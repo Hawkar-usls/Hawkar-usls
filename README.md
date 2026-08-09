@@ -46,7 +46,8 @@ Its moral, mythological, and theological vocabulary belongs to the fictional sys
 
 Public repositories are explicitly classified as **Featured**, **Active Prototype**, **Work in Progress**, **Legacy**, **Archive**, or **Upstream-derived**. An unfinished project should say so on its first screen rather than look accidentally abandoned or complete.
 
-→ **[Repository maturity & visibility catalog](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-visibility.json)**
+→ **[Human-readable Repository Catalog](https://github.com/Hawkar-usls/Janus/blob/main/docs/REPOSITORY_CATALOG.md)**  
+→ **[Machine-readable maturity & visibility catalog](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-visibility.json)**
 
 ## Review rules
 
