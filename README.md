@@ -42,6 +42,12 @@ A local-first interactive world / AI-assisted game with portable saves, optional
 
 Its moral, mythological, and theological vocabulary belongs to the fictional system and is separate from the evidence-bearing research tracks above.
 
+## Repository maturity
+
+Public repositories are explicitly classified as **Featured**, **Active Prototype**, **Work in Progress**, **Legacy**, **Archive**, or **Upstream-derived**. An unfinished project should say so on its first screen rather than look accidentally abandoned or complete.
+
+→ **[Repository maturity & visibility catalog](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-visibility.json)**
+
 ## Review rules
 
 - **CI shows that software checks ran; it is not peer review.**
@@ -58,10 +64,12 @@ Counterexamples, prior art, clean-room implementations, independent replication,
 ## Machine-readable entry points
 
 - **[Public portfolio index](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-index.json)** — repository classification, preferred review order, and claim boundaries.
+- **[Repository maturity & visibility](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-visibility.json)** — featured/WIP/legacy/archive/upstream recommendations.
 - **[Metadata coverage audit](https://github.com/Hawkar-usls/Janus/blob/main/public-metadata-coverage.json)** — public metadata coverage and intentional exceptions.
 - **[Schema registry](https://github.com/Hawkar-usls/Janus/blob/main/schemas/registry.json)** — stable `schema_id` → JSON Schema / vocabulary mapping.
+- **[Presentation standard](https://github.com/Hawkar-usls/Janus/blob/main/docs/PUBLIC_REPOSITORY_PRESENTATION_STANDARD.md)** — academic/minimalist README and claim-boundary rules.
 
-Schema validity describes metadata structure; it does **not** establish scientific truth, novelty, replication, or peer review.
+The presentation standard is MIT-inspired academic minimalism only; **no affiliation with MIT is implied**. Schema validity describes metadata structure; it does **not** establish scientific truth, novelty, replication, or peer review.
 
 ---
 
