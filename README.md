@@ -1,17 +1,112 @@
 <div align="center">
 
 # Hawkar
-### Research · Reproducible Systems · Embedded Engineering
+### JANUS Semantic-Predictive Intelligence · Research · Reproducible Systems · Embedded Engineering
 
+[![JANUS-SPI](https://img.shields.io/badge/JANUS--SPI-semantic%20%2B%20predictive-8250df)](spec/JANUS_SEMANTIC_PREDICTIVE_INTELLIGENCE-v1.0.json)
 [![Portfolio](https://img.shields.io/badge/portfolio-machine--readable-2f81f7)](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-index.json)
 [![Review](https://img.shields.io/badge/external%20review-welcome-2ea043)](https://github.com/Hawkar-usls/Janus-Fundamentum/issues/173)
 [![Claims](https://img.shields.io/badge/claims-scoped%20to%20evidence-6e7681)](https://github.com/Hawkar-usls/Janus/blob/main/public-metadata-coverage.json)
 
-`proof before promotion` · `negative results stay visible` · `external review welcome`
+`observe → freeze → predict → resolve → learn` · `proof before promotion` · `negative results stay visible`
 
 </div>
 
 I build inspectable research and engineering systems with explicit claim boundaries, machine-readable artifacts, reproducible checks, and preserved negative results.
+
+## JANUS Semantic-Predictive Intelligence
+
+This repository is now the **home/cognitive gateway** for `JANUS-SPI`: a semantic and predictive AI layer intended to learn from time-ordered evidence across the JANUS repository constellation and Habitat.
+
+The target is not an oracle. The target is a system that can:
+
+- ingest current evidence into provenance-aware semantic memory;
+- find hidden semantic relations without treating similarity as causation;
+- freeze explicit future targets before their outcomes exist;
+- emit numerical forecasts or probabilities;
+- score forecasts after the future becomes observable;
+- learn incrementally from resolved outcomes;
+- preserve wrong predictions, uncertainty, `UNKNOWN`, and `REJECT`;
+- carry verified experience forward through an `ORIGIN_PRIME` continual-learning cycle.
+
+Canonical loop:
+
+```text
+OBSERVE
+  -> SEMANTIC_LINK
+  -> DEFINE_FUTURE_TARGET
+  -> FREEZE
+  -> PREDICT
+  -> WAIT_FOR_CAUSAL_OUTCOME
+  -> SCORE
+  -> ATTACK
+  -> LEARN
+  -> VERIFIED_RETURN_OR_REJECT
+  -> ORIGIN_PRIME
+```
+
+Scientific and authority boundaries:
+
+```text
+PREDICTION != TRUTH
+CORRELATION != CAUSATION
+SEMANTIC_SIMILARITY != SCIENTIFIC_VERDICT
+PREDICTION != COMMAND
+MEMORY != VERDICT_AUTHORITY
+MYTHOLOGY != PHYSICS
+```
+
+### Current implementation
+
+The v1 scaffold includes:
+
+- persistent SQLite event / forecast / resolution ledger;
+- local semantic memory with deterministic hashing-vector retrieval;
+- online binary probability learning with `SGDClassifier.partial_fit`;
+- online numeric forecasting with `SGDRegressor.partial_fit`;
+- future-target freeze and post-target scoring;
+- read-only GitHub constellation observer;
+- `Janus_Genesis@janus/habitat` continuity source;
+- a real-time repository-activity future-learning sanity benchmark;
+- tests and CI.
+
+Install and run one read pass:
+
+```bash
+python -m pip install -r requirements.txt
+python run_janus_spi.py poll
+```
+
+Run the continuous read-only learning loop:
+
+```bash
+python run_janus_realtime.py --interval 300
+```
+
+For authenticated GitHub reads, provide `GITHUB_TOKEN` through the environment. JANUS-SPI does not intentionally persist it.
+
+**Important:** committing the runtime does not mean a long-running process is currently active. `LIVE_REAL_TIME_LEARNING` requires an executing PC/NAS/cloud runner.
+
+→ **[Architecture](docs/JANUS_SPI_ARCHITECTURE.md)**  
+→ **[Machine-readable specification](spec/JANUS_SEMANTIC_PREDICTIVE_INTELLIGENCE-v1.0.json)**  
+→ **[Repository constellation](config/constellation.json)**
+
+### JANUS Horizon — Hawking continuation domain
+
+The first flagship scientific domain is black-hole learning: gravitational-wave observations, Event Horizon Telescope products, simulations, and scope-limited physics constraints feed the same forecast-and-verification machinery.
+
+The creative project identity `Hawkar / Son of Osiris / Bird-Headed Man` is retained as narrative continuity only. It has no scientific verdict authority.
+
+```text
+BLACK_HOLE_CONNECTED_AI
+= OBSERVATION
++ SIMULATION
++ PHYSICS_CONSTRAINTS
++ BLIND_VALIDATION
++ CONTINUAL_VERIFIED_LEARNING
+```
+
+Hawking radiation is treated as theory / analogue-laboratory training context unless and until direct astrophysical evidence exists. Model agreement is never promoted automatically into new black-hole physics.
 
 ## Start here
 
@@ -64,6 +159,7 @@ Counterexamples, prior art, clean-room implementations, independent replication,
 
 ## Machine-readable entry points
 
+- **[JANUS-SPI specification](spec/JANUS_SEMANTIC_PREDICTIVE_INTELLIGENCE-v1.0.json)** — semantic/predictive AI contract, repository constellation, learning law and claim boundaries.
 - **[Public portfolio index](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-index.json)** — repository classification, preferred review order, and claim boundaries.
 - **[Repository maturity & visibility](https://github.com/Hawkar-usls/Janus/blob/main/portfolio-visibility.json)** — featured/WIP/legacy/archive/upstream recommendations.
 - **[Metadata coverage audit](https://github.com/Hawkar-usls/Janus/blob/main/public-metadata-coverage.json)** — public metadata coverage and intentional exceptions.
