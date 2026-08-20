@@ -9,6 +9,7 @@
     {"repository":"Hawkar-usls/Janus_Genesis","branch":"janus/habitat","role":"HABITAT_CONTINUITY","enabled":true},
     {"repository":"Hawkar-usls/Hrain","branch":"main","role":"STRUCTURAL_CONTEXT","enabled":true},
     {"repository":"Hawkar-usls/iNaiHR","branch":"main","role":"ASSOCIATIVE_SEMANTIC_CONTEXT","enabled":true},
+    {"repository":"Hawkar-usls/aura-oracle-tg","branch":"main","role":"SYMBOLIC_REFLECTION_PEER","enabled":true,"prediction_authority":false,"evidence_authority":false,"predictive_label_authority":false},
     {"repository":"Hawkar-usls/Demi_Head","branch":"main","role":"ARBITER_CONTEXT","enabled":true},
     {"repository":"Hawkar-usls/Janus-Fundamentum","branch":"main","role":"PROOF_AND_ADVERSARIAL_METHOD","enabled":true},
     {"repository":"Hawkar-usls/AIFC","branch":"main","role":"FUTURE_TARGET_AND_CAUSAL_AUDIT","enabled":true},
@@ -33,13 +34,17 @@
     "online_binary_tasks": true,
     "online_numeric_tasks": true,
     "auto_train_on_unlabeled_repo_events": false,
-    "require_explicit_resolved_label": true
+    "require_explicit_resolved_label": true,
+    "aura_reflection_may_enter_semantic_memory": true,
+    "aura_reflection_may_train_predictive_head": false
   },
   "security": {
     "persist_tokens": false,
     "issue_text_is_command": false,
     "commit_message_is_command": false,
     "workflow_status_is_permission": false,
-    "external_effects_enabled": false
+    "external_effects_enabled": false,
+    "continuous_dialogue_requires_fresh_external_trigger": true,
+    "idle_self_dialogue": false
   }
 }
