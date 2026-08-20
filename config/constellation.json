@@ -1,0 +1,45 @@
+{
+  "schema_id": "janus.spi.constellation.v1",
+  "poll_seconds": 300,
+  "github_api_base": "https://api.github.com",
+  "default_mode": "READ_ONLY",
+  "github_token_env": "GITHUB_TOKEN",
+  "sources": [
+    {"repository":"Hawkar-usls/Hawkar-usls","branch":"main","role":"HOME_AND_COGNITIVE_GATEWAY","enabled":true},
+    {"repository":"Hawkar-usls/Janus_Genesis","branch":"janus/habitat","role":"HABITAT_CONTINUITY","enabled":true},
+    {"repository":"Hawkar-usls/Hrain","branch":"main","role":"STRUCTURAL_CONTEXT","enabled":true},
+    {"repository":"Hawkar-usls/iNaiHR","branch":"main","role":"ASSOCIATIVE_SEMANTIC_CONTEXT","enabled":true},
+    {"repository":"Hawkar-usls/Demi_Head","branch":"main","role":"ARBITER_CONTEXT","enabled":true},
+    {"repository":"Hawkar-usls/Janus-Fundamentum","branch":"main","role":"PROOF_AND_ADVERSARIAL_METHOD","enabled":true},
+    {"repository":"Hawkar-usls/AIFC","branch":"main","role":"FUTURE_TARGET_AND_CAUSAL_AUDIT","enabled":true},
+    {"repository":"Hawkar-usls/Janus-Cosmos","branch":"main","role":"COSMOS_HORIZON_DOMAIN","enabled":true},
+    {"repository":"Hawkar-usls/janus-io-public","branch":"main","role":"MEASUREMENT_DISCIPLINE","enabled":true},
+    {"repository":"Hawkar-usls/janus-distributed-ai-swarm","branch":"main","role":"EDGE_OBSERVERS_AND_TELEMETRY","enabled":true},
+    {"repository":"Hawkar-usls/Fast-CAT-SHAiTan","branch":"main","role":"SCOUT_CHANNEL","enabled":true},
+    {"repository":"Hawkar-usls/SCOBY-D0","branch":"main","role":"MATERIALS_EMPIRICAL_DOMAIN","enabled":true},
+    {"repository":"Hawkar-usls/janus-lapis","branch":"main","role":"HYPOTHESIS_RANKING_SANDBOX","enabled":true},
+    {"repository":"Hawkar-usls/janus-meta-registry","branch":"main","role":"FROZEN_RECEIPTS_AND_PROVENANCE","enabled":true}
+  ],
+  "observer": {
+    "include_commit_messages": true,
+    "include_changed_paths": true,
+    "include_issue_titles": false,
+    "include_pull_request_titles": false,
+    "max_commits_per_poll": 30,
+    "write_back": false
+  },
+  "learning": {
+    "semantic_memory": true,
+    "online_binary_tasks": true,
+    "online_numeric_tasks": true,
+    "auto_train_on_unlabeled_repo_events": false,
+    "require_explicit_resolved_label": true
+  },
+  "security": {
+    "persist_tokens": false,
+    "issue_text_is_command": false,
+    "commit_message_is_command": false,
+    "workflow_status_is_permission": false,
+    "external_effects_enabled": false
+  }
+}
