@@ -1,0 +1,66 @@
+{
+  "schema_id": "janus.spi.project_status.v1",
+  "project": "JANUS Semantic-Predictive Intelligence",
+  "repository": "Hawkar-usls/Hawkar-usls",
+  "status_date": "2026-08-21",
+  "maturity": "ACTIVE_RESEARCH_ENGINEERING_PROTOTYPE",
+  "home_role": "COGNITIVE_GATEWAY",
+  "implemented": {
+    "machine_readable_architecture": true,
+    "semantic_event_ledger": true,
+    "semantic_search": true,
+    "online_binary_learning": true,
+    "online_numeric_learning": true,
+    "future_forecast_freeze": true,
+    "post_target_resolution_scoring": true,
+    "read_only_github_constellation_observer": true,
+    "habitat_branch_observation_declared": true,
+    "realtime_repository_activity_benchmark": true,
+    "hawking_temperature_physics_module": true,
+    "kerr_horizon_area_module": true,
+    "hawking_h1_synthetic_teacher_runner": true,
+    "tests": true,
+    "ci_workflow": true
+  },
+  "not_yet_established": {
+    "persistent_runtime_currently_running": true,
+    "longitudinal_forecast_calibration": true,
+    "cross_domain_predictive_advantage": true,
+    "live_sensor_ingestion": true,
+    "GWOSC_training_run": true,
+    "EHT_training_run": true,
+    "independent_replication": true,
+    "new_black_hole_physics": true,
+    "direct_hawking_radiation_detection": true,
+    "AGI": true
+  },
+  "current_gates": {
+    "P0_LOCAL_CORE": "IMPLEMENTED_SCAFFOLD",
+    "P1_CONSTELLATION_READ": "IMPLEMENTED_SCAFFOLD",
+    "P2_HABITAT_CONTINUITY": "CONFIGURED_READ_ONLY",
+    "P3_FORECAST_LEDGER": "IMPLEMENTED_SCAFFOLD",
+    "P4_CALIBRATED_REAL_TIME": "OPEN",
+    "P5_CROSS_DOMAIN_TRANSFER": "OPEN",
+    "P6_JANUS_HORIZON": "H0_H1_CODE_ADDED_RUN_RESULT_NOT_YET_FROZEN"
+  },
+  "next_execution_order": [
+    "CI compile/test confirmation",
+    "run H1 Hawking synthetic teacher and freeze result receipt",
+    "launch read-only real-time runner on persistent JANUS runtime",
+    "accumulate repository-activity forecast calibration history",
+    "add explicit Habitat episode adapter beyond commit-level observation",
+    "freeze H3 GWOSC dataset manifest",
+    "train first real black-hole data baseline",
+    "only after negative controls and blind holdout consider H5 EHT adapter"
+  ],
+  "scientific_boundaries": [
+    "PREDICTION != TRUTH",
+    "PREDICTION != COMMAND",
+    "SEMANTIC_SIMILARITY != CAUSATION",
+    "MEMORY != VERDICT_AUTHORITY",
+    "SYNTHETIC_RECOVERY != ASTROPHYSICAL_DISCOVERY",
+    "ANALOGUE_HAWKING_RADIATION != DIRECT_ASTROPHYSICAL_HAWKING_RADIATION",
+    "MYTHOLOGY != PHYSICS",
+    "INTERNAL_PASS != EXTERNAL_VALIDATION"
+  ]
+}
