@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from janus_spi.aura_habitat_spiral import AURA_REFLECTION_SCHEMA, SpiralDialogueEngine
 
