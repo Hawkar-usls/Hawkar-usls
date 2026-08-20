@@ -12,27 +12,60 @@ class HabitatEventBus:
     The bus is read-only with respect to inbox/journal sources. Dialogue output is
     handled separately by HabitatMirror, preventing the mirror directory from
     becoming its own input and creating a feedback loop.
+
+    On first start, existing Habitat history is treated as baseline by default.
+    Set replay_existing=True only for an explicit historical replay.
     """
 
-    def __init__(self, habitat_root: str | Path, state_path: str | Path) -> None:
+    def __init__(
+        self,
+        habitat_root: str | Path,
+        state_path: str | Path,
+        *,
+        replay_existing: bool = False,
+    ) -> None:
         self.root = Path(habitat_root)
         self.state_path = Path(state_path)
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        existed = self.state_path.exists()
         self.state = self._load_state()
+        if not existed and not replay_existing:
+            self._bootstrap_current_boundary()
+            self._save_state()
 
     def _load_state(self) -> Dict[str, Any]:
         if self.state_path.exists():
             value = json.loads(self.state_path.read_text(encoding="utf-8"))
             if isinstance(value, dict):
                 return value
-        return {"journal_lines": 0, "inbox_hashes": {}}
-
-    def _save_state(self) -> None:
-        self.state_path.write_text(json.dumps(self.state, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        return {"journal_lines": 0, "inbox_hashes": {}, "bootstrapped": False}
 
     @staticmethod
     def _hash(data: bytes) -> str:
         return hashlib.sha256(data).hexdigest()
+
+    def _current_inbox_hashes(self) -> Dict[str, str]:
+        root = self.root / "inbox"
+        if not root.exists():
+            return {}
+        current: Dict[str, str] = {}
+        for path in sorted(p for p in root.rglob("*") if p.is_file()):
+            rel = path.relative_to(self.root).as_posix()
+            current[rel] = self._hash(path.read_bytes())
+        return current
+
+    def _bootstrap_current_boundary(self) -> None:
+        journal = self.root / "memory" / "journal.jsonl"
+        lines = journal.read_text(encoding="utf-8", errors="replace").splitlines() if journal.exists() else []
+        self.state = {
+            "journal_lines": len(lines),
+            "inbox_hashes": self._current_inbox_hashes(),
+            "bootstrapped": True,
+            "bootstrap_rule": "EXISTING_HISTORY_IS_BASELINE_NOT_FRESH_TRIGGER",
+        }
+
+    def _save_state(self) -> None:
+        self.state_path.write_text(json.dumps(self.state, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
     def _journal_events(self) -> List[Dict[str, Any]]:
         path = self.root / "memory" / "journal.jsonl"
@@ -40,6 +73,9 @@ class HabitatEventBus:
             return []
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         start = int(self.state.get("journal_lines", 0))
+        if start > len(lines):
+            # Journal replacement/truncation is a new baseline, not permission to replay old-looking lines.
+            start = len(lines)
         events: List[Dict[str, Any]] = []
         for idx in range(start, len(lines)):
             raw = lines[idx].strip()
@@ -61,6 +97,7 @@ class HabitatEventBus:
     def _inbox_events(self) -> List[Dict[str, Any]]:
         root = self.root / "inbox"
         if not root.exists():
+            self.state["inbox_hashes"] = {}
             return []
         previous = dict(self.state.get("inbox_hashes", {}))
         current: Dict[str, str] = {}
@@ -85,5 +122,6 @@ class HabitatEventBus:
 
     def poll(self) -> List[Dict[str, Any]]:
         events = self._journal_events() + self._inbox_events()
+        self.state["bootstrapped"] = True
         self._save_state()
         return events
