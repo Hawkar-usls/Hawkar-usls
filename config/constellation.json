@@ -5,6 +5,7 @@
   "default_mode": "READ_ONLY",
   "github_token_env": "GITHUB_TOKEN",
   "sources": [
+    {"repository":"Hawkar-usls/-Terminal-for-Janus","branch":"main","role":"HUMAN_AUTHORIZED_OPERATOR_CONTROL_PLANE","enabled":true,"epistemic_authority":false,"physical_effect_authority":false},
     {"repository":"Hawkar-usls/Hawkar-usls","branch":"main","role":"HOME_AND_COGNITIVE_GATEWAY","enabled":true},
     {"repository":"Hawkar-usls/Janus_Genesis","branch":"janus/habitat","role":"HABITAT_CONTINUITY","enabled":true},
     {"repository":"Hawkar-usls/Hrain","branch":"main","role":"STRUCTURAL_CONTEXT","enabled":true},
@@ -21,6 +22,14 @@
     {"repository":"Hawkar-usls/janus-lapis","branch":"main","role":"HYPOTHESIS_RANKING_SANDBOX","enabled":true},
     {"repository":"Hawkar-usls/janus-meta-registry","branch":"main","role":"FROZEN_RECEIPTS_AND_PROVENANCE","enabled":true}
   ],
+  "operator": {
+    "entrypoint_repository": "Hawkar-usls/-Terminal-for-Janus",
+    "contract": "contracts/JANUS_TERMINAL_CONTROL_PLANE-v1.0.json",
+    "human_authorized_writes_allowed": true,
+    "terminal_access_is_truth_authority": false,
+    "terminal_access_is_physical_effect_authority": false,
+    "command_receipt_required_for_terminal_managed_operations": true
+  },
   "observer": {
     "include_commit_messages": true,
     "include_changed_paths": true,
@@ -36,7 +45,9 @@
     "auto_train_on_unlabeled_repo_events": false,
     "require_explicit_resolved_label": true,
     "aura_reflection_may_enter_semantic_memory": true,
-    "aura_reflection_may_train_predictive_head": false
+    "aura_reflection_may_train_predictive_head": false,
+    "terminal_command_may_enter_semantic_memory": true,
+    "terminal_command_may_resolve_predictive_target": false
   },
   "security": {
     "persist_tokens": false,
