@@ -1,0 +1,22 @@
+{
+  "schema": "janus.spi.json_mirror_pass_link.v1",
+  "source_repository": "Hawkar-usls/Hawkar-usls",
+  "target_repository": "Hawkar-usls/-Terminal-for-Janus",
+  "target_contract": "contracts/JANUS_JSON_MIRROR_PASS_PROTOCOL-v1.0.json",
+  "interchange": "config/JANUS_JSON_INTERCHANGE.json",
+  "mode": "PRIMARY_INTERAGENT_JSON_WITH_TWO_PASS_REASONING",
+  "requirements": {
+    "json_primary": true,
+    "forward_pass_required": true,
+    "reverse_pass_required": true,
+    "recovered_at_origin_before_answer": true,
+    "same_source_both_passes": true,
+    "source_trace_required_for_reverse_recovery": true,
+    "intent_id_preserved": true
+  },
+  "authority": {
+    "mirror_finding_is_evidence": false,
+    "mirror_finding_is_world_truth": false,
+    "predictive_training_requires_resolved_outcome": true
+  }
+}
