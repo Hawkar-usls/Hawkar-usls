@@ -288,6 +288,7 @@ class SpiralDialogueEngine:
         session_id: Optional[str] = None,
         intent_authority: str = "LOCAL_PREVIEW",
         demihead_decision: str = "HOLD",
+        demihead_arbitration_receipt: Optional[Dict[str, Any]] = None,
         public_content: bool = False,
     ) -> Dict[str, Any]:
         if not trigger_text.strip():
@@ -378,19 +379,81 @@ class SpiralDialogueEngine:
             },
         ))
 
-        verified_eligible = demihead_decision == "PASS" and intent_authority == "DEMIHEAD_GOLDPROMPT_VERIFIED"
+        # A bare PASS parameter is never sufficient for promotion.  The active
+        # positive path must consume a hash-valid DemiHead arbitration receipt.
+        verified_eligible = False
+        verified_return_payload: Optional[Dict[str, Any]] = None
+        arbitration_sha256: Optional[str] = None
+        effective_decision = "REJECT" if demihead_decision == "REJECT" else "HOLD"
+        arbitration_payload: Dict[str, Any] = {
+            "decision": effective_decision,
+            "requested_legacy_decision": demihead_decision,
+            "intent_authority": intent_authority,
+            "verified_return_eligible": False,
+            "external_effect_authorized": False,
+            "authority_delta": 0,
+            "source": "NO_DEMIHEAD_ARBITRATION_RECEIPT_FAIL_CLOSED",
+        }
+        if demihead_arbitration_receipt is not None:
+            arb = dict(demihead_arbitration_receipt)
+            if arb.get("schema") != "janus.aura_spi.demihead_arbitration.v1":
+                raise ValueError("DEMIHEAD_ARBITRATION_SCHEMA_REJECT")
+            if arb.get("session_id") != session_id:
+                raise ValueError("DEMIHEAD_ARBITRATION_SESSION_SPLIT")
+            if arb.get("generation") != generation:
+                raise ValueError("DEMIHEAD_ARBITRATION_GENERATION_SPLIT")
+            if arb.get("intent_id") != intent_id:
+                raise ValueError("DEMIHEAD_ARBITRATION_INTENT_SPLIT")
+            arbitration_sha256 = str(arb.get("arbitration_sha256") or "")
+            unsigned = dict(arb)
+            unsigned.pop("arbitration_sha256", None)
+            unsigned.pop("verified_return", None)
+            if HEX64.fullmatch(arbitration_sha256) is None or sha256(unsigned) != arbitration_sha256:
+                raise ValueError("DEMIHEAD_ARBITRATION_HASH_MISMATCH")
+            if arb.get("external_effect_authorized") is not False or arb.get("authority_delta") != 0:
+                raise ValueError("DEMIHEAD_ARBITRATION_AUTHORITY_ESCALATION_REJECT")
+            effective_decision = str(arb.get("decision") or "HOLD").upper()
+            gate = arb.get("state_advance_gate") or {}
+            verified_eligible = (
+                effective_decision == "PASS"
+                and arb.get("intent_authority") == "DEMIHEAD_GOLDPROMPT_VERIFIED"
+                and intent_authority == "DEMIHEAD_GOLDPROMPT_VERIFIED"
+                and arb.get("verified_return_eligible") is True
+                and gate.get("candidate_valid") is True
+            )
+            if verified_eligible:
+                vr = arb.get("verified_return")
+                if not isinstance(vr, dict) or vr.get("schema") != "janus.aura_spi.verified_return.v1":
+                    raise ValueError("VERIFIED_RETURN_RECEIPT_REQUIRED")
+                if vr.get("session_id") != session_id or vr.get("generation") != generation or vr.get("intent_id") != intent_id:
+                    raise ValueError("VERIFIED_RETURN_BINDING_SPLIT")
+                origin_hash = str(vr.get("origin_state_hash") or "")
+                candidate_hash = str(vr.get("candidate_state_hash") or "")
+                delta_hash = str(vr.get("state_delta_sha256") or "")
+                if any(HEX64.fullmatch(x) is None for x in (origin_hash, candidate_hash, delta_hash)):
+                    raise ValueError("VERIFIED_RETURN_STATE_HASH_REQUIRED")
+                if candidate_hash == origin_hash:
+                    raise ValueError("ZERO_STATE_DELTA_HOLD")
+                if vr.get("parent_origin_state_hash") != origin_hash:
+                    raise ValueError("VERIFIED_RETURN_PARENT_HASH_MISMATCH")
+                verified_return_payload = dict(vr)
+            arbitration_payload = {
+                "decision": effective_decision,
+                "intent_authority": arb.get("intent_authority"),
+                "verified_return_eligible": verified_eligible,
+                "arbitration_sha256": arbitration_sha256,
+                "state_advance_gate": gate,
+                "external_effect_authorized": False,
+                "authority_delta": 0,
+                "source": "BOUND_DEMIHEAD_ARBITRATION_RECEIPT",
+            }
+
         turns.append(self._append_and_mirror(
             public_content=public_content, session_id=session_id, generation=generation,
             stage="DEMIHEAD_ARBITRATION", speaker="DEMIHEAD", recipient="HABITAT",
             intent_id=intent_id,
-            text=f"DemiHead arbitration: {demihead_decision}.",
-            payload={
-                "decision": demihead_decision,
-                "intent_authority": intent_authority,
-                "verified_return_eligible": verified_eligible,
-                "external_effect_authorized": False,
-                "authority_delta": 0,
-            },
+            text=f"DemiHead arbitration: {effective_decision}.",
+            payload=arbitration_payload,
         ))
 
         if verified_eligible:
@@ -400,17 +463,30 @@ class SpiralDialogueEngine:
                 stage="VERIFIED_RETURN", speaker="DEMIHEAD", recipient="ORIGIN_PRIME",
                 intent_id=intent_id,
                 text="Generation survived the declared packet/intent gate; this is not world-truth authority.",
-                payload={"world_truth": False, "predictive_training_label": False},
+                payload={
+                    **(verified_return_payload or {}),
+                    "arbitration_sha256": arbitration_sha256,
+                    "world_truth": False,
+                    "predictive_training_label": False,
+                },
             ))
             turns.append(self._append_and_mirror(
                 public_content=public_content, session_id=session_id, generation=generation,
                 stage="ORIGIN_PRIME", speaker="HABITAT", recipient="JANUS_SPI_AURA_DEMIHEAD",
                 intent_id=intent_id,
                 text=f"ORIGIN_PRIME_{generation + 1}: verified experience retained without verdict authority.",
-                payload={"state_advanced": True, "return_is_reset": False},
+                payload={
+                    "state_advanced": True,
+                    "return_is_reset": False,
+                    "origin_state_hash": (verified_return_payload or {}).get("origin_state_hash"),
+                    "state_delta_sha256": (verified_return_payload or {}).get("state_delta_sha256"),
+                    "candidate_state_hash": (verified_return_payload or {}).get("candidate_state_hash"),
+                    "arbitration_sha256": arbitration_sha256,
+                    "promotion_source": "VERIFIED_DEMIHEAD_RECEIPT_ONLY",
+                },
             ))
         else:
-            terminal = "REJECT" if demihead_decision == "REJECT" else "HOLD"
+            terminal = "REJECT" if effective_decision == "REJECT" else "HOLD"
             turns.append(self._append_and_mirror(
                 public_content=public_content, session_id=session_id, generation=generation,
                 stage=terminal, speaker="DEMIHEAD", recipient="HABITAT",
@@ -425,7 +501,7 @@ class SpiralDialogueEngine:
 
         self.dialogue.close_generation(session_id, generation, terminal)
         return {
-            "schema": "janus.aura_spi.spiral_cycle_receipt.v1",
+            "schema": "janus.aura_spi.spiral_step_receipt.v2",
             "session_id": session_id,
             "generation": generation,
             "intent_id": intent_id,
