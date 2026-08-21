@@ -10,11 +10,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from janus_spi.aura_habitat_spiral import AuraPeerAdapter, SpiralDialogueEngine
+from janus_spi.advancing_spiral import AdvancingSpiralDialogueEngine, AuraPeerAdapter
 
 
-def process(engine: SpiralDialogueEngine, item: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
-    return engine.cycle(
+def process(engine: AdvancingSpiralDialogueEngine, item: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    return engine.spiral_step(
         trigger_text=str(item["text"]),
         source_ref=str(item.get("source_ref", "LOCAL_INBOX")),
         intent_id=item.get("intent_id"),
@@ -26,7 +26,7 @@ def process(engine: SpiralDialogueEngine, item: dict[str, Any], args: argparse.N
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Aura Oracle <-> JANUS-SPI <-> DemiHead Habitat spiral runtime")
+    parser = argparse.ArgumentParser(description="Aura Oracle <-> JANUS-SPI <-> DemiHead Habitat state-advancing spiral runtime")
     parser.add_argument("--state-dir", default="state")
     parser.add_argument("--habitat-root", default=None, help="Local Janus_Genesis/habitat checkout; no Git push is performed")
     parser.add_argument("--aura-peer", default=None, help="Command reading one JSON packet on stdin and writing Aura reflection JSON on stdout")
@@ -42,7 +42,7 @@ def main() -> None:
     args = parser.parse_args()
 
     command = shlex.split(args.aura_peer) if args.aura_peer else None
-    engine = SpiralDialogueEngine(
+    engine = AdvancingSpiralDialogueEngine(
         state_dir=args.state_dir,
         habitat_root=args.habitat_root,
         aura_peer=AuraPeerAdapter(command),
@@ -75,6 +75,9 @@ def main() -> None:
         "status": "RUNNING_LOCAL_PROCESS",
         "inbox": str(inbox),
         "idle_behavior": "SILENT_NO_SELF_CHAT",
+        "operation": "SPIRAL_STEP",
+        "position_may_repeat_state_must_advance": True,
+        "return_is_reset": False,
         "rule": "CONTINUOUS != INFINITE_SELF_CHAT",
     }, ensure_ascii=False))
 
