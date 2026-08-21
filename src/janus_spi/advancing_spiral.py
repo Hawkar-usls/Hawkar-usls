@@ -37,6 +37,9 @@ class AdvancingSpiralDialogueEngine(SpiralDialogueEngine):
             demihead_decision=demihead_decision,
             public_content=public_content,
         )
+        legacy_schema = receipt.get("schema")
+        receipt["schema"] = "janus.aura_spi.spiral_step_receipt.v2"
+        receipt["legacy_base_schema"] = legacy_schema
         receipt["preferred_operation"] = "SPIRAL_STEP"
         receipt["legacy_cycle_api_used_internally"] = True
         receipt["legacy_cycle_api_semantics"] = "BACKWARD_COMPATIBILITY_ONLY_NOT_RING_MODEL"
