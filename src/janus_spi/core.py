@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import joblib
 import numpy as np
+from scipy.sparse import vstack as sparse_vstack
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.linear_model import SGDClassifier, SGDRegressor
 from sklearn.metrics.pairwise import cosine_similarity
@@ -69,8 +70,10 @@ class Ledger:
     def __init__(self, path: str | Path = "state/janus_spi.sqlite3") -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(self.path)
+        self.db = sqlite3.connect(self.path, timeout=5.0)
         self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA foreign_keys=ON")
+        self.db.execute("PRAGMA busy_timeout=5000")
         self._init_schema()
 
     def _init_schema(self) -> None:
@@ -120,28 +123,47 @@ class Ledger:
               model_version TEXT NOT NULL,
               provenance_json TEXT NOT NULL
             );
+            CREATE INDEX IF NOT EXISTS idx_model_updates_task_feature
+              ON model_updates(task_id, feature_hash);
             """
         )
         self.db.commit()
 
+    @staticmethod
+    def _event_values(event: SemanticEvent) -> tuple[Any, ...]:
+        return (
+            event.event_id,
+            event.timestamp,
+            event.source,
+            event.source_ref,
+            event.text,
+            json.dumps(event.metadata, ensure_ascii=False, sort_keys=True),
+            event.content_hash,
+        )
+
     def append_event(self, event: SemanticEvent) -> bool:
-        try:
-            self.db.execute(
-                "INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    event.event_id,
-                    event.timestamp,
-                    event.source,
-                    event.source_ref,
-                    event.text,
-                    json.dumps(event.metadata, ensure_ascii=False, sort_keys=True),
-                    event.content_hash,
-                ),
-            )
-            self.db.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
+        cursor = self.db.execute(
+            "INSERT OR IGNORE INTO events VALUES (?, ?, ?, ?, ?, ?, ?)",
+            self._event_values(event),
+        )
+        self.db.commit()
+        return cursor.rowcount == 1
+
+    def append_events(self, events: Iterable[SemanticEvent]) -> List[bool]:
+        """Insert many observations in one SQLite transaction.
+
+        The boolean result preserves per-event deduplication semantics while avoiding
+        one fsync/commit for every commit observed during a repository poll.
+        """
+        results: List[bool] = []
+        with self.db:
+            for event in events:
+                cursor = self.db.execute(
+                    "INSERT OR IGNORE INTO events VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    self._event_values(event),
+                )
+                results.append(cursor.rowcount == 1)
+        return results
 
     def append_forecast(self, forecast: Forecast) -> None:
         self.db.execute(
@@ -194,14 +216,14 @@ class Ledger:
             score = abs(pred - float(observed_outcome))
             scoring_rule = "ABSOLUTE_ERROR"
 
-        self.db.execute(
-            "INSERT INTO resolutions VALUES (?, ?, ?, ?, ?, ?)",
-            (forecast_id, time.time(), float(observed_outcome), scoring_rule, score, "RESOLVED"),
-        )
-        self.db.execute(
-            "UPDATE forecasts SET status='RESOLVED' WHERE forecast_id=?", (forecast_id,)
-        )
-        self.db.commit()
+        with self.db:
+            self.db.execute(
+                "INSERT INTO resolutions VALUES (?, ?, ?, ?, ?, ?)",
+                (forecast_id, time.time(), float(observed_outcome), scoring_rule, score, "RESOLVED"),
+            )
+            self.db.execute(
+                "UPDATE forecasts SET status='RESOLVED' WHERE forecast_id=?", (forecast_id,)
+            )
         return {"forecast_id": forecast_id, "scoring_rule": scoring_rule, "score": score}
 
     def append_model_update(
@@ -237,8 +259,8 @@ class Ledger:
 class SemanticMemory:
     """Lightweight semantic layer using a stateless hashing vectorizer.
 
-    This intentionally starts with an auditable local representation. A future embedding
-    adapter may replace or augment it, but similarity never receives verdict authority.
+    The recent corpus is cached as a sparse matrix and updated incrementally after
+    successful ingest. Similarity never receives verdict authority.
     """
 
     def __init__(self, ledger: Ledger, n_features: int = 2**15) -> None:
@@ -250,23 +272,56 @@ class SemanticMemory:
             ngram_range=(1, 2),
             lowercase=True,
         )
+        self._cache_events: List[SemanticEvent] = []
+        self._cache_matrix = None
+        self._cache_limit: Optional[int] = None
+
+    def _cache_prepend(self, event: SemanticEvent) -> None:
+        if self._cache_matrix is None or self._cache_limit is None:
+            return
+        row = self.vectorizer.transform([event.text])
+        self._cache_events.insert(0, event)
+        self._cache_matrix = sparse_vstack([row, self._cache_matrix], format="csr")
+        if len(self._cache_events) > self._cache_limit:
+            self._cache_events = self._cache_events[: self._cache_limit]
+            self._cache_matrix = self._cache_matrix[: self._cache_limit]
+
+    def _ensure_cache(self, corpus_limit: int) -> None:
+        corpus_limit = max(1, int(corpus_limit))
+        if self._cache_matrix is not None and self._cache_limit == corpus_limit:
+            return
+        self._cache_events = list(self.ledger.iter_events(limit=corpus_limit))
+        self._cache_limit = corpus_limit
+        if self._cache_events:
+            self._cache_matrix = self.vectorizer.transform([event.text for event in self._cache_events])
+        else:
+            self._cache_matrix = None
 
     def ingest(self, event: SemanticEvent) -> bool:
-        return self.ledger.append_event(event)
+        inserted = self.ledger.append_event(event)
+        if inserted:
+            self._cache_prepend(event)
+        return inserted
+
+    def ingest_many(self, events: Iterable[SemanticEvent]) -> List[bool]:
+        batch = list(events)
+        inserted = self.ledger.append_events(batch)
+        for event, was_inserted in zip(batch, inserted):
+            if was_inserted:
+                self._cache_prepend(event)
+        return inserted
 
     def search(self, query: str, limit: int = 10, corpus_limit: int = 5000) -> List[Dict[str, Any]]:
-        events = list(self.ledger.iter_events(limit=corpus_limit))
-        if not events:
+        self._ensure_cache(corpus_limit)
+        if self._cache_matrix is None or not self._cache_events:
             return []
-        docs = [e.text for e in events]
-        matrix = self.vectorizer.transform(docs)
         q = self.vectorizer.transform([query])
-        scores = cosine_similarity(q, matrix).ravel()
-        order = np.argsort(scores)[::-1][:limit]
+        scores = cosine_similarity(q, self._cache_matrix).ravel()
+        order = np.argsort(scores)[::-1][: max(0, int(limit))]
         return [
             {
                 "score": float(scores[i]),
-                "event": asdict(events[i]),
+                "event": asdict(self._cache_events[i]),
                 "warning": "SEMANTIC_SIMILARITY_IS_NOT_CAUSAL_OR_VERDICT_AUTHORITY",
             }
             for i in order
@@ -296,6 +351,10 @@ class JanusSPICore:
 
     Key invariant: unlabelled observations enrich semantic memory but do not silently
     train predictive heads. Predictive updates require an explicit resolved label.
+
+    Security boundary: ``online_tasks.joblib`` is trusted local runtime state. Joblib
+    persistence is not safe for attacker-controlled files and must never be loaded from
+    an untrusted or publicly writable state directory.
     """
 
     def __init__(self, state_dir: str | Path = "state") -> None:
@@ -322,7 +381,10 @@ class JanusSPICore:
             self.tasks = joblib.load(path)
 
     def _save_tasks(self) -> None:
-        joblib.dump(self.tasks, self._task_path())
+        path = self._task_path()
+        tmp = path.with_name(path.name + ".tmp")
+        joblib.dump(self.tasks, tmp)
+        tmp.replace(path)
 
     @staticmethod
     def _feature_text(event: SemanticEvent, extra: Optional[Dict[str, Any]] = None) -> str:
@@ -340,12 +402,16 @@ class JanusSPICore:
     def observe(self, event: SemanticEvent) -> bool:
         return self.semantic.ingest(event)
 
-    def ensure_task(self, task_id: str, task_type: str) -> OnlineTask:
+    def observe_many(self, events: Iterable[SemanticEvent]) -> List[bool]:
+        return self.semantic.ingest_many(events)
+
+    def ensure_task(self, task_id: str, task_type: str, *, persist: bool = True) -> OnlineTask:
         task = self.tasks.get(task_id)
         if task is None:
             task = OnlineTask(task_id, task_type)
             self.tasks[task_id] = task
-            self._save_tasks()
+            if persist:
+                self._save_tasks()
         elif task.task_type != task_type:
             raise ValueError(f"Task {task_id} already exists as {task.task_type}")
         return task
@@ -359,7 +425,7 @@ class JanusSPICore:
         provenance: Optional[Dict[str, Any]] = None,
         extra_features: Optional[Dict[str, Any]] = None,
     ) -> str:
-        task = self.ensure_task(task_id, task_type)
+        task = self.ensure_task(task_id, task_type, persist=False)
         feature_text = self._feature_text(event, extra_features)
         X = self.featureizer.transform([feature_text])
         if task_type == "BINARY_PROBABILITY":
@@ -395,7 +461,8 @@ class JanusSPICore:
     ) -> Forecast:
         if task_id not in self.tasks or not self.tasks[task_id].fitted:
             raise ValueError(f"Task {task_id} has no resolved-label training history")
-        if target_time <= time.time():
+        now = time.time()
+        if target_time <= now:
             raise ValueError("target_time must be in the future when the forecast is frozen")
 
         task = self.tasks[task_id]
@@ -414,9 +481,9 @@ class JanusSPICore:
         forecast = Forecast(
             forecast_id=f"fc-{uuid.uuid4().hex}",
             task_id=task_id,
-            created_at=time.time(),
+            created_at=now,
             target_time=float(target_time),
-            feature_cutoff_time=time.time(),
+            feature_cutoff_time=now,
             model_version=task.model_version,
             prediction_type=task.task_type,
             probability_or_value=value,
