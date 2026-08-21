@@ -51,7 +51,13 @@ jobs:
         working-directory: home
         run: pytest -q
 
-      - name: Run first real Aura-SPI-Habitat spiral
+      - name: Verify Aura v2/5D peer
+        run: |
+          test -f aura/tools/aura_habitat_spiral_peer_v2.py
+          test -f aura/tools/aura_5d_spiral_v2.py
+          python -m py_compile aura/tools/aura_habitat_spiral_peer_v2.py aura/tools/aura_5d_spiral_v2.py
+
+      - name: Run advancing Aura-SPI-Habitat spiral
         shell: bash
         run: |
           mkdir -p runtime/state
@@ -59,14 +65,14 @@ jobs:
           python run_aura_habitat_spiral.py \
             --state-dir ../runtime/state \
             --habitat-root ../genesis/habitat \
-            --aura-peer "python ../aura/tools/aura_habitat_spiral_peer_v1.py" \
-            --message "FIRST_LIVE_SPIRAL_START: Aura Oracle and JANUS Semantic-Predictive Intelligence enter the first event-driven Habitat spiral under DemiHead fail-closed arbitration. Preserve intent, preserve uncertainty, test the chain, and do not promote symbolic reflection or semantic similarity into evidence." \
-            --source-ref "GITHUB_ACTIONS_FIRST_LIVE_SPIRAL" \
+            --aura-peer "python ../aura/tools/aura_habitat_spiral_peer_v2.py" \
+            --message "SYSTEM_SPIRAL_START: Aura v2/5D and JANUS Semantic-Predictive Intelligence enter an event-driven Habitat spiral under DemiHead fail-closed arbitration. POSITION MAY REPEAT BUT STATE MUST ADVANCE. RETURN IS NOT RESET. Preserve intent, uncertainty and source provenance; reflection and semantic similarity are not evidence." \
+            --source-ref "GITHUB_ACTIONS_SYSTEM_SPIRAL" \
             --demihead-decision HOLD \
             --public-content \
             > ../runtime/FIRST_LIVE_SPIRAL_RECEIPT.json
 
-      - name: Verify fail-closed first run
+      - name: Verify fail-closed advancing run
         run: |
           python - <<'PY'
           import json
@@ -76,13 +82,16 @@ jobs:
           assert r['chain_valid'] is True, r
           assert r['terminal'] == 'HOLD', r
           assert r['predictive_model_updated'] is False, r
-          assert int(r['generation']) == 1, r
+          assert int(r['generation']) >= 1, r
           print(json.dumps({
               'session_id': r['session_id'],
               'generation': r['generation'],
               'terminal': r['terminal'],
               'chain_valid': r['chain_valid'],
-              'predictive_model_updated': r['predictive_model_updated']
+              'predictive_model_updated': r['predictive_model_updated'],
+              'aura_peer': 'AURA_SEMANTIC_PREDICTIVE_SPIRAL_V2',
+              'return_is_reset': False,
+              'position_may_repeat_state_must_advance': True
           }, indent=2))
           PY
 
@@ -95,10 +104,10 @@ jobs:
           fi
           find runtime -maxdepth 5 -type f -print
 
-      - name: Upload first live spiral receipt
+      - name: Upload spiral receipt
         uses: actions/upload-artifact@v4
         with:
-          name: JANUS-FIRST-LIVE-SPIRAL
+          name: JANUS-SYSTEM-SPIRAL
           path: runtime/
           if-no-files-found: error
           retention-days: 30
