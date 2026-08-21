@@ -97,7 +97,9 @@ class AdvancingSpiralDialogueEngine(SpiralDialogueEngine):
     may promote ORIGIN_PRIME_(n+1); HOLD/REJECT are preserved rather than reset.
 
     This adapter does not alter the fail-closed authority model of the underlying
-    engine and does not turn technical event loops into epistemic promotion.
+    engine and does not turn technical event loops into epistemic promotion. A
+    supplied DemiHead arbitration receipt is only forwarded to the existing base
+    verifier; this wrapper grants no additional authority itself.
     """
 
     def spiral_step(
@@ -109,6 +111,7 @@ class AdvancingSpiralDialogueEngine(SpiralDialogueEngine):
         session_id: Optional[str] = None,
         intent_authority: str = "LOCAL_PREVIEW",
         demihead_decision: str = "HOLD",
+        demihead_arbitration_receipt: Optional[Dict[str, Any]] = None,
         public_content: bool = False,
     ) -> Dict[str, Any]:
         receipt = super().cycle(
@@ -118,6 +121,7 @@ class AdvancingSpiralDialogueEngine(SpiralDialogueEngine):
             session_id=session_id,
             intent_authority=intent_authority,
             demihead_decision=demihead_decision,
+            demihead_arbitration_receipt=demihead_arbitration_receipt,
             public_content=public_content,
         )
         legacy_schema = receipt.get("schema")
@@ -128,6 +132,7 @@ class AdvancingSpiralDialogueEngine(SpiralDialogueEngine):
         receipt["legacy_cycle_api_semantics"] = "BACKWARD_COMPATIBILITY_ONLY_NOT_RING_MODEL"
         receipt["position_may_repeat_state_must_advance"] = True
         receipt["return_is_reset"] = False
+        receipt["demihead_arbitration_receipt_forwarded"] = demihead_arbitration_receipt is not None
         return receipt
 
 
