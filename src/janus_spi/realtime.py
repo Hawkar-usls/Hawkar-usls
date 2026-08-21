@@ -16,6 +16,10 @@ class RealtimeRepositoryActivityLoop:
     observed label is whether at least one new constellation commit appeared. Only then
     is the previous sample admitted to online learning. The model may then forecast the
     next interval. This is an engineering sanity benchmark, not a scientific claim.
+
+    Temporal invariant: a new label is not admitted until the configured poll interval
+    has actually elapsed. A fast manual re-entry therefore produces HOLD rather than a
+    shorter, mislabeled target window.
     """
 
     TASK_ID = "constellation.any_new_commit_next_poll.v1"
@@ -34,11 +38,15 @@ class RealtimeRepositoryActivityLoop:
     def _load(self) -> Dict[str, Any]:
         if not self.state_path.exists():
             return {}
-        return json.loads(self.state_path.read_text(encoding="utf-8"))
+        try:
+            value = json.loads(self.state_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError):
+            return {}
+        return value if isinstance(value, dict) else {}
 
     def _save(self, state: Dict[str, Any]) -> None:
-        tmp = self.state_path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp = self.state_path.with_name(self.state_path.name + ".tmp")
+        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         tmp.replace(self.state_path)
 
     @staticmethod
@@ -58,21 +66,48 @@ class RealtimeRepositoryActivityLoop:
         return SemanticEvent(**data)
 
     def cycle(self, poll_seconds: int = 300) -> Dict[str, Any]:
+        interval = max(60, int(poll_seconds))
         previous = self._load()
+        gate_time = time.time()
+        last_cycle_at = float(previous.get("last_cycle_at") or 0.0)
+
+        if last_cycle_at > 0.0:
+            elapsed = max(0.0, gate_time - last_cycle_at)
+            if elapsed < interval:
+                return {
+                    "status": "HOLD_TOO_EARLY_NO_LABEL_NO_POLL",
+                    "elapsed_seconds": elapsed,
+                    "required_interval_seconds": interval,
+                    "seconds_remaining": max(0.0, interval - elapsed),
+                    "poll": None,
+                    "learned_model_version": None,
+                    "next_poll_forecast_id": previous.get("forecast_id"),
+                    "next_poll_probability": previous.get("forecast_probability"),
+                    "warning": "REPOSITORY_ACTIVITY_FORECAST_IS_AN_ENGINEERING_BENCHMARK_NOT_SCIENTIFIC_FORESIGHT",
+                }
+
         poll = self.observer.poll_once(self.core)
         now = time.time()
         inserted = int(poll.get("inserted", 0))
 
+        resolution_status = "NO_PRIOR_FORECAST"
+        prior_forecast_resolved = False
         if previous.get("forecast_id"):
             try:
                 self.core.resolve(previous["forecast_id"], 1.0 if inserted > 0 else 0.0)
-            except ValueError:
-                # If a manual cycle is called too early, preserve the frozen forecast.
-                pass
+                prior_forecast_resolved = True
+                resolution_status = "RESOLVED"
+            except (ValueError, KeyError) as exc:
+                # Never train a predictive head from a target window that could not be
+                # resolved under its own frozen timing/status rules.
+                resolution_status = f"HOLD_UNRESOLVED:{type(exc).__name__}"
 
         learned_version: Optional[str] = None
-        if previous.get("feature_event"):
-            prior_event = self._event_from_json(previous["feature_event"])
+        prior_feature = previous.get("feature_event")
+        prior_forecast_id = previous.get("forecast_id")
+        label_eligible = bool(prior_feature) and (not prior_forecast_id or prior_forecast_resolved)
+        if label_eligible:
+            prior_event = self._event_from_json(prior_feature)
             learned_version = self.core.learn(
                 task_id=self.TASK_ID,
                 task_type="BINARY_PROBABILITY",
@@ -83,8 +118,9 @@ class RealtimeRepositoryActivityLoop:
                     "EXECUTION_ASSISTANCE": "REALTIME_REPOSITORY_ACTIVITY_LOOP",
                     "EVIDENCE_SOURCE": "NEXT_GITHUB_POLL_OBSERVATION",
                     "SCIENTIFIC_AUTHORITY": False,
+                    "TEMPORAL_GATE": "ELAPSED_INTERVAL_VERIFIED",
                 },
-                extra_features={"poll_seconds": poll_seconds},
+                extra_features={"poll_seconds": interval},
             )
 
         summary_text = json.dumps(
@@ -93,6 +129,7 @@ class RealtimeRepositoryActivityLoop:
                 "inserted_new_events": inserted,
                 "duplicates": int(poll.get("duplicates", 0)),
                 "repositories": int(poll.get("repositories", 0)),
+                "unchanged_head_shortcuts": int(poll.get("unchanged_head_shortcuts", 0)),
                 "per_repository_new_events": {
                     k.removeprefix("repo:"): v for k, v in poll.items() if k.startswith("repo:")
                 },
@@ -117,12 +154,12 @@ class RealtimeRepositoryActivityLoop:
                 target_definition={
                     "event": "at least one previously unseen constellation commit is observed at the next poll",
                     "resolution": "1 iff next poll inserted > 0 else 0",
-                    "poll_seconds": poll_seconds,
+                    "poll_seconds": interval,
                     "claim_ceiling": "ENGINEERING_SANITY_BENCHMARK",
                 },
-                target_time=now + max(60, int(poll_seconds)),
+                target_time=now + interval,
                 evidence_refs=[current_event.event_id],
-                extra_features={"poll_seconds": poll_seconds},
+                extra_features={"poll_seconds": interval},
             )
             forecast_id = forecast.forecast_id
             probability = forecast.probability_or_value
@@ -133,6 +170,7 @@ class RealtimeRepositoryActivityLoop:
         self._save(
             {
                 "last_cycle_at": now,
+                "interval_seconds": interval,
                 "feature_event": self._event_to_json(current_event),
                 "forecast_id": forecast_id,
                 "forecast_probability": probability,
@@ -140,7 +178,10 @@ class RealtimeRepositoryActivityLoop:
         )
 
         return {
+            "status": "POLL_COMPLETED",
             "poll": poll,
+            "prior_forecast_resolution": resolution_status,
+            "prior_label_admitted": learned_version is not None,
             "learned_model_version": learned_version,
             "next_poll_forecast_id": forecast_id,
             "next_poll_probability": probability,
