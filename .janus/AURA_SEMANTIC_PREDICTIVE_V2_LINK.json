@@ -1,0 +1,17 @@
+{
+  "schema": "janus.spi.aura_semantic_predictive.link.v2",
+  "home": "Hawkar-usls/Hawkar-usls",
+  "aura": "Hawkar-usls/aura-oracle-tg",
+  "primary_peer": "tools/aura_habitat_spiral_peer_v2.py",
+  "contract": "contracts/AURA_ORACLE_SEMANTIC_PREDICTIVE_SPIRAL_V2.json",
+  "deep_mode": "SPIRAL_5D",
+  "registry_index": "READ_ONLY_LOCAL_AURA_INDEX",
+  "semantic_memory_input_allowed": true,
+  "typing_predictor_input_allowed": true,
+  "world_predictive_training_requires_externally_resolved_outcome": true,
+  "aura_output_may_train_world_predictive_head_directly": false,
+  "aura_may_resolve_forecast": false,
+  "aura_output_is_evidence": false,
+  "spiral_law": "POSITION_MAY_REPEAT_BUT_STATE_MUST_ADVANCE",
+  "return_is_reset": false
+}
