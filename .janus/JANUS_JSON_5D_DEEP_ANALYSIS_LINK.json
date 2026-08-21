@@ -1,0 +1,23 @@
+{
+  "schema": "janus.spi.deep_analysis_5d_link.v1",
+  "source_repository": "Hawkar-usls/Hawkar-usls",
+  "target_repository": "Hawkar-usls/-Terminal-for-Janus",
+  "target_contract": "contracts/JANUS_JSON_5D_DEEP_ANALYSIS_PROTOCOL-v1.0.json",
+  "mode": "DEEP_TRANSCEPTION_5D",
+  "requirements": {
+    "json_primary": true,
+    "five_axes_required": true,
+    "hrain_structural_projection_required": true,
+    "inaihr_associative_projection_required": true,
+    "demihead_disagreement_preservation_required": true,
+    "non_tail_graph_patch_supported": true,
+    "source_text_immutable": true,
+    "recovered_at_origin_before_answer": true,
+    "raw_private_chain_of_thought_storage": false
+  },
+  "prediction_boundary": {
+    "deep_analysis_graph_may_enter_semantic_memory": true,
+    "associative_candidate_may_train_predictive_head": false,
+    "resolved_real_outcome_required_for_predictive_label": true
+  }
+}
