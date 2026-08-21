@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shlex
 import sys
 import time
@@ -22,6 +21,7 @@ def process(engine: AdvancingSpiralDialogueEngine, item: dict[str, Any], args: a
         session_id=item.get("session_id"),
         intent_authority=str(item.get("intent_authority", args.intent_authority)),
         demihead_decision=str(item.get("demihead_decision", args.demihead_decision)).upper(),
+        demihead_arbitration_receipt=item.get("demihead_arbitration_receipt"),
         public_content=bool(item.get("public_content", args.public_content)),
     )
 
@@ -50,16 +50,29 @@ def _load_cursor(path: Path) -> dict[str, Any]:
     return value
 
 
-def _incremental_records(inbox: Path, cursor: dict[str, Any], max_chunk_bytes: int = 4 * 1024 * 1024):
+def _discard_to_record_boundary(handle: Any) -> tuple[int, bool]:
+    """Discard the rest of an oversized JSONL record without interpreting fragments."""
+    while True:
+        chunk = handle.readline(64 * 1024)
+        if not chunk:
+            return handle.tell(), False
+        if chunk.endswith(b"\n"):
+            return handle.tell(), True
+
+
+def _incremental_records(inbox: Path, cursor: dict[str, Any], max_record_bytes: int = 4 * 1024 * 1024):
     """Yield newline-terminated inbox records without rereading historical content.
 
     Replacement or truncation becomes a new baseline rather than replaying stale-looking
-    input as a fresh trigger. Partial final records remain pending until a newline arrives.
+    input as a fresh trigger. A partial normal-sized tail waits for a newline. An oversized
+    record is rejected as one unit and discarded through its boundary so it cannot pin the
+    daemon forever or be interpreted later as command fragments.
     """
     stat = inbox.stat()
     identity = _file_identity(inbox)
     previous_identity = str(cursor.get("file_identity") or "")
     offset = max(0, int(cursor.get("offset_bytes") or 0))
+    limit = max(1, int(max_record_bytes))
 
     if (previous_identity and previous_identity != identity) or stat.st_size < offset:
         cursor["offset_bytes"] = stat.st_size
@@ -75,20 +88,34 @@ def _incremental_records(inbox: Path, cursor: dict[str, Any], max_chunk_bytes: i
         handle.seek(offset)
         while True:
             start = handle.tell()
-            chunk = handle.read(max(1, int(max_chunk_bytes)))
-            if not chunk:
+            raw = handle.readline(limit + 1)
+            if not raw:
                 break
-            last_newline = chunk.rfind(b"\n")
-            if last_newline < 0:
-                # Do not advance over an incomplete record. A very large line therefore
-                # remains pending instead of being silently truncated into a command.
+
+            newline_terminated = raw.endswith(b"\n")
+            payload_length = len(raw.rstrip(b"\r\n"))
+            if payload_length > limit:
+                if not newline_terminated:
+                    end_offset, found_boundary = _discard_to_record_boundary(handle)
+                else:
+                    end_offset, found_boundary = handle.tell(), True
+                cursor["offset_bytes"] = int(end_offset)
+                cursor["last_rejection"] = {
+                    "reason": "INBOX_RECORD_EXCEEDS_MAX_BYTES",
+                    "start_offset_bytes": int(start),
+                    "end_offset_bytes": int(end_offset),
+                    "max_record_bytes": limit,
+                    "newline_boundary_found": found_boundary,
+                }
+                continue
+
+            if not newline_terminated:
+                # Small incomplete tail: preserve it for the next poll instead of
+                # interpreting an incomplete JSON command.
+                handle.seek(start)
                 break
-            complete = chunk[: last_newline + 1]
-            consumed = 0
-            for raw in complete.splitlines(keepends=True):
-                consumed += len(raw)
-                yield start + consumed, raw.rstrip(b"\r\n")
-            handle.seek(start + last_newline + 1)
+
+            yield handle.tell(), raw.rstrip(b"\r\n")
 
     cursor["file_identity"] = identity
 
@@ -107,7 +134,14 @@ def main() -> None:
     parser.add_argument("--daemon", action="store_true")
     parser.add_argument("--inbox", default="state/aura_spi_inbox.jsonl")
     parser.add_argument("--interval", type=float, default=5.0)
-    parser.add_argument("--max-inbox-chunk-bytes", type=int, default=4 * 1024 * 1024)
+    parser.add_argument(
+        "--max-inbox-record-bytes",
+        "--max-inbox-chunk-bytes",
+        dest="max_inbox_record_bytes",
+        type=int,
+        default=4 * 1024 * 1024,
+        help="Maximum accepted JSONL record size. The old --max-inbox-chunk-bytes name remains as a compatibility alias.",
+    )
     args = parser.parse_args()
 
     command = shlex.split(args.aura_peer) if args.aura_peer else None
@@ -148,12 +182,13 @@ def main() -> None:
         "position_may_repeat_state_must_advance": True,
         "return_is_reset": False,
         "inbox_polling": "INCREMENTAL_BYTE_CURSOR",
+        "max_inbox_record_bytes": max(1, int(args.max_inbox_record_bytes)),
         "rule": "CONTINUOUS != INFINITE_SELF_CHAT",
     }, ensure_ascii=False))
 
     while True:
         processed_any = False
-        for next_offset, raw_bytes in _incremental_records(inbox, cursor, args.max_inbox_chunk_bytes) or ():
+        for next_offset, raw_bytes in _incremental_records(inbox, cursor, args.max_inbox_record_bytes) or ():
             processed_any = True
             raw = raw_bytes.decode("utf-8", errors="replace").strip()
             cursor["offset_bytes"] = int(next_offset)
@@ -173,6 +208,8 @@ def main() -> None:
                     "offset_bytes": int(next_offset),
                 }, ensure_ascii=False), file=sys.stderr)
 
+        # Persist cursor changes caused by replacement/truncation or oversized record
+        # rejection even when no valid event was yielded.
         if not processed_any:
             _atomic_json_write(cursor_path, cursor)
         time.sleep(max(1.0, args.interval))
