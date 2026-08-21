@@ -4,9 +4,12 @@
   "home_repository": "Hawkar-usls/Hawkar-usls",
   "spec": "spec/JANUS_AURA_HABITAT_SPIRAL-v1.0.json",
   "runtime": "run_aura_habitat_spiral.py",
+  "preferred_operation": "SPIRAL_STEP",
   "aura": {
     "repository": "Hawkar-usls/aura-oracle-tg",
-    "peer_tool": "tools/aura_habitat_spiral_peer_v1.py",
+    "primary_peer_tool": "tools/aura_habitat_spiral_peer_v2.py",
+    "deep_engine": "tools/aura_5d_spiral_v2.py",
+    "legacy_fallback_peer_tool": "tools/aura_habitat_spiral_peer_v1.py",
     "reciprocal_link": ".janus/JANUS_SPI_SPIRAL_LINK.json"
   },
   "demihead": {
@@ -21,7 +24,13 @@
     "state_gate": "habitat/state/AURA_SPI_SPIRAL_GATE_v1.0.json",
     "dialogue_manifest": "habitat/memory/reflections/AURA_SPI_DIALOGUE_MANIFEST_v1.0.json"
   },
-  "spiral": "ORIGIN_n -> DEMIHEAD_INTENT_n -> AURA_REFLECTION_n -> SPI_SEMANTIC_SYNTHESIS_n -> DEMIHEAD_ARBITRATION_n -> VERIFIED_RETURN_OR_REJECT_n -> ORIGIN_PRIME_(n+1)",
+  "spiral": "ORIGIN_n -> DEMIHEAD_INTENT_n -> AURA_5D_REFLECTION_n -> SPI_SEMANTIC_SYNTHESIS_n -> DEMIHEAD_ARBITRATION_n -> VERIFIED_RETURN_OR_HOLD_OR_REJECT_n -> ORIGIN_PRIME_(n+1)",
+  "state_semantics": {
+    "position_may_repeat": true,
+    "state_must_advance": true,
+    "return_is_reset": false,
+    "zero_state_delta": "HOLD_STALL_NO_PROMOTION"
+  },
   "rules": [
     "CONTINUOUS != INFINITE_SELF_CHAT",
     "AURA_OUTPUT != PREDICTIVE_GROUND_TRUTH",
@@ -29,7 +38,9 @@
     "MODEL_OUTPUT != EVIDENCE",
     "MEMORY != VERDICT_AUTHORITY",
     "PREDICTION != COMMAND",
-    "ORIGIN_PRIME_REQUIRES_VERIFIED_RETURN"
+    "ORIGIN_PRIME_REQUIRES_VERIFIED_RETURN",
+    "POSITION_MAY_REPEAT_BUT_STATE_MUST_ADVANCE",
+    "RETURN != RESET"
   ],
   "runtime_currently_running": false,
   "external_effect_authority": false,
