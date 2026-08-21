@@ -1,0 +1,19 @@
+{
+  "schema": "janus.unexplained_alignment.link.v1",
+  "repository": "Hawkar-usls/Hawkar-usls",
+  "canonical_principle": "Hawkar-usls/janus-meta-registry:data/JANUS-UNEXPLAINED-ALIGNMENT-PRINCIPLE-2026-08-21-v1.0.json",
+  "role": "SEMANTIC_PREDICTIVE_REASONING_ESCALATION",
+  "on_event": {
+    "interest_priority": "ELEVATED",
+    "analysis_mode": "DEEP_TRANSCEPTION_5D",
+    "prediction_probability_may_be_proposed": true,
+    "prediction_may_self_validate": false,
+    "requires_external_outcome_for_learning": true
+  },
+  "laws": [
+    "UNEXPLAINED_ALIGNMENT -> INCREASE_ATTENTION_NOT_TRUTH",
+    "PREDICTION != FUTURE_FACT",
+    "INSUFFICIENT_DATA != RANDOMNESS_PROVEN",
+    "INSUFFICIENT_DATA != CAUSALITY_PROVEN"
+  ]
+}
