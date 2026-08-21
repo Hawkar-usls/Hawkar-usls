@@ -1,23 +1,32 @@
 {
   "schema_id": "janus.aura_spi.habitat_spiral.v1",
-  "spec_id": "JANUS_AURA_HABITAT_SPIRAL_v1_0",
-  "status": "REFERENCE_IMPLEMENTATION_CONTRACT",
+  "spec_id": "JANUS_AURA_HABITAT_SPIRAL_v1_1",
+  "status": "REFERENCE_IMPLEMENTATION_CONTRACT_SPIRAL_MIGRATED",
   "created_at_local": "2026-08-21T01:43:00+03:00",
+  "updated_at_local": "2026-08-21T15:34:00+03:00",
   "home_repository": "Hawkar-usls/Hawkar-usls",
   "participants": {
     "JANUS_SPI": "semantic memory, evidence retrieval, frozen forecasting, resolved-outcome learning",
-    "AURA_ORACLE": "symbolic reflection, counterpoint and search-prioritization proposals only",
+    "AURA_ORACLE": "semantic/predictive reflection, 5D Reverse+Tranception analysis, information-gain questions and search-prioritization proposals without truth authority",
     "DEMIHEAD": "intent-bound arbitration and verified-return gate",
     "HABITAT": "continuity, append-preserving dialogue memory and repository constellation context"
   },
-  "canonical_spiral": "ORIGIN_n -> DEMIHEAD_INTENT_n -> AURA_REFLECTION_n -> SPI_SEMANTIC_SYNTHESIS_n -> SPI_FORECAST_OPTIONAL_n -> DEMIHEAD_ARBITRATION_n -> VERIFIED_RETURN_OR_REJECT_n -> ORIGIN_PRIME_(n+1)",
+  "canonical_spiral": "ORIGIN_n -> DEMIHEAD_INTENT_n -> AURA_5D_REFLECTION_n -> SPI_SEMANTIC_SYNTHESIS_n -> SPI_FORECAST_OPTIONAL_n -> DEMIHEAD_ARBITRATION_n -> VERIFIED_RETURN_OR_HOLD_OR_REJECT_n -> ORIGIN_PRIME_(n+1)",
+  "spiral_laws": [
+    "POSITION_MAY_REPEAT_BUT_STATE_MUST_ADVANCE",
+    "RETURN != RESET",
+    "SEMANTIC_CLOSED_RING_IS_NOT_A_VALID_PROMOTION",
+    "ZERO_STATE_DELTA -> HOLD_STALL_NO_PROMOTION",
+    "INFRASTRUCTURE_LOOP != COGNITIVE_RING"
+  ],
   "generation_semantics": {
     "generation_starts_on_fresh_trigger": true,
     "generation_must_preserve_intent_id": true,
     "generation_may_end": ["VERIFIED_RETURN", "HOLD", "REJECT"],
     "origin_prime_requires": "VERIFIED_RETURN",
     "return_is_reset": false,
-    "position_may_repeat_state_must_advance": true
+    "position_may_repeat_state_must_advance": true,
+    "same_position_same_state_is": "STALL_NOT_NEW_GENERATION_PROMOTION"
   },
   "continuous_runtime": {
     "entrypoint": "run_aura_habitat_spiral.py",
@@ -28,7 +37,8 @@
     "dialogue_ledger_default": "state/aura_spi_dialogue.sqlite3",
     "max_autonomous_turns_per_generation": 4,
     "fresh_trigger_classes": ["HUMAN", "HABITAT", "GITHUB", "MEASUREMENT", "RESOLVED_FORECAST"],
-    "rule": "CONTINUOUS != INFINITE_SELF_CHAT"
+    "rule": "CONTINUOUS != INFINITE_SELF_CHAT",
+    "safe_infrastructure_loops": ["HEARTBEAT", "POLL", "RETRY", "WATCHER"]
   },
   "dialogue_persistence": {
     "local_authority": "SQLite WAL + SHA-256 parent-linked turns",
@@ -41,18 +51,25 @@
   },
   "aura_contract": {
     "repository": "Hawkar-usls/aura-oracle-tg",
-    "peer_tool": "tools/aura_habitat_spiral_peer_v1.py",
+    "primary_peer_tool": "tools/aura_habitat_spiral_peer_v2.py",
+    "legacy_fallback_peer_tool": "tools/aura_habitat_spiral_peer_v1.py",
+    "deep_engine": "tools/aura_5d_spiral_v2.py",
     "output_schema": "janus.aura_spi.aura_reflection.v1",
-    "allowed_roles": ["MIRROR", "TENSION", "COUNTERPOINT", "NEXT_GATE"],
+    "allowed_roles": ["RECOVERED_AT_ORIGIN", "MIRROR", "HRAIN_STRUCTURAL", "INAIHR_ASSOCIATIVE", "TENSION", "COUNTERPOINT", "INFORMATION_GAIN", "NEXT_GATE"],
     "may_enter_semantic_memory": true,
+    "may_train_typing_predictor": true,
     "may_train_predictive_head": false,
     "may_resolve_forecast": false,
     "evidence_authority": false,
-    "prediction_authority": false
+    "prediction_authority": false,
+    "five_axis_analysis": ["D1_FORWARD", "D2_REVERSE", "D3_HRAIN_STRUCTURAL", "D4_INAIHR_ASSOCIATIVE", "D5_SPIRAL_ABSTRACTION"]
   },
   "spi_contract": {
     "repository": "Hawkar-usls/Hawkar-usls",
     "runtime_module": "src/janus_spi/aura_habitat_spiral.py",
+    "preferred_step_name": "spiral_step",
+    "legacy_method_alias": "cycle",
+    "legacy_method_alias_semantics": "BACKWARD_COMPATIBILITY_ONLY_NOT_RING_MODEL",
     "semantic_synthesis_is": "retrieval-backed proposal with source refs",
     "semantic_synthesis_is_evidence": false,
     "forecast_rule": "forecast must be frozen before target outcome",
@@ -66,7 +83,8 @@
     "intent_handoff_schema": "janus.goldprompt.intent_handoff.v1",
     "decision_set": ["PASS", "HOLD", "REJECT"],
     "authority_delta": 0,
-    "external_effect_authority": false
+    "external_effect_authority": false,
+    "must_reject_same_state_false_promotion": true
   },
   "habitat_contract": {
     "repository": "Hawkar-usls/Janus_Genesis",
@@ -74,24 +92,20 @@
     "state_gate": "habitat/state/AURA_SPI_SPIRAL_GATE_v1.0.json",
     "dialogue_manifest": "habitat/memory/reflections/AURA_SPI_DIALOGUE_MANIFEST_v1.0.json",
     "existing_repository_links_remain_reference_only": true,
-    "write_back_requires_explicit_human_authorization": true
+    "write_back_requires_explicit_human_authorization": true,
+    "must_preserve_generation_history": true
   },
   "turn_envelope": {
-    "required_fields": [
-      "schema", "session_id", "generation", "stage", "speaker", "recipient",
-      "intent_id", "created_at", "text", "payload", "parent_hash", "turn_hash"
-    ],
-    "stages": [
-      "ORIGIN", "DEMIHEAD_INTENT", "AURA_REFLECTION", "SPI_SEMANTIC_SYNTHESIS",
-      "SPI_FORECAST_OPTIONAL", "DEMIHEAD_ARBITRATION", "VERIFIED_RETURN", "HOLD", "REJECT", "ORIGIN_PRIME"
-    ],
+    "required_fields": ["schema", "session_id", "generation", "stage", "speaker", "recipient", "intent_id", "created_at", "text", "payload", "parent_hash", "turn_hash"],
+    "stages": ["ORIGIN", "DEMIHEAD_INTENT", "AURA_REFLECTION", "SPI_SEMANTIC_SYNTHESIS", "SPI_FORECAST_OPTIONAL", "DEMIHEAD_ARBITRATION", "VERIFIED_RETURN", "HOLD", "REJECT", "ORIGIN_PRIME"],
     "hash": "sha256(canonical_json(turn_without_turn_hash))"
   },
   "repetition_guard": {
     "same_content_hash_twice_in_generation": "STOP_AND_HOLD",
     "same_speaker_without_new_external_input": "NO_AUTOMATIC_REPLY_CHAIN",
     "max_turns": 4,
-    "purpose": "prevent closed-loop self-reinforcement and synthetic certainty"
+    "purpose": "prevent closed-loop self-reinforcement and synthetic certainty",
+    "does_not_forbid": ["safe heartbeat", "polling", "retry", "new generation after fresh external state delta"]
   },
   "scientific_firewall": [
     "AURA_OUTPUT != PREDICTIVE_GROUND_TRUTH",
@@ -102,8 +116,10 @@
     "ASSOCIATION != EVIDENCE",
     "MEMORY != VERDICT_AUTHORITY",
     "PREDICTION != COMMAND",
-    "CONTINUOUS_DIALOGUE != CONSCIOUSNESS"
+    "CONTINUOUS_DIALOGUE != CONSCIOUSNESS",
+    "RETURN != RESET",
+    "POSITION_MAY_REPEAT_BUT_STATE_MUST_ADVANCE"
   ],
-  "promotion_rule": "FRESH_TRIGGER + INTENT_BINDING + SOURCE_PROVENANCE + DEMIHEAD_PASS = VERIFIED_RETURN_CANDIDATE; predictive learning still requires an independently observed resolved outcome",
+  "promotion_rule": "FRESH_TRIGGER + INTENT_BINDING + SOURCE_PROVENANCE + NONZERO_STATE_DELTA + DEMIHEAD_PASS = VERIFIED_RETURN_CANDIDATE; predictive learning still requires an independently observed resolved outcome",
   "runtime_status_rule": "CODE_PRESENT != LIVE_DAEMON_RUNNING"
 }
