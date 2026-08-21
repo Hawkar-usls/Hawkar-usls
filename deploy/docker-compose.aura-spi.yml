@@ -12,7 +12,7 @@ services:
       - --state-dir
       - /state
       - --aura-peer
-      - python /aura/tools/aura_habitat_spiral_peer_v1.py
+      - python /aura/tools/aura_habitat_spiral_peer_v2.py
       - --interval
       - "5"
       - --demihead-decision
@@ -23,6 +23,8 @@ services:
       - ../../aura-oracle-tg:/aura:ro
     environment:
       PYTHONUNBUFFERED: "1"
+      JANUS_SPIRAL_SEMANTICS: "STATE_n->WORK_n->RETURN_n->STATE_PRIME_(n+1)"
+      JANUS_RETURN_IS_RESET: "false"
     read_only: false
     security_opt:
       - no-new-privileges:true
@@ -32,5 +34,7 @@ services:
 #   Hawkar-usls/Janus_Genesis
 #   Hawkar-usls/aura-oracle-tg
 #
+# The service uses Aura v2/5D and the preferred SPIRAL_STEP runtime path.
+# Heartbeat/polling remain technical loops; cognitive state is not reset on return.
 # This service does not push GitHub and does not grant external-effect authority.
 # DemiHead decision defaults to HOLD until an explicit verified arbiter adapter is supplied.
