@@ -13,10 +13,14 @@ RECONCILABLE_TRANSPORT_TERMINALS = {
     "TRANSPORT_SENT_AWAITING_ACK",
     "TRANSPORT_OUTCOME_UNDETERMINED",
 }
+STRUCTURALLY_BOUND_TERMINALS = {
+    "ACK_STRUCTURALLY_BOUND_SOURCE_UNVERIFIED_NO_EXECUTION",
+    "ACK_REJECTION_STRUCTURALLY_BOUND_SOURCE_UNVERIFIED_NO_EXECUTION",
+}
 
 
 class AckReconciliationLedger:
-    """Append-only hash-chained ledger for receiver ACK binding attempts."""
+    """Append-only hash-chained ledger for offline ACK structural binding attempts."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -61,11 +65,11 @@ class AckReconciliationLedger:
             previous = claimed
         return True
 
-    def previously_bound(self, reconciliation_id: str) -> bool:
+    def previously_structurally_bound(self, reconciliation_id: str) -> bool:
         for row in self.read():
             if row.get("reconciliation_id") != reconciliation_id:
                 continue
-            if row.get("terminal") in {"ACK_BOUND_NO_EXECUTION", "ACK_BOUND_REJECTED_NO_EXECUTION"}:
+            if row.get("terminal") in STRUCTURALLY_BOUND_TERMINALS:
                 return True
         return False
 
@@ -92,17 +96,20 @@ def verify_transport_receipt(receipt: Dict[str, Any]) -> bool:
 
 
 def verify_receiver_ack(ack: Dict[str, Any]) -> bool:
+    """Verify ACK self-integrity and schema only; this does NOT authenticate its source."""
     if not verify_sealed_object(ack, "ack_hash"):
         return False
     return ack.get("schema") == ACK_SCHEMA
 
 
 class JanusAckReconciler:
-    """Offline fail-closed binding of a receiver ACK to exact transport lineage.
+    """Offline fail-closed structural binding of an ACK to exact transport lineage.
 
-    Reconciliation proves only that a sealed ACK matches a sealed dispatch packet
-    and a sealed transport receipt. It never upgrades delivery acknowledgement to
-    execution, evidence, claim authority, or external-effect authority.
+    The receiver ACK currently carries a canonical self-hash, not a source
+    signature. Therefore v0.5 may prove internal object integrity and exact
+    packet/transport matching, but it may not claim that Janus-Demiurge actually
+    emitted the ACK. Source authenticity and delivery confirmation remain open
+    until a separate GitHub Actions artifact provenance gate verifies origin.
     """
 
     def __init__(self, state_dir: str | Path = "state/activator") -> None:
@@ -130,7 +137,7 @@ class JanusAckReconciler:
         *,
         terminal: str,
         reasons: list[str],
-        delivery_ack_valid: bool,
+        ack_integrity_valid: bool,
     ) -> Dict[str, Any]:
         receipt = {
             "schema": "janus.activator.ack_reconciliation_receipt.v0.5",
@@ -144,7 +151,11 @@ class JanusAckReconciler:
             "transport_terminal_before": str(transport.get("terminal") or "UNKNOWN"),
             "ack_terminal": str(ack.get("terminal") or "UNKNOWN"),
             "ack_accepted": ack.get("accepted") is True,
-            "delivery_ack_valid": bool(delivery_ack_valid),
+            "ack_integrity_valid": bool(ack_integrity_valid),
+            "ack_source_authenticity": "UNVERIFIED_OFFLINE",
+            "ack_source_authenticated": False,
+            "delivery_confirmed": False,
+            "transport_ambiguity_resolved": False,
             "execution_authorized": False,
             "execution_performed": False,
             "claim_authority_granted": False,
@@ -174,7 +185,7 @@ class JanusAckReconciler:
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_INVALID_PACKET",
                 reasons=["Dispatch packet integrity or deterministic packet identity failed."],
-                delivery_ack_valid=False,
+                ack_integrity_valid=False,
             )
 
         if not verify_transport_receipt(transport_receipt):
@@ -184,7 +195,7 @@ class JanusAckReconciler:
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_INVALID_TRANSPORT_RECEIPT",
                 reasons=["Transport receipt integrity, schema, or authority ceiling failed verification."],
-                delivery_ack_valid=False,
+                ack_integrity_valid=False,
             )
 
         if transport_receipt.get("terminal") not in RECONCILABLE_TRANSPORT_TERMINALS:
@@ -193,8 +204,8 @@ class JanusAckReconciler:
                 transport_receipt,
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_TRANSPORT_NOT_RECONCILABLE",
-                reasons=["Only transport states that crossed the network boundary may be resolved by a receiver ACK."],
-                delivery_ack_valid=False,
+                reasons=["Only transport states that crossed the network boundary are structurally ACK-reconcilable."],
+                ack_integrity_valid=False,
             )
 
         if (
@@ -207,7 +218,7 @@ class JanusAckReconciler:
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_PACKET_MISMATCH",
                 reasons=["Transport receipt does not bind to the supplied dispatch packet id and hash."],
-                delivery_ack_valid=False,
+                ack_integrity_valid=False,
             )
 
         if not verify_receiver_ack(ack):
@@ -216,8 +227,8 @@ class JanusAckReconciler:
                 transport_receipt,
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_INVALID_ACK",
-                reasons=["Receiver ACK hash or schema failed verification."],
-                delivery_ack_valid=False,
+                reasons=["Receiver ACK self-hash or schema failed verification."],
+                ack_integrity_valid=False,
             )
 
         if ack.get("packet_id") != packet.get("packet_id") or ack.get("packet_hash") != packet.get("packet_hash"):
@@ -226,8 +237,8 @@ class JanusAckReconciler:
                 transport_receipt,
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_PACKET_MISMATCH",
-                reasons=["Receiver ACK does not bind to the exact dispatch packet id and hash."],
-                delivery_ack_valid=False,
+                reasons=["ACK does not bind to the exact dispatch packet id and hash."],
+                ack_integrity_valid=True,
             )
 
         if (
@@ -242,36 +253,37 @@ class JanusAckReconciler:
                 ack,
                 terminal="ACK_RECONCILIATION_BLOCKED_AUTHORITY_ESCALATION",
                 reasons=["ACK attempted to escalate execution, claim, or external-effect authority."],
-                delivery_ack_valid=False,
+                ack_integrity_valid=True,
             )
 
         reconciliation_id = self._reconciliation_id(packet, transport_receipt, ack)
-        if self.ledger.previously_bound(reconciliation_id):
+        if self.ledger.previously_structurally_bound(reconciliation_id):
             return self._seal(
                 packet,
                 transport_receipt,
                 ack,
-                terminal="ACK_ALREADY_RECONCILED",
-                reasons=["This exact packet/transport/ACK tuple was already bound; no second delivery-state transition occurred."],
-                delivery_ack_valid=True,
+                terminal="ACK_ALREADY_STRUCTURALLY_RECONCILED",
+                reasons=["This exact packet/transport/ACK tuple was already structurally bound; no second state transition occurred."],
+                ack_integrity_valid=True,
             )
 
         accepted = ack.get("accepted")
         ack_terminal = str(ack.get("terminal") or "")
         if accepted is True and ack_terminal == "ACK_ACCEPTED_NO_EXECUTION":
             reasons = [
-                "Receiver ACK integrity verified and binds to the exact packet and transport lineage.",
-                "Delivery acknowledgement is accepted, but no target execution is authorized or inferred.",
+                "ACK self-integrity verified and its packet id/hash structurally match the exact dispatch and transport lineage.",
+                "ACK source authenticity remains UNVERIFIED_OFFLINE because a self-hash does not prove which system emitted the object.",
+                "Delivery, target execution, evidence authority, claim authority, and external-effect authority are not inferred.",
             ]
             if transport_receipt.get("terminal") == "TRANSPORT_OUTCOME_UNDETERMINED":
-                reasons.append("A later valid ACK resolves the prior transport-delivery ambiguity without replaying the packet.")
+                reasons.append("The candidate ACK is consistent with a resolution of transport ambiguity, but the ambiguity remains unresolved until ACK source provenance is independently verified.")
             return self._seal(
                 packet,
                 transport_receipt,
                 ack,
-                terminal="ACK_BOUND_NO_EXECUTION",
+                terminal="ACK_STRUCTURALLY_BOUND_SOURCE_UNVERIFIED_NO_EXECUTION",
                 reasons=reasons,
-                delivery_ack_valid=True,
+                ack_integrity_valid=True,
             )
 
         if accepted is False and ack_terminal.startswith("ACK_REJECTED_"):
@@ -279,12 +291,13 @@ class JanusAckReconciler:
                 packet,
                 transport_receipt,
                 ack,
-                terminal="ACK_BOUND_REJECTED_NO_EXECUTION",
+                terminal="ACK_REJECTION_STRUCTURALLY_BOUND_SOURCE_UNVERIFIED_NO_EXECUTION",
                 reasons=[
-                    "Receiver rejection is cryptographically bound to the exact packet and preserved in lineage.",
-                    "Rejected delivery does not authorize retry, execution, evidence promotion, or history deletion by itself.",
+                    "ACK rejection self-integrity and packet binding are structurally valid and preserved in lineage.",
+                    "ACK source authenticity remains UNVERIFIED_OFFLINE; rejection is not promoted to authenticated receiver evidence.",
+                    "The candidate rejection does not authorize replay, execution, evidence promotion, or history deletion by itself.",
                 ],
-                delivery_ack_valid=True,
+                ack_integrity_valid=True,
             )
 
         return self._seal(
@@ -293,7 +306,7 @@ class JanusAckReconciler:
             ack,
             terminal="ACK_RECONCILIATION_BLOCKED_INCONSISTENT_ACK_STATE",
             reasons=["ACK accepted flag and receiver terminal are internally inconsistent."],
-            delivery_ack_valid=False,
+            ack_integrity_valid=True,
         )
 
 
