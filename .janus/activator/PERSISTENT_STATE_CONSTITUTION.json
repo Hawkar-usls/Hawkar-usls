@@ -1,6 +1,6 @@
 {
-  "schema": "janus.activator.persistent_state_constitution.v0.6.2",
-  "status": "PERSISTENT_HOME_STATE_GATE",
+  "schema": "janus.activator.persistent_state_constitution.v0.7",
+  "status": "PERSISTENT_HOME_STATE_WITH_EXECUTION_GRANT_LINEAGE",
   "architecture_branch": "main",
   "living_state_branch": "janus/activator-state",
   "state_root": "state/activator",
@@ -16,6 +16,8 @@
     "SELF_OUTPUT != FRESH_TRIGGER",
     "CORRUPT_STATE != REPLAY_PERMISSION",
     "CORRUPT_LOCAL_LINEAGE_FAILS_CLOSED",
+    "EXECUTION_GRANT_LINEAGE_IS_PART_OF_HOME_HEALTH",
+    "EXECUTION_GRANT != TARGET_EXECUTION",
     "STATE_SUMMARY != VERDICT_AUTHORITY",
     "HEARTH_PASS != WORLD_TRUTH",
     "PERSISTENCE != CONSCIOUSNESS",
@@ -45,6 +47,7 @@
     "ack_reconciliation_ledger.jsonl",
     "ack_provenance_ledger.jsonl",
     "ack_authenticated_finalization_ledger.jsonl",
+    "execution_grant_ledger.jsonl",
     "hearth_ledger.jsonl"
   ],
   "mutable_summaries": [
@@ -59,6 +62,7 @@
     "cognition_authorized_by_heartbeat": false,
     "dispatch_authorized_by_heartbeat": false,
     "target_execution_authorized_by_heartbeat": false,
+    "execution_grant_can_authorize_only_typed_p12_operation": true,
     "external_effect_authorized": false,
     "physical_runtime_effect_authorized": false,
     "claim_authority_granted": false,

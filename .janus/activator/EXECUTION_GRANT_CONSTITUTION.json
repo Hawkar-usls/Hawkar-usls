@@ -1,0 +1,46 @@
+{
+  "schema": "janus.activator.execution_grant_constitution.v0.7",
+  "status": "BOUNDED_TARGET_EXECUTION_GRANT_GATE",
+  "scope": "AUTHENTICATED_DELIVERY_TO_EXPLICIT_READ_ONLY_TARGET_EXECUTION_AUTHORIZATION",
+  "target": "Hawkar-usls/Janus-Demiurge",
+  "operation": "READ_ONLY_ORIENTATION_SNAPSHOT",
+  "risk_class": "R0_INTERNAL_READ_ONLY_ORIENTATION",
+  "execution_scope": "TARGET_REPOSITORY_LOCAL_READ_ONLY_METADATA",
+  "laws": [
+    "DELIVERY_CONFIRMED != EXECUTION_AUTHORIZED",
+    "EXECUTION_GRANT != COMMAND_AUTHORITY",
+    "EXECUTION_GRANT != CLAIM_AUTHORITY",
+    "EXECUTION_GRANT != EXTERNAL_EFFECT_AUTHORITY",
+    "EXECUTION_GRANT_REQUIRES_AUTHENTICATED_DELIVERY_FINALIZATION",
+    "FINAL_RECEIPT_MEMBERSHIP != TRUSTED_LINEAGE_IF_ANY_PARENT_CHAIN_INVALID",
+    "EXECUTION_GRANT_REQUIRES_VALID_DISPATCH_PACKET_AND_AUTHORIZED_DISPATCH_LEDGER_BINDING",
+    "EXECUTION_GRANT_REQUIRES_VALID_TRANSPORT_LEDGER_BINDING",
+    "EXECUTION_GRANT_REQUIRES_VALID_STRUCTURAL_RECONCILIATION_BINDING",
+    "EXECUTION_GRANT_REQUIRES_VALID_ACK_PROVENANCE_BINDING",
+    "EXECUTION_GRANT_REQUIRES_VALID_FINALIZATION_LEDGER_BINDING",
+    "REJECTED_ACK != EXECUTION_GRANT",
+    "DUPLICATE_FINALIZATION != SECOND_EXECUTION_GRANT",
+    "READ_ONLY_ORIENTATION_SNAPSHOT != RESEARCH_RESULT",
+    "READ_ONLY_ORIENTATION_SNAPSHOT != SCIENTIFIC_EVIDENCE"
+  ],
+  "grant_authority": {
+    "target_execution_authorized": true,
+    "target_execution_operation": "READ_ONLY_ORIENTATION_SNAPSHOT",
+    "repository_write_authorized": false,
+    "network_access_authorized": false,
+    "model_access_authorized": false,
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  },
+  "eligible_parent_terminal": "ACK_AUTHENTICATED_DELIVERY_CONFIRMED_NO_EXECUTION",
+  "ineligible_parent_terminals": [
+    "ACK_AUTHENTICATED_REJECTION_CONFIRMED_NO_EXECUTION",
+    "ACK_AUTHENTICATED_FINALIZATION_ALREADY_RECORDED"
+  ],
+  "grant_terminal": "EXECUTION_GRANT_ISSUED_READ_ONLY_ORIENTATION",
+  "duplicate_policy": "RETURN_EXACT_EXISTING_GRANT_NO_SECOND_GRANT",
+  "future_task_payloads": "OUT_OF_SCOPE_UNTIL_SEPARATE_TYPED_WORK_ENVELOPE_GATE"
+}

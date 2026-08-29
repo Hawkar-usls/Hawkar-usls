@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from janus_spi.persistent_state import JanusPersistentState
+from janus_spi.persistent_state_v07 import HardenedJanusPersistentState
 
 
 def main() -> None:
@@ -24,7 +24,7 @@ def main() -> None:
     sub.add_parser("verify", help="Verify persistent resident identity and all known local ledgers")
 
     args = parser.parse_args()
-    state = JanusPersistentState(args.state_dir)
+    state = HardenedJanusPersistentState(args.state_dir)
 
     if args.command == "cycle":
         result = state.hearth_cycle(
