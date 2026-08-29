@@ -1,42 +1,103 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "JANUS_SEMANTIC_TO_MECHANIC/v0.1",
-  "title": "JANUS semantic-to-mechanical analogue candidate",
+  "$id": "JANUS_SEMANTIC_TO_MECHANIC/v0.2",
+  "title": "JANUS source-bound semantic-to-mechanical analogue candidate",
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "candidate_id",
     "semantic_source",
     "semantic_principle",
     "mechanical_analogue",
-    "topa_verdict",
+    "topa_gate",
+    "implementation",
     "epistemic_status"
   ],
   "properties": {
-    "semantic_source": {"type": "string"},
-    "semantic_principle": {"type": "string"},
+    "candidate_id": {"type": "string", "minLength": 8},
+    "semantic_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "path", "ref", "artifact_id"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+        "path": {"type": "string", "minLength": 1},
+        "ref": {"type": "string", "minLength": 1},
+        "artifact_id": {"type": "string", "minLength": 1},
+        "blob_sha": {"type": ["string", "null"], "minLength": 7}
+      }
+    },
+    "semantic_principle": {"type": "string", "minLength": 3},
     "mechanical_analogue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["input", "state", "transition", "precondition", "action", "output", "failure_state", "receipt"],
+      "required": ["input", "state", "transition", "precondition", "action", "output", "failure_state", "receipt", "falsifier"],
       "properties": {
-        "input": {},
-        "state": {},
-        "transition": {},
-        "precondition": {},
-        "action": {},
-        "output": {},
-        "failure_state": {},
-        "receipt": {}
+        "input": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "state": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "transition": {"type": "string", "minLength": 3},
+        "precondition": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "action": {"type": "string", "minLength": 3},
+        "output": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "failure_state": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "receipt": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "falsifier": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
       }
     },
     "demiurge_analogue": {
-      "type": ["object", "null"]
+      "type": ["object", "null"],
+      "properties": {
+        "repository": {"const": "Hawkar-usls/Janus-Demiurge"},
+        "paths": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "reuse_mode": {"enum": ["DIRECT_PRIMITIVE_CANDIDATE", "ADAPT", "OPTIONAL_DOWNSTREAM", "NONE"]}
+      },
+      "required": ["repository", "paths", "reuse_mode"],
+      "additionalProperties": false
     },
-    "topa_verdict": {
-      "enum": ["PASS", "REJECT_METAPHOR_ONLY", "OPEN", "UNKNOWN_RESOURCE_LIMIT"]
+    "topa_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "protocol_version", "verdict", "receipt"],
+      "properties": {
+        "protocol": {"type": "string", "minLength": 1},
+        "protocol_version": {"type": "string", "minLength": 1},
+        "verdict": {"enum": ["PASS", "REJECT_METAPHOR_ONLY", "OPEN", "UNKNOWN_RESOURCE_LIMIT", "NOT_RUN"]},
+        "receipt": {"type": ["string", "null"], "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"verdict": {"const": "PASS"}}},
+          "then": {"properties": {"receipt": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "repository", "paths", "tested_commit", "test_receipt"],
+      "properties": {
+        "status": {"enum": ["NOT_IMPLEMENTED", "IMPLEMENTATION_CANDIDATE", "IMPLEMENTED_UNTESTED", "IMPLEMENTED_TESTED", "REJECTED"]},
+        "repository": {"type": ["string", "null"]},
+        "paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "tested_commit": {"type": ["string", "null"], "minLength": 7},
+        "test_receipt": {"type": ["string", "null"], "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "IMPLEMENTED_TESTED"}}},
+          "then": {
+            "properties": {
+              "repository": {"type": "string", "minLength": 3},
+              "paths": {"minItems": 1},
+              "tested_commit": {"type": "string", "minLength": 7},
+              "test_receipt": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      ]
     },
     "epistemic_status": {
-      "enum": ["MECHANICAL_ANALOGUE_NOT_YET_IMPLEMENTED", "IMPLEMENTATION_CANDIDATE", "IMPLEMENTED", "REJECTED"]
+      "enum": ["SEMANTIC_ONLY", "MECHANICAL_ANALOGUE_CANDIDATE", "TOPA_ADMITTED", "IMPLEMENTED_WITHIN_TEST_SCOPE", "REJECTED", "UNRESOLVED"]
     }
   }
 }
