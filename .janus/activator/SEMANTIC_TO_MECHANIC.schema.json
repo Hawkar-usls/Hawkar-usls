@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "JANUS_SEMANTIC_TO_MECHANIC/v0.1",
+  "title": "JANUS semantic-to-mechanical analogue candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "semantic_source",
+    "semantic_principle",
+    "mechanical_analogue",
+    "topa_verdict",
+    "epistemic_status"
+  ],
+  "properties": {
+    "semantic_source": {"type": "string"},
+    "semantic_principle": {"type": "string"},
+    "mechanical_analogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "state", "transition", "precondition", "action", "output", "failure_state", "receipt"],
+      "properties": {
+        "input": {},
+        "state": {},
+        "transition": {},
+        "precondition": {},
+        "action": {},
+        "output": {},
+        "failure_state": {},
+        "receipt": {}
+      }
+    },
+    "demiurge_analogue": {
+      "type": ["object", "null"]
+    },
+    "topa_verdict": {
+      "enum": ["PASS", "REJECT_METAPHOR_ONLY", "OPEN", "UNKNOWN_RESOURCE_LIMIT"]
+    },
+    "epistemic_status": {
+      "enum": ["MECHANICAL_ANALOGUE_NOT_YET_IMPLEMENTED", "IMPLEMENTATION_CANDIDATE", "IMPLEMENTED", "REJECTED"]
+    }
+  }
+}
