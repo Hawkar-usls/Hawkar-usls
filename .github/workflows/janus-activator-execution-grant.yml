@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: janus-activator-execution-grant-${{ github.event_name }}
+  group: janus-activator-state-writer
   cancel-in-progress: false
 
 jobs:
