@@ -58,4 +58,6 @@ jobs:
           json.loads(Path('config/JANUS_INTELLIGENCE_STEP_POLICY-v1.0.json').read_text(encoding='utf-8'))
           PY
       - name: Test
+        env:
+          PYTHONPATH: src
         run: pytest -q
