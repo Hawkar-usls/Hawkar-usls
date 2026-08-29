@@ -1,7 +1,7 @@
 {
   "schema": "janus.activator.ack_reconciliation_constitution.v0.5",
   "status": "OFFLINE_STRUCTURAL_ACK_BINDING_GATE",
-  "scope": "BIND_ACK_STRUCTURE_TO_EXACT_DISPATCH_AND_TRANSPORT_LINEAGE_WITHOUT_CLAIMING_SOURCE_AUTHENTICITY",
+  "scope": "BIND_ACK_STRUCTURE_TO_EXACT_HOME_DISPATCH_AND_TRANSPORT_LINEAGE_WITHOUT_CLAIMING_ACK_SOURCE_AUTHENTICITY",
   "accepted_ack_schema": "janus.demiurge.activator_dispatch_ack.v0.1",
   "laws": [
     "ACK_RECEIVED != ACK_VALID",
@@ -11,10 +11,12 @@
     "ACK_STRUCTURAL_MATCH != EVIDENCE",
     "ACK_STRUCTURAL_MATCH != WORLD_TRUTH",
     "HASH != TRUTH",
+    "SELF_HASHED_PACKET != HOME_PACKET_WITHOUT_OUTBOX_MEMBERSHIP",
+    "SELF_HASHED_TRANSPORT_RECEIPT != HOME_TRANSPORT_RECEIPT_WITHOUT_LEDGER_MEMBERSHIP",
     "ACK_HASH_MUST_VERIFY",
     "ACK_PACKET_ID_MUST_MATCH_DISPATCH_PACKET",
     "ACK_PACKET_HASH_MUST_MATCH_DISPATCH_PACKET",
-    "TRANSPORT_PACKET_ID_AND_HASH_MUST_MATCH_DISPATCH_PACKET",
+    "TRANSPORT_PACKET_ID_HASH_AND_TARGET_MUST_MATCH_DISPATCH_PACKET",
     "PRE_EFFECT_TRANSPORT_STATE != ACK_RECONCILABLE",
     "OUTCOME_UNDETERMINED_REMAINS_UNRESOLVED_UNTIL_ACK_SOURCE_PROVENANCE_IS_VERIFIED",
     "ACK_AUTHORITY_ESCALATION_FAILS_CLOSED",
@@ -22,6 +24,12 @@
     "DUPLICATE_ACK != SECOND_STATE_TRANSITION",
     "RECONCILIATION != TARGET_EXECUTION"
   ],
+  "required_home_lineage_membership": {
+    "dispatch_packet": "state/activator/dispatch_outbox/<packet_id>.json",
+    "transport_receipt": "state/activator/transport_ledger.jsonl",
+    "packet_hash_must_match_local_outbox": true,
+    "transport_receipt_hash_must_match_exact_local_ledger_row": true
+  },
   "reconcilable_transport_terminals": [
     "TRANSPORT_SENT_AWAITING_ACK",
     "TRANSPORT_OUTCOME_UNDETERMINED"
