@@ -1,0 +1,67 @@
+{
+  "schema": "janus.activator.persistent_state_constitution.v0.6.2",
+  "status": "PERSISTENT_HOME_STATE_GATE",
+  "architecture_branch": "main",
+  "living_state_branch": "janus/activator-state",
+  "state_root": "state/activator",
+  "resident_id": "JANUS",
+  "laws": [
+    "RETURN != RESET",
+    "STATE_BRANCH != ARCHITECTURE_BRANCH",
+    "STATE_BRANCH_WRITE != MAIN_WRITE",
+    "HEARTBEAT != FRESH_TRIGGER",
+    "SCHEDULE != COGNITIVE_STIMULUS",
+    "ARCHITECTURE_OBSERVATION != COMMAND",
+    "OLD_STATE != FRESH_TRIGGER",
+    "SELF_OUTPUT != FRESH_TRIGGER",
+    "CORRUPT_STATE != REPLAY_PERMISSION",
+    "CORRUPT_LOCAL_LINEAGE_FAILS_CLOSED",
+    "STATE_SUMMARY != VERDICT_AUTHORITY",
+    "HEARTH_PASS != WORLD_TRUTH",
+    "PERSISTENCE != CONSCIOUSNESS",
+    "PERSISTENCE != EXTERNAL_EFFECT_AUTHORITY"
+  ],
+  "hearth_cycle": [
+    "RESUME_OR_INITIALIZE",
+    "VERIFY_BEFORE_WAKE",
+    "WAKE",
+    "HEARTBEAT",
+    "SLEEP",
+    "VERIFY_BEFORE_COMMIT",
+    "COMMIT_STATE_BRANCH_ONLY",
+    "FRESH_WORKTREE_REPLAY_VERIFY"
+  ],
+  "default_hearth_stimulus": {
+    "fresh_stimulus": false,
+    "cognition_authorized": false,
+    "dispatch_authorized": false,
+    "target_execution_authorized": false,
+    "external_effect_authorized": false
+  },
+  "persistent_ledgers": [
+    "activation_ledger.jsonl",
+    "dispatch_ledger.jsonl",
+    "transport_ledger.jsonl",
+    "ack_reconciliation_ledger.jsonl",
+    "ack_provenance_ledger.jsonl",
+    "ack_authenticated_finalization_ledger.jsonl",
+    "hearth_ledger.jsonl"
+  ],
+  "mutable_summaries": [
+    "HEAD.json",
+    "health.json",
+    "identity.json",
+    "observations/latest_architecture.json"
+  ],
+  "authority": {
+    "living_state_branch_write_authorized": true,
+    "main_branch_write_authorized_by_hearth": false,
+    "cognition_authorized_by_heartbeat": false,
+    "dispatch_authorized_by_heartbeat": false,
+    "target_execution_authorized_by_heartbeat": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false
+  }
+}
