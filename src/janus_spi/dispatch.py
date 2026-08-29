@@ -143,13 +143,15 @@ class JanusDispatchBroker:
         packet_path: Optional[str] = None,
         packet_hash: Optional[str] = None,
     ) -> Dict[str, Any]:
+        claimed_parent_hash = str(parent_activation.get("receipt_hash") or "")
+        bound_parent_hash = claimed_parent_hash if len(claimed_parent_hash) == 64 else canonical_hash(parent_activation)
         receipt = {
             "schema": "janus.activator.dispatch_receipt.v0.3",
             "dispatch_id": dispatch_id,
             "created_at": time.time(),
             "parent_dispatch_hash": self.ledger.tip_hash(),
             "activation_id": str(parent_activation.get("activation_id") or "UNKNOWN"),
-            "activation_receipt_hash": str(parent_activation.get("receipt_hash") or ""),
+            "activation_receipt_hash": bound_parent_hash,
             "target_organ": target_organ,
             "operation": operation,
             "dispatch_authorized": bool(authorized),
