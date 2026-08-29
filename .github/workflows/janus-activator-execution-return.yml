@@ -1,0 +1,166 @@
+name: JANUS Activator Execution Return
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/execution_return.py'
+      - 'src/janus_spi/persistent_state_v08.py'
+      - 'run_janus_execution_return.py'
+      - 'run_janus_activator_hearth.py'
+      - 'tests/test_execution_return.py'
+      - '.janus/activator/EXECUTION_RETURN_CONSTITUTION.json'
+      - '.github/workflows/janus-activator-execution-return.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/execution_return.py'
+      - 'src/janus_spi/persistent_state_v08.py'
+      - 'run_janus_execution_return.py'
+      - 'run_janus_activator_hearth.py'
+      - 'tests/test_execution_return.py'
+      - '.janus/activator/EXECUTION_RETURN_CONSTITUTION.json'
+      - '.github/workflows/janus-activator-execution-return.yml'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Exact Janus-Demiurge execution workflow run ID'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+
+concurrency:
+  group: janus-activator-execution-return
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Compile and validate
+        run: |
+          python -m compileall -q src/janus_spi/execution_return.py src/janus_spi/persistent_state_v08.py run_janus_execution_return.py tests/test_execution_return.py
+          python -m json.tool .janus/activator/EXECUTION_RETURN_CONSTITUTION.json >/dev/null
+          python -m json.tool .janus/activator/PERSISTENT_STATE_CONSTITUTION.json >/dev/null
+      - name: Run execution return tests
+        env:
+          PYTHONPATH: src
+        run: pytest -q tests/test_execution_return.py
+
+  finalize:
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out reviewed HOME architecture
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Preserve engine and resume persistent HOME
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install -r requirements.txt
+          engine="${RUNNER_TEMP}/janus-execution-return-engine"
+          mkdir -p "$engine"
+          cp -a src "$engine/src"
+          cp run_janus_execution_return.py "$engine/"
+          cp run_janus_activator_hearth.py "$engine/"
+          echo "JANUS_ENGINE=$engine" >> "$GITHUB_ENV"
+          git config user.name "JANUS Execution Return"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          git switch --create janus/activator-state --track origin/janus/activator-state
+      - name: Verify persistent HOME before return adjudication
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+        run: python "$JANUS_ENGINE/run_janus_activator_hearth.py" --state-dir state/activator verify > "$RUNNER_TEMP/pre-return-health.json"
+      - name: Authenticate exact execution run and finalize result
+        id: adjudicate
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+          JANUS_ACK_PROVENANCE_TOKEN: ${{ secrets.JANUS_ACK_PROVENANCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python "$JANUS_ENGINE/run_janus_execution_return.py" \
+            --run-id '${{ inputs.run_id }}' \
+            --state-dir state/activator \
+            --provenance-output "$RUNNER_TEMP/execution-provenance.json" \
+            --receipt-output "$RUNNER_TEMP/execution-receipt.json" \
+            --snapshot-output "$RUNNER_TEMP/execution-snapshot.json" \
+            --final-output "$RUNNER_TEMP/execution-final.json"
+          if [ -f "$RUNNER_TEMP/execution-final.json" ]; then
+            terminal=$(python -c "import json,os; print(json.load(open(os.environ['RUNNER_TEMP']+'/execution-final.json'))['terminal'])")
+          else
+            terminal=$(python -c "import json,os; print(json.load(open(os.environ['RUNNER_TEMP']+'/execution-provenance.json'))['terminal'])")
+          fi
+          echo "terminal=$terminal" >> "$GITHUB_OUTPUT"
+          echo "EXECUTION_RETURN_TERMINAL=$terminal"
+      - name: Persist execution return lineage before verdict
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python "$JANUS_ENGINE/run_janus_activator_hearth.py" --state-dir state/activator verify > "$RUNNER_TEMP/post-return-health.json"
+          git add state/activator/execution_provenance_ledger.jsonl state/activator/execution_result_finalization_ledger.jsonl state/activator/health.json || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Execution return ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            git push origin HEAD:refs/heads/janus/activator-state
+          fi
+          echo "EXECUTION_RETURN_STATE_PERSISTED=TRUE"
+          echo "MAIN_MUTATION=FALSE"
+      - name: Fresh-worktree replay
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="${RUNNER_TEMP}/execution-return-replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          python "$JANUS_ENGINE/run_janus_activator_hearth.py" --state-dir "$replay/state/activator" verify >/dev/null
+          echo "EXECUTION_RETURN_PERSISTENT_REPLAY=PASS"
+      - name: Require authenticated observed execution
+        env:
+          TERMINAL: ${{ steps.adjudicate.outputs.terminal }}
+        run: |
+          test "$TERMINAL" = "EXECUTION_RESULT_AUTHENTICATED_READ_ONLY_ORIENTATION_OBSERVED"
+          echo "TARGET_EXECUTION_OBSERVED=TRUE"
+          echo "CLAIM_AUTHORITY=FALSE"
+          echo "SCIENTIFIC_EVIDENCE_AUTHORITY=FALSE"
+          echo "WORLD_TRUTH_AUTHORITY=FALSE"
+          echo "EXTERNAL_EFFECT_AUTHORITY=FALSE"
+      - name: Upload return receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-execution-return-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/execution-provenance.json
+            ${{ runner.temp }}/execution-receipt.json
+            ${{ runner.temp }}/execution-snapshot.json
+            ${{ runner.temp }}/execution-final.json
+          if-no-files-found: warn
+          retention-days: 14
