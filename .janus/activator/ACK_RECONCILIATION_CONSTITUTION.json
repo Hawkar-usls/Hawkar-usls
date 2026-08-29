@@ -1,0 +1,41 @@
+{
+  "schema": "janus.activator.ack_reconciliation_constitution.v0.5",
+  "status": "OFFLINE_ACK_BINDING_GATE",
+  "scope": "BIND_DEMIURGE_RECEIVER_ACK_TO_EXACT_DISPATCH_AND_TRANSPORT_LINEAGE",
+  "accepted_ack_schema": "janus.demiurge.activator_dispatch_ack.v0.1",
+  "laws": [
+    "ACK_RECEIVED != ACK_VALID",
+    "ACK_VALID != EXECUTION",
+    "ACK_VALID != EVIDENCE",
+    "ACK_VALID != WORLD_TRUTH",
+    "ACK_HASH_MUST_VERIFY",
+    "ACK_PACKET_ID_MUST_MATCH_DISPATCH_PACKET",
+    "ACK_PACKET_HASH_MUST_MATCH_DISPATCH_PACKET",
+    "TRANSPORT_PACKET_ID_AND_HASH_MUST_MATCH_DISPATCH_PACKET",
+    "PRE_EFFECT_TRANSPORT_STATE != ACK_RECONCILABLE",
+    "OUTCOME_UNDETERMINED_MAY_BE_RESOLVED_BY_LATER_VALID_ACK",
+    "ACK_AUTHORITY_ESCALATION_FAILS_CLOSED",
+    "ACK_REJECTION_IS_PRESERVED_NOT_ERASED",
+    "DUPLICATE_ACK != SECOND_STATE_TRANSITION",
+    "RECONCILIATION != TARGET_EXECUTION"
+  ],
+  "reconcilable_transport_terminals": [
+    "TRANSPORT_SENT_AWAITING_ACK",
+    "TRANSPORT_OUTCOME_UNDETERMINED"
+  ],
+  "accepted_receiver_terminal": "ACK_ACCEPTED_NO_EXECUTION",
+  "receiver_rejection_prefix": "ACK_REJECTED_",
+  "successful_reconciliation_terminal": "ACK_BOUND_NO_EXECUTION",
+  "rejected_reconciliation_terminal": "ACK_BOUND_REJECTED_NO_EXECUTION",
+  "forbidden_authority_flags": {
+    "execution_authorized": true,
+    "execution_performed": true,
+    "claim_authority_granted": true,
+    "external_effect_authorized": true
+  },
+  "network_required": false,
+  "credential_required": false,
+  "target_execution_authorized": false,
+  "external_effect_authorized": false,
+  "claim_promotion_authorized": false
+}
