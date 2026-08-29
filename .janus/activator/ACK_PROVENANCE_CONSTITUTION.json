@@ -1,0 +1,61 @@
+{
+  "schema": "janus.activator.ack_provenance_constitution.v0.6",
+  "status": "GITHUB_ACTIONS_ACK_SOURCE_PROVENANCE_GATE",
+  "scope": "AUTHENTICATE_ACK_ORIGIN_UNDER_EXPLICIT_GITHUB_ACTIONS_TRUST_MODEL_AND_BIND_TO_V0_5_STRUCTURAL_LINEAGE",
+  "source_repository": "Hawkar-usls/Janus-Demiurge",
+  "credential_env": "JANUS_ACK_PROVENANCE_TOKEN",
+  "credential_value_persisted": false,
+  "admitted_receiver": {
+    "workflow_id": 345454851,
+    "workflow_path": ".github/workflows/janus-activator-dispatch-receiver.yml",
+    "workflow_blob_sha": "918b44dd543b179304d48b9d4f942092fda38919",
+    "protocol_path": "protocol/ACTIVATOR_DISPATCH_RECEIVER-v0.1.json",
+    "protocol_blob_sha": "f1c465e979e38aa534efc67b92cacd8643b23ee5",
+    "handler_path": "tools/activator_dispatch_receiver.py",
+    "handler_blob_sha": "a5f3a89c9d882d417dbbf1bfe12785180cc10180",
+    "accepted_run_events": ["repository_dispatch", "workflow_dispatch"],
+    "required_run_status": "completed",
+    "required_run_conclusion": "success",
+    "artifact_name_template": "janus-activator-dispatch-ack-{run_id}"
+  },
+  "laws": [
+    "ACK_SELF_HASH != SOURCE_AUTHENTICATION",
+    "ARTIFACT_NAME != ARTIFACT_PROVENANCE",
+    "RUN_SUCCESS != ACK_ACCEPTANCE",
+    "RUN_SUCCESS != TARGET_EXECUTION",
+    "GITHUB_API_METADATA != WORLD_TRUTH",
+    "SOURCE_AUTHENTICATED_UNDER_GITHUB_TRUST_MODEL != INDEPENDENT_SCIENTIFIC_EVIDENCE",
+    "SOURCE_AUTHENTICATED_UNDER_GITHUB_TRUST_MODEL != TARGET_EXECUTION",
+    "SOURCE_AUTHENTICATED_UNDER_GITHUB_TRUST_MODEL != CLAIM_AUTHORITY",
+    "WORKFLOW_ID_PATH_AND_BLOB_MUST_MATCH_PINNED_RECEIVER",
+    "RECEIVER_PROTOCOL_AND_HANDLER_BLOBS_MUST_MATCH_PINNED_RECEIVER",
+    "ARTIFACT_MUST_BELONG_TO_EXACT_RUN",
+    "ARTIFACT_ARCHIVE_MUST_BE_SAFE_AND_UNAMBIGUOUS",
+    "ACK_HASH_MUST_MATCH_ARTIFACT_CONTENT",
+    "PROVENANCE_ACK_HASH_MUST_MATCH_V0_5_STRUCTURAL_RECEIPT",
+    "PROVENANCE_PACKET_ID_AND_HASH_MUST_MATCH_HOME_LINEAGE",
+    "AUTHENTICATED_REJECTED_ACK_IS_PRESERVED",
+    "AUTHENTICATED_ACK_MAY_RESOLVE_TRANSPORT_DELIVERY_AMBIGUITY_BUT_NOT_EXECUTION",
+    "CREDENTIAL_VALUE_MUST_NOT_BE_PERSISTED"
+  ],
+  "archive_policy": {
+    "max_members": 20,
+    "max_total_uncompressed_bytes": 1048576,
+    "exact_ack_json_candidates": 1,
+    "ack_filename": "ack.json",
+    "reject_absolute_paths": true,
+    "reject_parent_traversal": true,
+    "reject_symlinks": true
+  },
+  "source_authentication_basis": "GITHUB_API_RUN_METADATA_PLUS_EXACT_RUN_ARTIFACT_PLUS_PINNED_RECEIVER_BLOBS_UNDER_GITHUB_TLS_AND_PLATFORM_TRUST",
+  "source_authentication_terminal": "ACK_SOURCE_AUTHENTICATED_GITHUB_ACTIONS_TRUST_MODEL",
+  "final_terminals": [
+    "ACK_AUTHENTICATED_DELIVERY_CONFIRMED_NO_EXECUTION",
+    "ACK_AUTHENTICATED_REJECTION_CONFIRMED_NO_EXECUTION"
+  ],
+  "target_execution_authorized": false,
+  "target_execution_inferred": false,
+  "claim_authority_granted": false,
+  "scientific_evidence_authority_granted": false,
+  "external_effect_authorized": false
+}

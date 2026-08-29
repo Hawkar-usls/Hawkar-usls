@@ -1,0 +1,98 @@
+name: JANUS Activator ACK Provenance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/ack_provenance.py'
+      - 'run_janus_ack_provenance.py'
+      - 'tests/test_ack_provenance.py'
+      - '.janus/activator/ACK_PROVENANCE_CONSTITUTION.json'
+      - '.janus/activator/ACK_PROVENANCE_RECEIPT.schema.json'
+      - '.janus/activator/ACK_AUTHENTICATED_FINAL_RECEIPT.schema.json'
+      - '.github/workflows/janus-activator-ack-provenance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/ack_provenance.py'
+      - 'run_janus_ack_provenance.py'
+      - 'tests/test_ack_provenance.py'
+      - '.janus/activator/ACK_PROVENANCE_CONSTITUTION.json'
+      - '.janus/activator/ACK_PROVENANCE_RECEIPT.schema.json'
+      - '.janus/activator/ACK_AUTHENTICATED_FINAL_RECEIPT.schema.json'
+      - '.github/workflows/janus-activator-ack-provenance.yml'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Janus-Demiurge receiver workflow run ID containing the ACK artifact'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime and test requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Compile provenance runtime and tests
+        run: python -m compileall -q src/janus_spi/ack_provenance.py run_janus_ack_provenance.py tests/test_ack_provenance.py
+      - name: Validate provenance contracts
+        run: |
+          python - <<'PY'
+          import json
+          for p in [
+              '.janus/activator/ACK_PROVENANCE_CONSTITUTION.json',
+              '.janus/activator/ACK_PROVENANCE_RECEIPT.schema.json',
+              '.janus/activator/ACK_AUTHENTICATED_FINAL_RECEIPT.schema.json',
+          ]:
+              json.load(open(p, encoding='utf-8'))
+              print('VALID_JSON', p)
+          PY
+      - name: Test provenance and authenticated finalization
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_ack_provenance.py
+
+  verify-live-provenance:
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install runtime requirements
+        run: pip install -r requirements.txt
+      - name: Verify exact receiver run and ACK artifact provenance
+        env:
+          JANUS_ACK_PROVENANCE_TOKEN: ${{ secrets.JANUS_ACK_PROVENANCE_TOKEN }}
+        run: |
+          mkdir -p runtime/ack-provenance
+          python run_janus_ack_provenance.py \
+            --run-id '${{ inputs.run_id }}' \
+            --state-dir runtime/ack-provenance/state \
+            --provenance-output runtime/ack-provenance/provenance.json \
+            --ack-output runtime/ack-provenance/ack.json \
+            --require-authenticated
+      - name: Upload provenance receipt and authenticated-source ACK bytes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-ack-provenance-${{ github.run_id }}
+          path: |
+            runtime/ack-provenance/provenance.json
+            runtime/ack-provenance/ack.json
+          if-no-files-found: warn
+          retention-days: 14
