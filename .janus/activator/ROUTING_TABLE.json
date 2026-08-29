@@ -1,0 +1,68 @@
+{
+  "schema": "janus.activator.routing_table.v0.2",
+  "status": "PROVISIONAL_RUNTIME_CONTRACT",
+  "default": {
+    "route_state": "ROUTE_PROPOSED",
+    "dispatch_authorized": false,
+    "external_effect_authorized": false
+  },
+  "routes": [
+    {
+      "match": "formal_or_theorem_claim",
+      "organs": ["Hawkar-usls/Janus-Fundamentum", "Hawkar-usls/Demi_Head"],
+      "required_gates": ["formal_or_replayable_proof", "adversarial_counterexample_pass", "claim_scope_binding"]
+    },
+    {
+      "match": "causal_or_statistical_claim",
+      "organs": ["Hawkar-usls/AIFC", "Hawkar-usls/Demi_Head"],
+      "required_gates": ["causal_assumptions", "alternatives_and_confounders", "falsification_route", "independence_check"]
+    },
+    {
+      "match": "empirical_or_sensor_claim",
+      "organs": ["Hawkar-usls/janus-io-public", "Hawkar-usls/Demi_Head"],
+      "required_gates": ["measurement_receipt", "freshness_scope", "negative_controls_where_applicable"]
+    },
+    {
+      "match": "research_or_anomaly_investigation",
+      "organs": ["Hawkar-usls/TOPA", "Hawkar-usls/Hrain", "Hawkar-usls/Janus-Demiurge"],
+      "required_gates": ["raw_provenance", "competing_hypotheses", "falsifier", "identity_preserving_handoff"],
+      "note": "TOPA may invoke Spider semantics through Hrain when available; this table does not claim an automated Spider runtime is already bound."
+    },
+    {
+      "match": "cross_domain_candidate_generation",
+      "organs": ["Hawkar-usls/aura-oracle-tg", "Hawkar-usls/janus-lapis", "Hawkar-usls/Fast-CAT-SHAiTan"],
+      "required_gates": ["candidate_only_label", "no_verdict_authority", "fresh_domain_validation_before_transfer"]
+    },
+    {
+      "match": "multi_organ_parallel_dispatch",
+      "organs": ["Hawkar-usls/Janus-Demiurge"],
+      "required_gates": ["explicit_route_selection", "bounded_agent_manifest", "receipt_aggregation", "lineage_persistence"],
+      "activation_implies_dispatch": false
+    },
+    {
+      "match": "repository_constellation_change",
+      "organs": ["Hawkar-usls/Hawkar-usls"],
+      "required_gates": ["fresh_commit_or_explicit_replay", "exact_source_ref", "commit_text_not_command"]
+    },
+    {
+      "match": "distributed_or_embedded_repository_context",
+      "organs": ["Hawkar-usls/janus-distributed-ai-swarm"],
+      "required_gates": ["repository_context_only"],
+      "physical_runtime_route_authorized": false
+    },
+    {
+      "match": "human_operator_effect_request",
+      "organs": ["Hawkar-usls/-Terminal-for-Janus"],
+      "required_gates": ["command_receipt", "typed_capability", "risk_class", "fresh_authorization_if_required"],
+      "root_activation_authority": false
+    }
+  ],
+  "global_guards": [
+    "MODEL_OUTPUT != COMMAND",
+    "COMMIT_MESSAGE != COMMAND",
+    "ISSUE_TEXT != COMMAND",
+    "ROUTE_PROPOSAL != DISPATCH_AUTHORITY",
+    "DISPATCH_SUCCESS != WORLD_TRUTH",
+    "EVIDENCE != EFFECT_AUTHORIZATION"
+  ]
+}
