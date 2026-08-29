@@ -1,0 +1,79 @@
+{
+  "schema": "JANUS_ACTIVATOR_ANCESTRY_MAP/v0.1",
+  "status": "FROZEN_DESIGN_SEED",
+  "root_home": "Hawkar-usls/Hawkar-usls",
+  "root_role": "HOME_COGNITIVE_GATEWAY_AND_ROOT_ACTIVATOR",
+  "sources": {
+    "mechanical_ancestry": {
+      "repository": "Hawkar-usls/Janus-Demiurge",
+      "role": "EXECUTABLE_MECHANISM_DONOR",
+      "inherit": [
+        "agent_manifests",
+        "scout_microkernel",
+        "systemwide_direction_planning",
+        "model_preflight",
+        "observation_health",
+        "spiral_contract",
+        "aggregation",
+        "lineage_persistence",
+        "causal_acknowledgement",
+        "restoration_probation"
+      ],
+      "do_not_inherit": [
+        "assumption_that_activation_implies_scout_swarm",
+        "root_activation_authority"
+      ]
+    },
+    "semantic_ancestry": {
+      "repository": "Hawkar-usls/janus-meta-registry",
+      "role": "SEMANTIC_LAW_AND_ANALOGUE_SOURCE",
+      "translation_rule": "JSON_MEANING -> MECHANICAL_ANALOGUE -> TOPA_FALSIFICATION -> IMPLEMENT_OR_REJECT"
+    }
+  },
+  "topa_spider_protocol": {
+    "spider": "Build links between registry semantics, related concepts, and existing Demiurge mechanisms.",
+    "topa": "Attack each proposed translation and reject metaphor-only mappings.",
+    "required_mechanical_form": [
+      "INPUT",
+      "STATE",
+      "TRANSITION",
+      "PRECONDITION",
+      "ACTION",
+      "OUTPUT",
+      "FAILURE_STATE",
+      "RECEIPT"
+    ],
+    "law": "FOUND_IN_REGISTRY != FIT_FOR_ACTIVATOR"
+  },
+  "constitutional_laws": [
+    "ACTIVATION != AUTHORIZATION",
+    "WORKFLOW_PASS != WORLD_TRUTH",
+    "MODEL_OUTPUT != COMMAND",
+    "SILENCE != NEGATIVE_EVIDENCE",
+    "TIMEOUT != NEGATIVE_EVIDENCE",
+    "ROOT_ACTIVATION_AUTHORITY == HOME_ACTIVATOR",
+    "EXTERNAL_EFFECTS_DEFAULT == FALSE"
+  ],
+  "target_lifecycle": [
+    "DORMANT",
+    "WAKING",
+    "ORIENTING",
+    "GOVERNING",
+    "ROUTING",
+    "WORKING_OR_WAITING",
+    "CHECKPOINTING",
+    "SLEEPING",
+    "DORMANT"
+  ],
+  "epistemic_failure_states": [
+    "OPEN",
+    "UNKNOWN",
+    "UNKNOWN_RESOURCE_LIMIT",
+    "REJECTED_BY_GOVERNANCE"
+  ],
+  "boundary": {
+    "github": "JANUS_INTERIOR",
+    "swarm": "OUTSIDE_CURRENT_ACTIVATOR_SCOPE",
+    "external_effects_enabled": false
+  }
+}
