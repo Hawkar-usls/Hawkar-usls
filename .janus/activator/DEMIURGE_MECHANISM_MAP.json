@@ -1,0 +1,74 @@
+{
+  "schema": "JANUS_DEMIURGE_MECHANISM_MAP/v0.1",
+  "source_repository": "Hawkar-usls/Janus-Demiurge",
+  "source_role": "EXECUTION_AND_AGENT_DISPATCH_CONTROL_PLANE",
+  "target": "Hawkar-usls/Hawkar-usls/.janus/activator",
+  "principle": "REUSE_MECHANISMS_NOT_MISSION_ASSUMPTIONS",
+  "observed_mechanism_families": [
+    {
+      "family": "AGENT_CAPABILITY_MANIFESTS",
+      "evidence_paths": [".github/agents/*.agent.md"],
+      "activator_use": "MODULE_CAPABILITIES_AND_ROUTE_ELIGIBILITY",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "SCOUT_MICROKERNEL",
+      "evidence_paths": [".github/workflows/janus-scout-microkernel.yml"],
+      "activator_use": "MINIMAL_BOUNDED_EXECUTION_SUBSTRATE",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "SYSTEMWIDE_DIRECTION_PLANNING",
+      "evidence_paths": [".github/workflows/janus-systemwide-scout-directions.yml"],
+      "activator_use": "CLASSIFY_AND_ROUTE_STIMULUS",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "SCOUT_DISPATCH_AND_AGGREGATION",
+      "evidence_paths": [".github/workflows/janus-demiurge-scout-swarm.yml"],
+      "activator_use": "OPTIONAL_DOWNSTREAM_DISPATCH",
+      "reuse": "PARTIAL",
+      "warning": "Activation must not imply scout-swarm execution."
+    },
+    {
+      "family": "SPIRAL_CONTRACT",
+      "evidence_paths": [".github/workflows/demiurge-spiral-contract.yml"],
+      "activator_use": "BOUNDED_ITERATION_AND_RETURN_CONTRACT",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "MODEL_PREFLIGHT",
+      "evidence_paths": [".github/workflows/validate-scout-model-preflight.yml"],
+      "activator_use": "PRECONDITION_GATE",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "OBSERVATION_HEALTH",
+      "evidence_paths": [".github/workflows/validate-scout-observation-health.yml"],
+      "activator_use": "INPUT_HEALTH_AND_EVIDENCE_QUALITY_GATE",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "CAUSAL_ACKNOWLEDGEMENT",
+      "evidence_paths": [".github/workflows/janus-causal-ack-genome.yml"],
+      "activator_use": "OUTCOME_ACK_AND_LINEAGE_LINKING",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "RESTORATION_PROBATION",
+      "evidence_paths": [".github/workflows/restoration-probation-ci.yml"],
+      "activator_use": "SAFE_REENTRY_AFTER_FAILURE_OR_REPAIR",
+      "reuse": "ADAPT"
+    },
+    {
+      "family": "FOREIGN_TRAIT_LINEAGE_FIREWALL",
+      "evidence_paths": [".github/workflows/foreign-trait-lineage-firewall.yml"],
+      "activator_use": "PROVENANCE_AND_UNTRUSTED_INPUT_BOUNDARY",
+      "reuse": "ADAPT"
+    }
+  ],
+  "root_authority": {
+    "source_has_root_activation_authority": false,
+    "target_home_activator_has_root_activation_authority": true
+  }
+}
