@@ -1,6 +1,6 @@
 {
-  "schema": "janus.activator.persistent_state_constitution.v0.7",
-  "status": "PERSISTENT_HOME_STATE_WITH_EXECUTION_GRANT_LINEAGE",
+  "schema": "janus.activator.persistent_state_constitution.v0.8",
+  "status": "PERSISTENT_HOME_STATE_THROUGH_AUTHENTICATED_EXECUTION_RETURN",
   "architecture_branch": "main",
   "living_state_branch": "janus/activator-state",
   "state_root": "state/activator",
@@ -17,7 +17,11 @@
     "CORRUPT_STATE != REPLAY_PERMISSION",
     "CORRUPT_LOCAL_LINEAGE_FAILS_CLOSED",
     "EXECUTION_GRANT_LINEAGE_IS_PART_OF_HOME_HEALTH",
+    "EXECUTION_TRANSPORT_LINEAGE_IS_PART_OF_HOME_HEALTH",
+    "EXECUTION_PROVENANCE_LINEAGE_IS_PART_OF_HOME_HEALTH",
+    "EXECUTION_RESULT_LINEAGE_IS_PART_OF_HOME_HEALTH",
     "EXECUTION_GRANT != TARGET_EXECUTION",
+    "EXECUTION_OBSERVED != SCIENTIFIC_EVIDENCE",
     "STATE_SUMMARY != VERDICT_AUTHORITY",
     "HEARTH_PASS != WORLD_TRUTH",
     "PERSISTENCE != CONSCIOUSNESS",
@@ -48,6 +52,9 @@
     "ack_provenance_ledger.jsonl",
     "ack_authenticated_finalization_ledger.jsonl",
     "execution_grant_ledger.jsonl",
+    "execution_transport_ledger.jsonl",
+    "execution_provenance_ledger.jsonl",
+    "execution_result_finalization_ledger.jsonl",
     "hearth_ledger.jsonl"
   ],
   "mutable_summaries": [
@@ -63,9 +70,11 @@
     "dispatch_authorized_by_heartbeat": false,
     "target_execution_authorized_by_heartbeat": false,
     "execution_grant_can_authorize_only_typed_p12_operation": true,
+    "authenticated_execution_result_can_observe_only_typed_p12_operation": true,
     "external_effect_authorized": false,
     "physical_runtime_effect_authorized": false,
     "claim_authority_granted": false,
-    "scientific_evidence_authority_granted": false
+    "scientific_evidence_authority_granted": false,
+    "world_truth_authority_granted": false
   }
 }
