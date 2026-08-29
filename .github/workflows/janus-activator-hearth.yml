@@ -19,7 +19,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: janus-activator-hearth
+  group: janus-activator-state-writer
   cancel-in-progress: false
 
 jobs:
