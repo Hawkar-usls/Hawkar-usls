@@ -1,74 +1,79 @@
 {
-  "schema": "JANUS_DEMIURGE_MECHANISM_MAP/v0.1",
+  "schema": "JANUS_DEMIURGE_MECHANISM_MAP/v0.2",
   "source_repository": "Hawkar-usls/Janus-Demiurge",
   "source_role": "EXECUTION_AND_AGENT_DISPATCH_CONTROL_PLANE",
   "target": "Hawkar-usls/Hawkar-usls/.janus/activator",
-  "principle": "REUSE_MECHANISMS_NOT_MISSION_ASSUMPTIONS",
-  "observed_mechanism_families": [
+  "principle": "REUSE_SOURCE_INSPECTED_MECHANICS_NOT_WORKFLOW_NAMES_OR_MISSION_ASSUMPTIONS",
+  "root_activation_authority": false,
+  "mechanisms": [
     {
-      "family": "AGENT_CAPABILITY_MANIFESTS",
-      "evidence_paths": [".github/agents/*.agent.md"],
-      "activator_use": "MODULE_CAPABILITIES_AND_ROUTE_ELIGIBILITY",
+      "id": "PERSISTENT_IDENTITY_AND_SPIRAL_LINEAGE",
+      "source_paths": ["spiral_evolution.py", "protocol/DEMIURGE_SPIRAL_EVOLUTION-v1.json"],
+      "observed_semantics": [
+        "NO_LEARNING_ENTITY_DELETION", "FAILURE_BECOMES_LESSON", "IDENTITY_PERSISTS_ACROSS_TURNS",
+        "ITERATION_IS_SPIRAL_NOT_RING", "BOUNDED_WORKING_MEMORY_REQUIRES_ARCHIVE_OR_SUMMARY",
+        "EXACT_REPEAT_WITHOUT_NEW_INFORMATION_IS_NO_ASCENT"
+      ],
+      "activator_translation": "Every activation has a parent lineage; HOLD/REJECT/failure survive; repeated position without delta cannot be reported as progress.",
+      "reuse": "DIRECT_PRIMITIVE_CANDIDATE"
+    },
+    {
+      "id": "EVIDENCE_BOUND_SCOUT_SNAPSHOT",
+      "source_paths": ["tools/demiurge_scout_swarm.py"],
+      "observed_semantics": [
+        "repository observation bound to exact commit", "previous report is memory not independent evidence",
+        "bounded selected source excerpts", "secret-like paths and token patterns scrubbed",
+        "transport failure retained as constraint not target evidence"
+      ],
+      "activator_translation": "Stimulus/context packets must bind observations to source identity and must not promote inherited model memory into fresh evidence.",
       "reuse": "ADAPT"
     },
     {
-      "family": "SCOUT_MICROKERNEL",
-      "evidence_paths": [".github/workflows/janus-scout-microkernel.yml"],
-      "activator_use": "MINIMAL_BOUNDED_EXECUTION_SUBSTRATE",
-      "reuse": "ADAPT"
+      "id": "MODEL_FAILURE_FAILS_CLOSED_TO_OBSERVATION",
+      "source_paths": ["tools/demiurge_scout_swarm.py", "tools/scout_observation_health.py"],
+      "observed_semantics": [
+        "deterministic repository snapshot may survive model synthesis failure",
+        "repository_snapshot model_synthesis and target_transport are separate health planes",
+        "model failure does not erase successful snapshot"
+      ],
+      "activator_translation": "Runtime health is a separate axis from epistemic state; degraded synthesis cannot erase already bound observations.",
+      "reuse": "DIRECT_SEMANTIC_PATTERN"
     },
     {
-      "family": "SYSTEMWIDE_DIRECTION_PLANNING",
-      "evidence_paths": [".github/workflows/janus-systemwide-scout-directions.yml"],
-      "activator_use": "CLASSIFY_AND_ROUTE_STIMULUS",
-      "reuse": "ADAPT"
+      "id": "OPTIONAL_PARALLEL_DISPATCH_AND_AGGREGATION",
+      "source_paths": [".github/workflows/janus-demiurge-scout-swarm.yml"],
+      "observed_semantics": ["shared model preflight", "plan matrix", "fail-fast false", "per-agent receipts", "aggregate lineage persistence"],
+      "activator_translation": "Use Demiurge only after routing selects dispatch; waking JANUS never implies a 17-agent run.",
+      "reuse": "OPTIONAL_DOWNSTREAM"
     },
     {
-      "family": "SCOUT_DISPATCH_AND_AGGREGATION",
-      "evidence_paths": [".github/workflows/janus-demiurge-scout-swarm.yml"],
-      "activator_use": "OPTIONAL_DOWNSTREAM_DISPATCH",
-      "reuse": "PARTIAL",
-      "warning": "Activation must not imply scout-swarm execution."
+      "id": "IDENTITY_PRESERVING_PEER_COORDINATION",
+      "source_paths": [".github/workflows/janus-systemwide-scout-directions.yml"],
+      "observed_semantics": ["round1 evidence", "identity-preserving blackboard", "peer round", "finalize", "append-only communication lineage"],
+      "activator_translation": "Multi-organ coordination may share state while preserving source identity and provenance.",
+      "reuse": "ADAPT_WHEN_MULTI_ORGAN_ROUTE_SELECTED"
     },
     {
-      "family": "SPIRAL_CONTRACT",
-      "evidence_paths": [".github/workflows/demiurge-spiral-contract.yml"],
-      "activator_use": "BOUNDED_ITERATION_AND_RETURN_CONTRACT",
-      "reuse": "ADAPT"
-    },
-    {
-      "family": "MODEL_PREFLIGHT",
-      "evidence_paths": [".github/workflows/validate-scout-model-preflight.yml"],
-      "activator_use": "PRECONDITION_GATE",
-      "reuse": "ADAPT"
-    },
-    {
-      "family": "OBSERVATION_HEALTH",
-      "evidence_paths": [".github/workflows/validate-scout-observation-health.yml"],
-      "activator_use": "INPUT_HEALTH_AND_EVIDENCE_QUALITY_GATE",
-      "reuse": "ADAPT"
-    },
-    {
-      "family": "CAUSAL_ACKNOWLEDGEMENT",
-      "evidence_paths": [".github/workflows/janus-causal-ack-genome.yml"],
-      "activator_use": "OUTCOME_ACK_AND_LINEAGE_LINKING",
-      "reuse": "ADAPT"
-    },
-    {
-      "family": "RESTORATION_PROBATION",
-      "evidence_paths": [".github/workflows/restoration-probation-ci.yml"],
-      "activator_use": "SAFE_REENTRY_AFTER_FAILURE_OR_REPAIR",
-      "reuse": "ADAPT"
-    },
-    {
-      "family": "FOREIGN_TRAIT_LINEAGE_FIREWALL",
-      "evidence_paths": [".github/workflows/foreign-trait-lineage-firewall.yml"],
-      "activator_use": "PROVENANCE_AND_UNTRUSTED_INPUT_BOUNDARY",
-      "reuse": "ADAPT"
+      "id": "TOPA_REQUIRED_EPISTEMIC_LAYER",
+      "source_paths": ["scout_swarm/orchestrator/TOPA_SCOUT_EPISTEMIC_PROTOCOL-v1.json", ".janus/TOPA_FOUNDATION.json"],
+      "observed_semantics": [
+        "RAW_PROVENANCE_MUST_BE_PRESERVED", "FIRSTHAND_AND_HEARSAY_MUST_BE_DISTINCT",
+        "PREDICTIONS_MUST_BE_FROZEN_BEFORE_OUTCOME_SCORING", "NO_POST_HOC_REDEFINITION_TO_SAVE_A_FAILED_PREDICTION",
+        "FAILED_RUNS_AND_NEGATIVE_RESULTS_MUST_SURVIVE", "I_DO_NOT_KNOW_IS_A_VALID_OUTPUT"
+      ],
+      "activator_translation": "TOPA is a promotion/falsification gate, not root wake authority.",
+      "reuse": "REQUIRED_BEFORE_CLAIM_PROMOTION"
     }
   ],
-  "root_authority": {
-    "source_has_root_activation_authority": false,
-    "target_home_activator_has_root_activation_authority": true
-  }
+  "known_drift": {
+    "issue": "janus-topa-scout-epistemic.yml validates TOPA v1.2 markers while active protocol file reports v1.3",
+    "status": "MUST_REPAIR_IN_DEMIURGE_BEFORE_CLAIMING_CURRENT_WORKFLOW_COVERAGE",
+    "effect_on_activator": "Source-inspected TOPA v1.3 semantics may guide design, but workflow validation status is not inherited as current proof."
+  },
+  "forbidden_inheritance": [
+    "ACTIVATION_IMPLIES_SCOUT_SWARM",
+    "MODEL_OUTPUT_IS_INDEPENDENT_CONFIRMATION",
+    "WORKFLOW_SUCCESS_IS_WORLD_TRUTH",
+    "DEMIURGE_OWNS_ROOT_ACTIVATION_AUTHORITY"
+  ]
 }
