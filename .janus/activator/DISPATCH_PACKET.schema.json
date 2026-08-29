@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "janus.activator.dispatch_packet.v0.3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "packet_id", "created_at", "activation_id", "activation_receipt_hash",
+    "route_match", "target_organ", "operation", "risk_class", "required_gates",
+    "dispatch_authorized", "external_effect_authorized", "delivery_terminal", "packet_hash"
+  ],
+  "properties": {
+    "schema": {"const": "janus.activator.dispatch_packet.v0.3"},
+    "packet_id": {"type": "string", "pattern": "^dsp-[0-9a-f]{64}$"},
+    "created_at": {"type": "number", "minimum": 0},
+    "activation_id": {"type": "string", "minLength": 1},
+    "activation_receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "route_match": {"type": "string", "minLength": 1},
+    "target_organ": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+    "operation": {"const": "WAKE_ORGAN_READ_ONLY"},
+    "risk_class": {"const": "R0_INTERNAL_READ_ONLY_ORGAN_WAKE"},
+    "required_gates": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "dispatch_authorized": {"const": true},
+    "external_effect_authorized": {"const": false},
+    "claim_authority_granted": {"const": false},
+    "command_authority_granted": {"const": false},
+    "effect_scope": {"const": "GITHUB_INTERNAL_READ_ONLY_ANALYSIS"},
+    "delivery_terminal": {"enum": ["AUTHORIZED_INTERNAL_HANDOFF", "ALREADY_EMITTED"]},
+    "packet_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
