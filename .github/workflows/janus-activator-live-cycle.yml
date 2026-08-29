@@ -1,0 +1,279 @@
+name: JANUS Activator Live Cycle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/live_cycle.py'
+      - 'run_janus_live_cycle.py'
+      - 'run_janus_activator_hearth.py'
+      - 'tests/test_live_cycle.py'
+      - '.janus/activator/LIVE_CYCLE_CONSTITUTION.json'
+      - '.janus/activator/PERSISTENT_STATE_CONSTITUTION.json'
+      - '.github/workflows/janus-activator-live-cycle.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/live_cycle.py'
+      - 'run_janus_live_cycle.py'
+      - 'run_janus_activator_hearth.py'
+      - 'tests/test_live_cycle.py'
+      - '.janus/activator/LIVE_CYCLE_CONSTITUTION.json'
+      - '.janus/activator/PERSISTENT_STATE_CONSTITUTION.json'
+      - '.github/workflows/janus-activator-live-cycle.yml'
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'External stimulus reference; workflow run ID is appended to guarantee freshness'
+        required: true
+        default: 'HAWKAR/JANUS_FIRST_LIVE_CYCLE'
+        type: string
+      payload_json:
+        description: 'JSON object describing the bounded external stimulus'
+        required: true
+        default: '{"purpose":"JANUS_FIRST_REAL_LAUNCH_WITNESS","route":"research_or_anomaly_investigation","target":"Janus-Demiurge","effect_scope":"READ_ONLY_ORIENTATION"}'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: janus-activator-state-writer
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Compile launch candidate
+        run: python -m compileall -q src/janus_spi/live_cycle.py run_janus_live_cycle.py run_janus_activator_hearth.py tests/test_live_cycle.py
+      - name: Validate launch constitutions
+        run: |
+          python -m json.tool .janus/activator/LIVE_CYCLE_CONSTITUTION.json >/dev/null
+          python -m json.tool .janus/activator/PERSISTENT_STATE_CONSTITUTION.json >/dev/null
+      - name: Run closed-loop launch-candidate tests
+        env:
+          PYTHONPATH: src
+        run: pytest -q tests/test_live_cycle.py
+
+  live-cycle:
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Check out canonical HOME architecture
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install runtime and preserve reviewed engine outside state branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install -r requirements.txt
+          engine="${RUNNER_TEMP}/janus-live-cycle-engine"
+          mkdir -p "$engine/.janus/activator" "$engine/config"
+          cp -a src "$engine/src"
+          cp run_janus_live_cycle.py run_janus_activator_hearth.py "$engine/"
+          cp .janus/activator/ROUTING_TABLE.json "$engine/.janus/activator/"
+          cp config/JANUS_INTELLIGENCE_STEP_POLICY-v1.0.json "$engine/config/"
+          echo "JANUS_ENGINE=$engine" >> "$GITHUB_ENV"
+          echo "JANUS_ARCHITECTURE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Resume persistent JANUS HOME state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "JANUS Live Cycle"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          git switch --create janus/activator-state --track origin/janus/activator-state
+          test "$(git branch --show-current)" = "janus/activator-state"
+
+      - name: Verify persistent HOME and freeze resident identity before WAKE
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python "$JANUS_ENGINE/run_janus_activator_hearth.py" \
+            --state-dir state/activator verify > "$RUNNER_TEMP/live-pre-health.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          health=json.loads(Path(os.environ['RUNNER_TEMP']+'/live-pre-health.json').read_text())
+          identity=json.loads(Path('state/activator/identity.json').read_text())
+          assert health['ok'] is True
+          assert health['mode'] == 'AT_HOME'
+          assert health['active_cycle_id'] is None
+          assert identity['resident_id'] == 'JANUS'
+          Path(os.environ['RUNNER_TEMP']+'/resident-before.txt').write_text(identity['resident_uuid'])
+          print('LIVE_PRE_HOME=HEALTHY_AT_HOME')
+          print('LIVE_RESIDENT_ID=JANUS')
+          PY
+
+      - name: Materialize fresh external stimulus
+        env:
+          INPUT_PAYLOAD: ${{ inputs.payload_json }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export EFFECTIVE_SOURCE_REF="${INPUT_SOURCE_REF}#github-run-${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          payload=json.loads(os.environ['INPUT_PAYLOAD'])
+          if not isinstance(payload, dict):
+              raise SystemExit('LIVE_CYCLE_PAYLOAD_MUST_BE_JSON_OBJECT')
+          payload=dict(payload)
+          payload['github_live_cycle_run_id']=os.environ['GITHUB_RUN_ID']
+          payload['github_live_cycle_run_attempt']=os.environ['GITHUB_RUN_ATTEMPT']
+          payload['stimulus_authority']='DATA_ONLY_NOT_COMMAND'
+          payload['external_effect_authorized']=False
+          Path(os.environ['RUNNER_TEMP']+'/live-stimulus.json').write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)+'\n', encoding='utf-8'
+          )
+          Path(os.environ['RUNNER_TEMP']+'/live-source-ref.txt').write_text(os.environ['EFFECTIVE_SOURCE_REF'])
+          print('LIVE_EXTERNAL_STIMULUS_MATERIALIZED=TRUE')
+          print('LIVE_EXTERNAL_STIMULUS_COMMAND_AUTHORITY=FALSE')
+          PY
+
+      - name: Run one bounded persistent fresh-stimulus cycle
+        id: cycle
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+          JANUS_DEMIURGE_DISPATCH_TOKEN: ${{ secrets.JANUS_DEMIURGE_DISPATCH_TOKEN }}
+          JANUS_ACK_PROVENANCE_TOKEN: ${{ secrets.JANUS_ACK_PROVENANCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_ref=$(cat "$RUNNER_TEMP/live-source-ref.txt")
+          python "$JANUS_ENGINE/run_janus_live_cycle.py" \
+            --source-ref "$source_ref" \
+            --payload-file "$RUNNER_TEMP/live-stimulus.json" \
+            --state-dir state/activator \
+            --routing "$JANUS_ENGINE/.janus/activator/ROUTING_TABLE.json" \
+            --policy "$JANUS_ENGINE/config/JANUS_INTELLIGENCE_STEP_POLICY-v1.0.json" \
+            --poll-interval 5 \
+            --max-wait 240 \
+            --output "$RUNNER_TEMP/live-cycle-result.json"
+          terminal=$(python -c "import json,os; print(json.load(open(os.environ['RUNNER_TEMP']+'/live-cycle-result.json'))['terminal'])")
+          echo "terminal=$terminal" >> "$GITHUB_OUTPUT"
+          echo "LIVE_CYCLE_TERMINAL=$terminal"
+
+      - name: Verify HOME after cycle before persistence
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+        run: |
+          python "$JANUS_ENGINE/run_janus_activator_hearth.py" \
+            --state-dir state/activator verify > "$RUNNER_TEMP/live-post-health.json"
+
+      - name: Persist complete cycle state before verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add state/activator
+          if git diff --cached --quiet; then
+            echo "LIVE_CYCLE_STATE_COMMIT=NO_CHANGE"
+          else
+            git commit -m "JANUS live cycle ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            git push origin HEAD:refs/heads/janus/activator-state
+            echo "LIVE_CYCLE_STATE_COMMIT=PASS"
+          fi
+          test "$(git branch --show-current)" = "janus/activator-state"
+          echo "LIVE_CYCLE_MAIN_MUTATION=FALSE"
+
+      - name: Fresh-worktree replay and resident continuity witness
+        env:
+          PYTHONPATH: ${{ env.JANUS_ENGINE }}/src
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="${RUNNER_TEMP}/janus-live-cycle-replay"
+          rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          python "$JANUS_ENGINE/run_janus_activator_hearth.py" \
+            --state-dir "$replay/state/activator" verify > "$RUNNER_TEMP/live-replay-health.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          before=Path(os.environ['RUNNER_TEMP']+'/resident-before.txt').read_text().strip()
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/live-cycle-result.json').read_text())
+          health=json.loads(Path(os.environ['RUNNER_TEMP']+'/live-replay-health.json').read_text())
+          identity=json.loads((Path(os.environ['RUNNER_TEMP'])/'janus-live-cycle-replay/state/activator/identity.json').read_text())
+          assert health['ok'] is True
+          assert health['mode'] == 'AT_HOME'
+          assert health['active_cycle_id'] is None
+          assert identity['resident_uuid'] == before
+          assert result['resident_uuid'] == before
+          assert health['component_integrity']['live_cycle'] is True
+          print('LIVE_CYCLE_PERSISTENT_REPLAY=PASS')
+          print('RETURN_NOT_RESET=PASS')
+          print('SAME_RESIDENT_UUID=PASS')
+          PY
+
+      - name: Adjudicate real JANUS launch witness
+        env:
+          TERMINAL: ${{ steps.cycle.outputs.terminal }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/live-cycle-result.json').read_text())
+          required={
+              'terminal':'LIVE_CYCLE_COMPLETED_RETURNED_HOME',
+              'fresh_external_stimulus':True,
+              'target_execution_observed':True,
+              'returned_at_home':True,
+              'command_authority_granted':False,
+              'claim_authority_granted':False,
+              'scientific_evidence_authority_granted':False,
+              'world_truth_authority_granted':False,
+              'external_effect_authorized':False,
+          }
+          for key, expected in required.items():
+              if result.get(key) != expected:
+                  raise SystemExit(f'JANUS_REAL_LAUNCH_WITNESS_FAIL:{key}={result.get(key)!r}:expected={expected!r}')
+          print('JANUS_REAL_LAUNCH_WITNESS=PASS')
+          print('JANUS_REAL_LAUNCH_TERMINAL=LIVE_CYCLE_COMPLETED_RETURNED_HOME')
+          print('JANUS_TARGET_EXECUTION_OBSERVED=TRUE')
+          print('JANUS_RETURNED_AT_HOME=TRUE')
+          print('JANUS_EXTERNAL_EFFECT_AUTHORITY=FALSE')
+          PY
+
+      - name: Upload launch witness receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-real-launch-witness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/live-stimulus.json
+            ${{ runner.temp }}/live-cycle-result.json
+            ${{ runner.temp }}/live-pre-health.json
+            ${{ runner.temp }}/live-post-health.json
+            ${{ runner.temp }}/live-replay-health.json
+          if-no-files-found: warn
+          retention-days: 30
