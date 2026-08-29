@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/janus_spi/**'
       - 'tests/**'
+      - 'config/**'
+      - '.janus/activator/**'
+      - 'run_janus_activator.py'
       - 'run_janus_spi.py'
       - 'run_janus_realtime.py'
       - 'run_aura_habitat_spiral.py'
@@ -15,6 +18,9 @@ on:
     paths:
       - 'src/janus_spi/**'
       - 'tests/**'
+      - 'config/**'
+      - '.janus/activator/**'
+      - 'run_janus_activator.py'
       - 'run_janus_spi.py'
       - 'run_janus_realtime.py'
       - 'run_aura_habitat_spiral.py'
@@ -39,6 +45,19 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
       - name: Compile
-        run: python -m compileall -q src run_janus_spi.py run_janus_realtime.py run_aura_habitat_spiral.py run_aura_habitat_bus.py
+        run: python -m compileall -q src run_janus_activator.py run_janus_spi.py run_janus_realtime.py run_aura_habitat_spiral.py run_aura_habitat_bus.py
+      - name: Validate Activator JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for p in sorted(Path('.janus/activator').glob('*.json')):
+              json.loads(p.read_text(encoding='utf-8'))
+              print('VALID_JSON', p)
+          json.loads(Path('config/constellation.json').read_text(encoding='utf-8'))
+          json.loads(Path('config/JANUS_INTELLIGENCE_STEP_POLICY-v1.0.json').read_text(encoding='utf-8'))
+          PY
       - name: Test
+        env:
+          PYTHONPATH: src
         run: pytest -q
