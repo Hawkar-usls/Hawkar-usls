@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "janus.activator.execution_grant.v0.7",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "grant_id", "created_at", "parent_grant_hash", "authenticated_final_receipt_hash",
+    "finalization_id", "packet_id", "packet_hash", "target_organ", "operation", "risk_class",
+    "execution_scope", "target_execution_authorized", "repository_write_authorized",
+    "network_access_authorized", "model_access_authorized", "command_authority_granted",
+    "claim_authority_granted", "scientific_evidence_authority_granted", "external_effect_authorized",
+    "physical_runtime_effect_authorized", "terminal", "reasons", "grant_hash"
+  ],
+  "properties": {
+    "schema": {"const": "janus.activator.execution_grant.v0.7"},
+    "grant_id": {"type": "string", "pattern": "^xg-[0-9a-f]{64}$"},
+    "created_at": {"type": "number", "minimum": 0},
+    "parent_grant_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "authenticated_final_receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "finalization_id": {"type": "string", "pattern": "^ackf-[0-9a-f]{64}$"},
+    "packet_id": {"type": "string", "pattern": "^dsp-[0-9a-f]{64}$"},
+    "packet_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "target_organ": {"const": "Hawkar-usls/Janus-Demiurge"},
+    "operation": {"const": "READ_ONLY_ORIENTATION_SNAPSHOT"},
+    "risk_class": {"const": "R0_INTERNAL_READ_ONLY_ORIENTATION"},
+    "execution_scope": {"const": "TARGET_REPOSITORY_LOCAL_READ_ONLY_METADATA"},
+    "target_execution_authorized": {"type": "boolean"},
+    "repository_write_authorized": {"const": false},
+    "network_access_authorized": {"const": false},
+    "model_access_authorized": {"const": false},
+    "command_authority_granted": {"const": false},
+    "claim_authority_granted": {"const": false},
+    "scientific_evidence_authority_granted": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "physical_runtime_effect_authorized": {"const": false},
+    "terminal": {
+      "enum": [
+        "EXECUTION_GRANT_ISSUED_READ_ONLY_ORIENTATION",
+        "EXECUTION_GRANT_BLOCKED_INVALID_FINAL_RECEIPT",
+        "EXECUTION_GRANT_BLOCKED_LOCAL_LINEAGE_INVALID",
+        "EXECUTION_GRANT_BLOCKED_FINAL_RECEIPT_NOT_LOCAL",
+        "EXECUTION_GRANT_BLOCKED_PARENT_NOT_ELIGIBLE",
+        "EXECUTION_GRANT_BLOCKED_PARENT_LINEAGE_MISSING",
+        "EXECUTION_GRANT_BLOCKED_PARENT_LINEAGE_INVALID",
+        "EXECUTION_GRANT_BLOCKED_PARENT_LINEAGE_MISMATCH",
+        "EXECUTION_GRANT_BLOCKED_DISPATCH_LINEAGE_INVALID",
+        "EXECUTION_GRANT_BLOCKED_TRANSPORT_LINEAGE_INVALID"
+      ]
+    },
+    "reasons": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "grant_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"terminal": {"const": "EXECUTION_GRANT_ISSUED_READ_ONLY_ORIENTATION"}}},
+      "then": {"properties": {"target_execution_authorized": {"const": true}}},
+      "else": {"properties": {"target_execution_authorized": {"const": false}}}
+    }
+  ]
+}
