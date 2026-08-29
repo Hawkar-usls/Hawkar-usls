@@ -4,6 +4,7 @@ from .core import Forecast, JanusSPICore, Ledger, SemanticEvent, SemanticMemory
 from .dispatch import DispatchLedger, JanusDispatchBroker, verify_dispatch_packet, verify_sealed_receipt
 from .github_observer import GitHubObserver
 from .habitat_bus import HabitatEventBus
+from .transport import JanusTransportBroker, TransportLedger
 
 __all__ = [
     "ActivationEvent",
@@ -18,11 +19,13 @@ __all__ = [
     "JanusActivator",
     "JanusDispatchBroker",
     "JanusSPICore",
+    "JanusTransportBroker",
     "Ledger",
     "SemanticEvent",
     "SemanticMemory",
     "SpiralDialogueEngine",
     "SpiralTurn",
+    "TransportLedger",
     "verify_dispatch_packet",
     "verify_sealed_receipt",
 ]
