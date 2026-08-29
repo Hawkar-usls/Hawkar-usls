@@ -65,10 +65,30 @@
       "reuse": "REQUIRED_BEFORE_CLAIM_PROMOTION"
     }
   ],
-  "known_drift": {
-    "issue": "janus-topa-scout-epistemic.yml validates TOPA v1.2 markers while active protocol file reports v1.3",
-    "status": "MUST_REPAIR_IN_DEMIURGE_BEFORE_CLAIMING_CURRENT_WORKFLOW_COVERAGE",
-    "effect_on_activator": "Source-inspected TOPA v1.3 semantics may guide design, but workflow validation status is not inherited as current proof."
+  "resolved_drift": {
+    "issue": "Scout manifest and active TOPA protocol were v1.3 while the validation workflow and 17 Scout mission prompts still referenced v1.2.",
+    "repair_repository": "Hawkar-usls/Janus-Demiurge",
+    "repair_pull_request": 33,
+    "merged_commit": "0d5ae8020c8ca436d45f850d74d4570b23eb8606",
+    "pr_head_validation": {
+      "head": "379cda698a96d0335b6a49be1f130f3d2cd74826",
+      "workflow_run_id": 33264988705,
+      "workflow": "Validate TOPA Scout Epistemic Layer",
+      "conclusion": "SUCCESS"
+    },
+    "main_validation": {
+      "workflow_run_id": 33265025084,
+      "workflow": "Validate TOPA Scout Epistemic Layer",
+      "conclusion": "SUCCESS"
+    },
+    "post_merge_scout_run": {
+      "workflow_run_id": 33265025061,
+      "workflow": "JANUS Demiurge Scout Swarm 17",
+      "conclusion": "SUCCESS",
+      "result_commit": "93211e0208560dff68e39cbf8b591cee5b6c2a92",
+      "claim_ceiling": "Workflow completion and persisted deterministic snapshots are engineering/runtime evidence only. Model synthesis may be degraded independently and workflow success is not world truth."
+    },
+    "status": "RESOLVED_AND_REPLAYED_ON_MAIN"
   },
   "forbidden_inheritance": [
     "ACTIVATION_IMPLIES_SCOUT_SWARM",
