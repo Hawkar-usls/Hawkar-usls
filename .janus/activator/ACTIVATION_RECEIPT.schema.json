@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "janus.activator.receipt.v0.2",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema", "activation_id", "parent_activation_hash", "event", "state_vector_before", "state_vector_after",
+    "lifecycle_trace", "routes_selected", "routes_blocked", "epistemic_terminal", "effect_terminal",
+    "health_terminal", "terminal", "dispatch_authorized", "external_effect_authorized", "next_gate",
+    "policy_sha256", "routing_sha256", "receipt_hash"
+  ],
+  "properties": {
+    "schema": {"const": "janus.activator.receipt.v0.2"},
+    "activation_id": {"type": "string", "pattern": "^act-[0-9a-f]{32}$"},
+    "parent_activation_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "lifecycle_trace": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+    "routes_selected": {"type": "array"},
+    "routes_blocked": {"type": "array", "items": {"type": "string"}},
+    "dispatch_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "effect_terminal": {"const": "NO_EXTERNAL_EFFECT"},
+    "policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "routing_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
