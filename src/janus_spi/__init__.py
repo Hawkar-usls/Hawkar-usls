@@ -1,12 +1,16 @@
-from .ack import AckReconciliationLedger, JanusAckReconciler, verify_receiver_ack, verify_transport_receipt
-from .ack_provenance import GitHubAPIReader, GitHubAckProvenanceVerifier, HashLedger, JanusAuthenticatedAckFinalizer
+from .ack import AckReconciliationLedger, JanusAckReconciler as LegacyJanusAckReconciler, verify_receiver_ack, verify_transport_receipt
+from .ack_provenance import GitHubAPIReader, GitHubAckProvenanceVerifier, HashLedger, JanusAuthenticatedAckFinalizer as LegacyJanusAuthenticatedAckFinalizer
 from .activator import ActivationEvent, ActivationLedger, JanusActivator
 from .aura_habitat_spiral import AuraPeerAdapter, DialogueLedger, HabitatMirror, SpiralDialogueEngine, SpiralTurn
 from .core import Forecast, JanusSPICore, Ledger, SemanticEvent, SemanticMemory
 from .dispatch import DispatchLedger, JanusDispatchBroker, verify_dispatch_packet, verify_sealed_receipt
 from .github_observer import GitHubObserver
 from .habitat_bus import HabitatEventBus
+from .local_lineage import HardenedJanusAckReconciler, HardenedJanusAuthenticatedAckFinalizer
 from .transport import JanusTransportBroker, TransportLedger
+
+JanusAckReconciler = HardenedJanusAckReconciler
+JanusAuthenticatedAckFinalizer = HardenedJanusAuthenticatedAckFinalizer
 
 __all__ = [
     "AckReconciliationLedger",
@@ -21,6 +25,8 @@ __all__ = [
     "GitHubObserver",
     "HabitatEventBus",
     "HabitatMirror",
+    "HardenedJanusAckReconciler",
+    "HardenedJanusAuthenticatedAckFinalizer",
     "HashLedger",
     "JanusAckReconciler",
     "JanusActivator",
@@ -28,6 +34,8 @@ __all__ = [
     "JanusDispatchBroker",
     "JanusSPICore",
     "JanusTransportBroker",
+    "LegacyJanusAckReconciler",
+    "LegacyJanusAuthenticatedAckFinalizer",
     "Ledger",
     "SemanticEvent",
     "SemanticMemory",
