@@ -27,13 +27,12 @@ class FakeOpener:
         return FakeResponse(self.status)
 
 
-def make_packet_and_state(tmp_path: Path):
-    state = tmp_path / "state"
+def make_packet(state: Path, suffix: str = "ack-test") -> dict:
     activation = JanusActivator(state_dir=state).activate(
         ActivationEvent.build(
             source_kind="GITHUB_COMMIT",
-            source_ref="Hawkar-usls/janus-meta-registry@ack-test",
-            payload={"kind": "registry_change"},
+            source_ref=f"Hawkar-usls/janus-meta-registry@{suffix}",
+            payload={"kind": "registry_change", "suffix": suffix},
             classifications=["research_or_anomaly_investigation"],
             fresh=True,
         )
@@ -42,8 +41,12 @@ def make_packet_and_state(tmp_path: Path):
         activation,
         target_organ="Hawkar-usls/Janus-Demiurge",
     )
-    packet = json.loads(Path(dispatch["packet_path"]).read_text(encoding="utf-8"))
-    return state, packet
+    return json.loads(Path(dispatch["packet_path"]).read_text(encoding="utf-8"))
+
+
+def make_packet_and_state(tmp_path: Path):
+    state = tmp_path / "state"
+    return state, make_packet(state)
 
 
 def make_transport(state: Path, packet: dict, *, status: int = 204, error: Exception | None = None):
@@ -76,6 +79,13 @@ def reseal_ack(ack: dict) -> dict:
     return ack
 
 
+def reseal_packet(packet: dict) -> dict:
+    packet = dict(packet)
+    packet.pop("packet_hash", None)
+    packet["packet_hash"] = canonical_hash(packet)
+    return packet
+
+
 def reseal_transport(receipt: dict) -> dict:
     receipt = dict(receipt)
     receipt.pop("receipt_hash", None)
@@ -91,6 +101,8 @@ def test_accepted_ack_is_only_structurally_bound_source_unverified(tmp_path):
     receipt = JanusAckReconciler(state_dir=state).reconcile(packet, transport, ack)
 
     assert receipt["terminal"] == "ACK_STRUCTURALLY_BOUND_SOURCE_UNVERIFIED_NO_EXECUTION"
+    assert receipt["packet_local_outbox_bound"] is True
+    assert receipt["transport_local_ledger_bound"] is True
     assert receipt["ack_integrity_valid"] is True
     assert receipt["ack_source_authenticity"] == "UNVERIFIED_OFFLINE"
     assert receipt["ack_source_authenticated"] is False
@@ -114,6 +126,37 @@ def test_fabricated_but_self_hashed_ack_cannot_claim_source_authenticity(tmp_pat
     assert receipt["terminal"] == "ACK_STRUCTURALLY_BOUND_SOURCE_UNVERIFIED_NO_EXECUTION"
     assert receipt["ack_integrity_valid"] is True
     assert receipt["ack_source_authenticated"] is False
+    assert receipt["delivery_confirmed"] is False
+
+
+def test_self_hashed_packet_not_in_home_outbox_is_blocked(tmp_path):
+    state, packet = make_packet_and_state(tmp_path)
+    transport = make_transport(state, packet)
+    fabricated_packet = dict(packet)
+    fabricated_packet["route_match"] = "fabricated-route"
+    fabricated_packet = reseal_packet(fabricated_packet)
+    ack = make_ack(fabricated_packet)
+
+    receipt = JanusAckReconciler(state_dir=state).reconcile(fabricated_packet, transport, ack)
+
+    assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_PACKET_NOT_IN_LOCAL_OUTBOX"
+    assert receipt["packet_local_outbox_bound"] is False
+    assert receipt["delivery_confirmed"] is False
+
+
+def test_self_hashed_transport_not_in_home_ledger_is_blocked(tmp_path):
+    state, packet = make_packet_and_state(tmp_path)
+    transport = make_transport(state, packet)
+    fabricated_transport = dict(transport)
+    fabricated_transport["reasons"] = ["fabricated self-consistent local transport receipt"]
+    fabricated_transport = reseal_transport(fabricated_transport)
+    ack = make_ack(packet)
+
+    receipt = JanusAckReconciler(state_dir=state).reconcile(packet, fabricated_transport, ack)
+
+    assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_TRANSPORT_NOT_IN_LOCAL_LEDGER"
+    assert receipt["packet_local_outbox_bound"] is True
+    assert receipt["transport_local_ledger_bound"] is False
     assert receipt["delivery_confirmed"] is False
 
 
@@ -142,6 +185,8 @@ def test_tampered_ack_is_blocked(tmp_path):
 
     assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_INVALID_ACK"
     assert receipt["ack_integrity_valid"] is False
+    assert receipt["packet_local_outbox_bound"] is True
+    assert receipt["transport_local_ledger_bound"] is True
     assert receipt["delivery_confirmed"] is False
 
 
@@ -168,6 +213,7 @@ def test_tampered_transport_receipt_is_blocked(tmp_path):
     receipt = JanusAckReconciler(state_dir=state).reconcile(packet, transport, ack)
 
     assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_INVALID_TRANSPORT_RECEIPT"
+    assert receipt["ack_integrity_valid"] is True
     assert receipt["delivery_confirmed"] is False
 
 
@@ -180,19 +226,21 @@ def test_pre_effect_transport_state_cannot_be_reconciled(tmp_path):
     receipt = JanusAckReconciler(state_dir=state).reconcile(packet, transport, ack)
 
     assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_TRANSPORT_NOT_RECONCILABLE"
+    assert receipt["transport_local_ledger_bound"] is True
     assert receipt["delivery_confirmed"] is False
 
 
-def test_transport_receipt_for_other_packet_is_blocked_even_if_resealed(tmp_path):
-    state, packet = make_packet_and_state(tmp_path)
-    transport = make_transport(state, packet)
-    transport["packet_id"] = "dsp-" + "c" * 64
-    transport = reseal_transport(transport)
-    ack = make_ack(packet)
+def test_local_transport_for_another_local_packet_is_blocked_by_packet_mismatch(tmp_path):
+    state, packet_one = make_packet_and_state(tmp_path)
+    packet_two = make_packet(state, "ack-test-two")
+    transport_two = make_transport(state, packet_two)
+    ack_one = make_ack(packet_one)
 
-    receipt = JanusAckReconciler(state_dir=state).reconcile(packet, transport, ack)
+    receipt = JanusAckReconciler(state_dir=state).reconcile(packet_one, transport_two, ack_one)
 
     assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_PACKET_MISMATCH"
+    assert receipt["packet_local_outbox_bound"] is True
+    assert receipt["transport_local_ledger_bound"] is True
     assert receipt["delivery_confirmed"] is False
 
 
@@ -220,6 +268,7 @@ def test_inconsistent_ack_state_is_blocked(tmp_path):
 
     assert receipt["terminal"] == "ACK_RECONCILIATION_BLOCKED_INCONSISTENT_ACK_STATE"
     assert receipt["ack_integrity_valid"] is True
+    assert receipt["delivery_confirmed"] is False
 
 
 def test_structurally_valid_rejection_is_preserved_without_authentication(tmp_path):
