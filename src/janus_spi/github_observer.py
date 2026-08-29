@@ -6,9 +6,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Mapping, Optional
 
 from .core import JanusSPICore, SemanticEvent
 
@@ -19,6 +19,30 @@ class RepoSource:
     branch: str
     role: str
     enabled: bool = True
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_mapping(cls, item: Mapping[str, Any]) -> "RepoSource":
+        """Parse one constellation source without discarding authority metadata.
+
+        Constellation entries are allowed to grow governance fields independently of
+        the read-only observer. Unknown fields remain metadata; they never become
+        command, epistemic, or effect authority merely by being present in config.
+        """
+        known = {"repository", "branch", "role", "enabled"}
+        repository = str(item.get("repository") or "").strip()
+        if "/" not in repository:
+            raise ValueError(f"INVALID_REPOSITORY_SOURCE:{repository or 'EMPTY'}")
+        branch = str(item.get("branch") or "main").strip() or "main"
+        role = str(item.get("role") or "UNSPECIFIED").strip() or "UNSPECIFIED"
+        metadata = {str(k): v for k, v in item.items() if k not in known}
+        return cls(
+            repository=repository,
+            branch=branch,
+            role=role,
+            enabled=bool(item.get("enabled", True)),
+            metadata=metadata,
+        )
 
 
 class GitHubObserver:
@@ -39,14 +63,23 @@ class GitHubObserver:
         self.token = os.environ.get(self.config.get("github_token_env", "GITHUB_TOKEN"), "")
         self.max_commits = min(100, max(1, int(observer_cfg.get("max_commits_per_poll", 30))))
         self.request_timeout = max(1.0, float(observer_cfg.get("request_timeout_seconds", 20.0)))
-        self.sources = [RepoSource(**item) for item in self.config.get("sources", []) if item.get("enabled", True)]
+        raw_sources = self.config.get("sources", [])
+        if not isinstance(raw_sources, list):
+            raise ValueError("CONSTELLATION_SOURCES_MUST_BE_LIST")
+        self.sources = [
+            source
+            for item in raw_sources
+            if isinstance(item, Mapping)
+            for source in [RepoSource.from_mapping(item)]
+            if source.enabled
+        ]
         self._head_sha: Dict[str, str] = {}
         self._unchanged_head_hits = 0
 
     def _request_json(self, url: str) -> object:
         headers = {
             "Accept": "application/vnd.github+json",
-            "User-Agent": "JANUS-SPI-read-only-observer/1.1",
+            "User-Agent": "JANUS-SPI-read-only-observer/1.2",
             "X-GitHub-Api-Version": "2022-11-28",
         }
         if self.token:
@@ -92,7 +125,13 @@ class GitHubObserver:
                 source="github-observer-error",
                 source_ref=source.repository,
                 text=f"Observer could not read {source.repository}@{source.branch}: {type(exc).__name__}",
-                metadata={"role": source.role, "branch": source.branch, "error_type": type(exc).__name__},
+                metadata={
+                    "role": source.role,
+                    "branch": source.branch,
+                    "error_type": type(exc).__name__,
+                    "observer_plane": "TARGET_TRANSPORT",
+                    "negative_evidence": False,
+                },
             )
             return
 
@@ -120,6 +159,7 @@ class GitHubObserver:
                     "commit_time": timestamp,
                     "html_url": html_url,
                     "command_authority": False,
+                    "source_governance": source.metadata,
                 },
             )
 
