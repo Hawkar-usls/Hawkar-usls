@@ -14,6 +14,8 @@ on:
       - 'run_janus_ack_reconcile.py'
       - 'run_janus_ack_provenance.py'
       - 'run_janus_execution_grant.py'
+      - 'run_janus_execution_transport.py'
+      - 'run_janus_execution_return.py'
       - 'run_janus_spi.py'
       - 'run_janus_realtime.py'
       - 'run_aura_habitat_spiral.py'
@@ -22,6 +24,8 @@ on:
       - '.github/workflows/janus-spi-ci.yml'
       - '.github/workflows/janus-activator-hearth.yml'
       - '.github/workflows/janus-activator-execution-grant.yml'
+      - '.github/workflows/janus-activator-execution-transport.yml'
+      - '.github/workflows/janus-activator-execution-return.yml'
       - '.github/workflows/janus-activator-transport.yml'
       - '.github/workflows/janus-activator-ack-reconciliation.yml'
       - '.github/workflows/janus-activator-ack-provenance.yml'
@@ -38,6 +42,8 @@ on:
       - 'run_janus_ack_reconcile.py'
       - 'run_janus_ack_provenance.py'
       - 'run_janus_execution_grant.py'
+      - 'run_janus_execution_transport.py'
+      - 'run_janus_execution_return.py'
       - 'run_janus_spi.py'
       - 'run_janus_realtime.py'
       - 'run_aura_habitat_spiral.py'
@@ -46,6 +52,8 @@ on:
       - '.github/workflows/janus-spi-ci.yml'
       - '.github/workflows/janus-activator-hearth.yml'
       - '.github/workflows/janus-activator-execution-grant.yml'
+      - '.github/workflows/janus-activator-execution-transport.yml'
+      - '.github/workflows/janus-activator-execution-return.yml'
       - '.github/workflows/janus-activator-transport.yml'
       - '.github/workflows/janus-activator-ack-reconciliation.yml'
       - '.github/workflows/janus-activator-ack-provenance.yml'
@@ -68,7 +76,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
       - name: Compile
-        run: python -m compileall -q src run_janus_activator.py run_janus_activator_hearth.py run_janus_dispatch.py run_janus_transport.py run_janus_ack_reconcile.py run_janus_ack_provenance.py run_janus_execution_grant.py run_janus_spi.py run_janus_realtime.py run_aura_habitat_spiral.py run_aura_habitat_bus.py
+        run: python -m compileall -q src run_janus_activator.py run_janus_activator_hearth.py run_janus_dispatch.py run_janus_transport.py run_janus_ack_reconcile.py run_janus_ack_provenance.py run_janus_execution_grant.py run_janus_execution_transport.py run_janus_execution_return.py run_janus_spi.py run_janus_realtime.py run_aura_habitat_spiral.py run_aura_habitat_bus.py
       - name: Validate Activator JSON
         run: |
           python - <<'PY'
