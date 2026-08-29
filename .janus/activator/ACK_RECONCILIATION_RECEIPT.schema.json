@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "janus.activator.ack_reconciliation_receipt.v0.5",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "reconciliation_id", "created_at", "parent_reconciliation_hash",
+    "packet_id", "packet_hash", "transport_receipt_hash", "ack_hash",
+    "transport_terminal_before", "ack_terminal", "ack_accepted",
+    "delivery_ack_valid", "execution_authorized", "execution_performed",
+    "claim_authority_granted", "external_effect_authorized",
+    "terminal", "reasons", "receipt_hash"
+  ],
+  "properties": {
+    "schema": {"const": "janus.activator.ack_reconciliation_receipt.v0.5"},
+    "reconciliation_id": {"type": "string", "pattern": "^ackr-[0-9a-f]{64}$"},
+    "created_at": {"type": "number", "minimum": 0},
+    "parent_reconciliation_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "packet_id": {"type": "string", "minLength": 1},
+    "packet_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "transport_receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ack_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "transport_terminal_before": {"type": "string", "minLength": 1},
+    "ack_terminal": {"type": "string", "minLength": 1},
+    "ack_accepted": {"type": "boolean"},
+    "delivery_ack_valid": {"type": "boolean"},
+    "execution_authorized": {"const": false},
+    "execution_performed": {"const": false},
+    "claim_authority_granted": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "terminal": {
+      "enum": [
+        "ACK_BOUND_NO_EXECUTION",
+        "ACK_BOUND_REJECTED_NO_EXECUTION",
+        "ACK_ALREADY_RECONCILED",
+        "ACK_RECONCILIATION_BLOCKED_INVALID_PACKET",
+        "ACK_RECONCILIATION_BLOCKED_INVALID_TRANSPORT_RECEIPT",
+        "ACK_RECONCILIATION_BLOCKED_TRANSPORT_NOT_RECONCILABLE",
+        "ACK_RECONCILIATION_BLOCKED_INVALID_ACK",
+        "ACK_RECONCILIATION_BLOCKED_PACKET_MISMATCH",
+        "ACK_RECONCILIATION_BLOCKED_AUTHORITY_ESCALATION",
+        "ACK_RECONCILIATION_BLOCKED_INCONSISTENT_ACK_STATE"
+      ]
+    },
+    "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
