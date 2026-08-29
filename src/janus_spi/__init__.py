@@ -7,6 +7,7 @@ from .dispatch import DispatchLedger, JanusDispatchBroker, verify_dispatch_packe
 from .github_observer import GitHubObserver
 from .habitat_bus import HabitatEventBus
 from .local_lineage import HardenedJanusAckReconciler, HardenedJanusAuthenticatedAckFinalizer
+from .persistent_state import HearthLedger, JanusPersistentState
 from .transport import JanusTransportBroker, TransportLedger
 
 JanusAckReconciler = HardenedJanusAckReconciler
@@ -28,10 +29,12 @@ __all__ = [
     "HardenedJanusAckReconciler",
     "HardenedJanusAuthenticatedAckFinalizer",
     "HashLedger",
+    "HearthLedger",
     "JanusAckReconciler",
     "JanusActivator",
     "JanusAuthenticatedAckFinalizer",
     "JanusDispatchBroker",
+    "JanusPersistentState",
     "JanusSPICore",
     "JanusTransportBroker",
     "LegacyJanusAckReconciler",
