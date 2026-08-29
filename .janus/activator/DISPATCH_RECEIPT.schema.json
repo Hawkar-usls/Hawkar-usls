@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "janus.activator.dispatch_receipt.v0.3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "dispatch_id", "created_at", "activation_id", "activation_receipt_hash",
+    "target_organ", "operation", "dispatch_authorized", "external_effect_authorized",
+    "terminal", "reasons", "receipt_hash"
+  ],
+  "properties": {
+    "schema": {"const": "janus.activator.dispatch_receipt.v0.3"},
+    "dispatch_id": {"type": "string", "pattern": "^dsp-[0-9a-f]{64}$"},
+    "created_at": {"type": "number", "minimum": 0},
+    "activation_id": {"type": "string", "minLength": 1},
+    "activation_receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "target_organ": {"type": "string", "minLength": 1},
+    "operation": {"const": "WAKE_ORGAN_READ_ONLY"},
+    "dispatch_authorized": {"type": "boolean"},
+    "external_effect_authorized": {"const": false},
+    "terminal": {
+      "enum": [
+        "AUTHORIZED_INTERNAL_HANDOFF",
+        "ALREADY_EMITTED",
+        "BLOCKED_INVALID_ACTIVATION_RECEIPT",
+        "BLOCKED_ACTIVATION_NOT_ROUTE_PROPOSED",
+        "BLOCKED_TARGET_NOT_SELECTED",
+        "BLOCKED_FORBIDDEN_AUTO_TARGET",
+        "BLOCKED_ROUTE_EFFECT_AUTHORITY",
+        "BLOCKED_OPERATION"
+      ]
+    },
+    "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "packet_path": {"type": ["string", "null"]},
+    "packet_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "receipt_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
