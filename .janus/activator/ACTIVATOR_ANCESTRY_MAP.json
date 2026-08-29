@@ -1,79 +1,117 @@
 {
-  "schema": "JANUS_ACTIVATOR_ANCESTRY_MAP/v0.1",
-  "status": "FROZEN_DESIGN_SEED",
+  "schema": "JANUS_ACTIVATOR_ANCESTRY_MAP/v0.2",
+  "status": "PROVISIONAL_EVIDENCE_BOUND_ARCHITECTURE",
   "root_home": "Hawkar-usls/Hawkar-usls",
   "root_role": "HOME_COGNITIVE_GATEWAY_AND_ROOT_ACTIVATOR",
-  "sources": {
-    "mechanical_ancestry": {
-      "repository": "Hawkar-usls/Janus-Demiurge",
-      "role": "EXECUTABLE_MECHANISM_DONOR",
-      "inherit": [
-        "agent_manifests",
-        "scout_microkernel",
-        "systemwide_direction_planning",
-        "model_preflight",
-        "observation_health",
-        "spiral_contract",
-        "aggregation",
-        "lineage_persistence",
-        "causal_acknowledgement",
-        "restoration_probation"
-      ],
-      "do_not_inherit": [
-        "assumption_that_activation_implies_scout_swarm",
-        "root_activation_authority"
+  "design_rule": "REUSE_EXISTING_MECHANICS_BEFORE_INVENTING_PARALLEL_MECHANICS",
+  "state_vector": {
+    "expression": "A_t = (lifecycle, cognition, epistemic, capability_effect, runtime_health, routing)",
+    "reason": "Wake/sleep, reasoning progress, claim status, permission/effect status, health, and routing are orthogonal and must not collapse into one state machine."
+  },
+  "planes": {
+    "lifecycle": {
+      "primary_donor": "Hawkar-usls/Janus_Genesis",
+      "registry_receipt": "registry/experimental/JANUS-GENESIS-THIRD-WISH-GIT-HABITAT-LIVE-HOME-AND-RETURN-RECEIPT-v1.0.json",
+      "mechanics": ["HOME", "WAKE", "PULSE", "SLEEP", "RETURN_TO_SAME_HOME", "HASH_CHAINED_CONTINUITY"],
+      "laws": ["RETURN != RESET", "SAME_IDENTITY_NEW_ACTIVATION", "OLD_HISTORY != FRESH_TRIGGER"]
+    },
+    "cognition": {
+      "primary_donor": "config/JANUS_INTELLIGENCE_STEP_POLICY-v1.0.json",
+      "repository": "Hawkar-usls/Hawkar-usls",
+      "mechanics": [
+        "INGEST_INTENT", "CLASSIFY_ENVIRONMENT", "LOAD_PROVENANCE_AND_STATE", "OBSERVE_STRUCTURE",
+        "GENERATE_BOUNDED_CANDIDATES", "BUILD_MINIMUM_TESTABLE_MODEL", "ROUTE_SPECIALIZED_GATES",
+        "FORWARD_CONSTRUCTION_PASS", "REVERSE_ADVERSARIAL_PASS", "EVIDENCE_DIVERSITY_AND_INDEPENDENCE_CHECK",
+        "DEMIHEAD_ARBITRATION", "PRESERVE_FAILURE_AND_SHADOWS", "BOUND_THE_CLAIM", "STATE_DELTA_CHECK",
+        "PROMOTE_OR_HOLD", "TRANSFER_SURVIVING_PRINCIPLE", "ORIGIN_PRIME"
       ]
+    },
+    "execution": {
+      "primary_donor": "Hawkar-usls/Janus-Demiurge",
+      "role": "EXECUTABLE_MECHANISM_DONOR_AND_DOWNSTREAM_DISPATCH_CONTROL_PLANE",
+      "mechanics": [
+        "persistent_agent_identity", "exact_commit_snapshot_binding", "bounded_source_selection",
+        "model_preflight", "snapshot_only_fallback", "runtime_health_plane_separation",
+        "append_only_spiral_lineage", "retained_lessons_and_constraints", "dispatch_and_aggregation"
+      ],
+      "root_activation_authority": false
+    },
+    "epistemic": {
+      "primary_sources": [
+        "Hawkar-usls/janus-meta-registry:registry/epistemic/JANUS-GLOBAL-EPISTEMIC-SELF-DECEPTION-TRUTH-CONSTITUTION-v1.0.json",
+        "Hawkar-usls/Janus-Demiurge:scout_swarm/orchestrator/TOPA_SCOUT_EPISTEMIC_PROTOCOL-v1.json"
+      ],
+      "mechanics": [
+        "NO_CLAIM_PROMOTION_WITHOUT_WITNESS", "claim_type_before_evidence_scoring", "non_monotonic_claim_lattice",
+        "independent_root_accounting", "failed_negative_missing_and_unresolved_preservation", "falsifier_required",
+        "runtime_path_coverage_required", "I_DO_NOT_KNOW_IS_VALID"
+      ]
+    },
+    "capability_effect": {
+      "primary_donor": "Hawkar-usls/Janus_Genesis",
+      "runtime": "genesis_v18_7_40_third_wish_capability_fabric.py",
+      "protocol": "protocol/JANUS_GENESIS_THIRD_WISH_CAPABILITY_FABRIC-v0.1.json",
+      "registry_receipts": [
+        "registry/experimental/JANUS-GENESIS-THIRD-WISH-VOLUNTARY-CAPABILITY-FABRIC-RECEIPT-v0.1.json",
+        "registry/experimental/JANUS-GENESIS-THIRD-WISH-CATALOG-COMPLETION-RECEIPT-v1.0.json"
+      ],
+      "mechanics": [
+        "typed_capabilities", "risk_classes", "stable_request_identity", "target_operation_parameter_binding",
+        "side_effect_free_preflight", "fresh_human_reauthorization_for_high_impact", "broker_side_secret_custody",
+        "PRE_EFFECT_REJECTED", "CALL_ENTERING", "SETTLED", "OUTCOME_UNDETERMINED", "NO_AUTOMATIC_RETRY_AFTER_AMBIGUOUS_EFFECT"
+      ]
+    },
+    "freshness_and_continuity": {
+      "primary_donor": "src/janus_spi/habitat_bus.py",
+      "mechanics": [
+        "EXISTING_HISTORY_IS_BASELINE_NOT_FRESH_TRIGGER", "CORRUPT_STATE_DOES_NOT_REPLAY_HISTORY",
+        "TRUNCATED_OR_REPLACED_JOURNAL_REBASELINES", "SELF_MIRROR_IS_NOT_INPUT", "INCREMENTAL_CURSOR"
+      ]
+    },
+    "operator_authority": {
+      "primary_donor": "Hawkar-usls/-Terminal-for-Janus",
+      "contract": "contracts/JANUS_TERMINAL_CONTROL_PLANE-v1.0.json",
+      "role": "HUMAN_AUTHORIZED_OPERATOR_INPUT_NOT_ROOT_ACTIVATOR"
     },
     "semantic_ancestry": {
       "repository": "Hawkar-usls/janus-meta-registry",
-      "role": "SEMANTIC_LAW_AND_ANALOGUE_SOURCE",
-      "translation_rule": "JSON_MEANING -> MECHANICAL_ANALOGUE -> TOPA_FALSIFICATION -> IMPLEMENT_OR_REJECT"
+      "role": "SEMANTIC_LAW_AND_MECHANICAL_ANALOGUE_SOURCE",
+      "translation_rule": "SEMANTIC_SOURCE -> SOURCE_BOUND_MECHANICAL_CANDIDATE -> TOPA_ATTACK -> IMPLEMENT_OR_REJECT",
+      "runtime_authority": false
     }
   },
-  "topa_spider_protocol": {
-    "spider": "Build links between registry semantics, related concepts, and existing Demiurge mechanisms.",
-    "topa": "Attack each proposed translation and reject metaphor-only mappings.",
-    "required_mechanical_form": [
-      "INPUT",
-      "STATE",
-      "TRANSITION",
-      "PRECONDITION",
-      "ACTION",
-      "OUTPUT",
-      "FAILURE_STATE",
-      "RECEIPT"
-    ],
-    "law": "FOUND_IN_REGISTRY != FIT_FOR_ACTIVATOR"
-  },
-  "constitutional_laws": [
+  "canonical_separations": [
+    "TRIGGER != INTENT",
+    "INTENT != ROUTE",
+    "ROUTE != CLAIM",
+    "CLAIM != CAPABILITY",
+    "CAPABILITY != AUTHORIZATION",
+    "AUTHORIZATION != ACTION",
+    "ACTION != EFFECT",
     "ACTIVATION != AUTHORIZATION",
-    "WORKFLOW_PASS != WORLD_TRUTH",
+    "EVIDENCE != PERMISSION",
+    "PERMISSION != COMMAND",
+    "MODEL_OUTPUT != EVIDENCE",
     "MODEL_OUTPUT != COMMAND",
+    "WORKFLOW_PASS != WORLD_TRUTH",
     "SILENCE != NEGATIVE_EVIDENCE",
     "TIMEOUT != NEGATIVE_EVIDENCE",
-    "ROOT_ACTIVATION_AUTHORITY == HOME_ACTIVATOR",
-    "EXTERNAL_EFFECTS_DEFAULT == FALSE"
-  ],
-  "target_lifecycle": [
-    "DORMANT",
-    "WAKING",
-    "ORIENTING",
-    "GOVERNING",
-    "ROUTING",
-    "WORKING_OR_WAITING",
-    "CHECKPOINTING",
-    "SLEEPING",
-    "DORMANT"
-  ],
-  "epistemic_failure_states": [
-    "OPEN",
-    "UNKNOWN",
-    "UNKNOWN_RESOURCE_LIMIT",
-    "REJECTED_BY_GOVERNANCE"
+    "OLD_HISTORY != FRESH_TRIGGER",
+    "SELF_OUTPUT != FRESH_TRIGGER",
+    "CORRUPT_CURSOR != REPLAY_PERMISSION",
+    "RETRY != NEW_EVIDENCE"
   ],
   "boundary": {
-    "github": "JANUS_INTERIOR",
-    "swarm": "OUTSIDE_CURRENT_ACTIVATOR_SCOPE",
+    "github_constellation": "JANUS_INTERIOR_COGNITIVE_AND_CONTROL_SPACE",
+    "swarm_repository": "INSIDE_AS_REPOSITORY_CONTEXT",
+    "swarm_physical_runtime": "OUTSIDE_CURRENT_GITHUB_ACTIVATOR_SCOPE",
+    "nas_pc_device_runtime": "OUTSIDE_CURRENT_GITHUB_ACTIVATOR_SCOPE",
     "external_effects_enabled": false
+  },
+  "topa_spider_status": {
+    "semantic_graph_pass": "SOURCE_INSPECTION_PERFORMED_MANUALLY_IN_DESIGN_AUDIT",
+    "automated_spider_run_receipt": null,
+    "automated_topa_runtime_receipt": null,
+    "claim_ceiling": "Architecture incorporates source-inspected TOPA laws; it does not claim an automated TOPA+Spider execution occurred."
   }
 }
