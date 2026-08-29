@@ -8,7 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from janus_spi.ack_provenance import GitHubAckProvenanceVerifier, JanusAuthenticatedAckFinalizer
+from janus_spi.ack_provenance import GitHubAckProvenanceVerifier
+from janus_spi.local_lineage import HardenedJanusAuthenticatedAckFinalizer
 
 CREDENTIAL_ENV = "JANUS_ACK_PROVENANCE_TOKEN"
 AUTHENTICATED_TERMINAL = "ACK_SOURCE_AUTHENTICATED_GITHUB_ACTIONS_TRUST_MODEL"
@@ -40,7 +41,7 @@ def main() -> None:
     parser.add_argument("--state-dir", default="state/activator")
     parser.add_argument("--provenance-output", help="Optional v0.6 provenance receipt path")
     parser.add_argument("--ack-output", help="Optional authenticated artifact ACK JSON path")
-    parser.add_argument("--structural-receipt", help="Optional local v0.5 structural receipt to finalize after source authentication")
+    parser.add_argument("--structural-receipt", help="Optional local structural receipt to finalize after source authentication")
     parser.add_argument("--final-output", help="Optional authenticated finalization receipt path")
     parser.add_argument("--require-authenticated", action="store_true", help="Exit non-zero unless source authentication succeeds")
     parser.add_argument("--require-finalized", action="store_true", help="Exit non-zero unless authenticated finalization succeeds")
@@ -59,7 +60,7 @@ def main() -> None:
     result = {"provenance": provenance, "ack": ack, "finalization": None}
     if args.structural_receipt and provenance.get("terminal") == AUTHENTICATED_TERMINAL:
         structural = load_object(args.structural_receipt)
-        final = JanusAuthenticatedAckFinalizer(state_dir=args.state_dir).finalize(structural, provenance)
+        final = HardenedJanusAuthenticatedAckFinalizer(state_dir=args.state_dir).finalize(structural, provenance)
         write_json(args.final_output, final)
         result["finalization"] = final
 

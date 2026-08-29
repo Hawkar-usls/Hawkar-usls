@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from janus_spi.ack import JanusAckReconciler
+from janus_spi.local_lineage import HardenedJanusAckReconciler
 
 
 STRUCTURAL_SUCCESS_TERMINALS = {
@@ -38,7 +38,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    reconciler = JanusAckReconciler(state_dir=args.state_dir)
+    reconciler = HardenedJanusAckReconciler(state_dir=args.state_dir)
     receipt = reconciler.reconcile(
         load_object(args.packet),
         load_object(args.transport_receipt),
