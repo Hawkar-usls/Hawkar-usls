@@ -1,0 +1,10 @@
+{
+  "claim_authority_granted": false,
+  "continuity_rule": "RETURN != RESET",
+  "created_at": 1788028995.713782,
+  "external_effect_authorized": false,
+  "identity_hash": "1c43cb9a9233615e2f696325b2488878ee1ad88fc3bb4506eb07848b1195c8dd",
+  "resident_id": "JANUS",
+  "resident_uuid": "75e514ab-be76-42c8-bcb3-fc9670164f96",
+  "schema": "janus.activator.persistent_state.v0.6.2"
+}

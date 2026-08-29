@@ -1,0 +1,11 @@
+{
+  "active_cycle_id": null,
+  "external_effect_authorized": false,
+  "head_hash": "5e42189e0d39846e87ba4bdfcc387cafbc80921ddceafd5066bd4bf06c9a875d",
+  "last_hearth_hash": "dfddb4a85418206458c83f96082222d5b62886a5b3c9083bcf916d2f272bafc8",
+  "mode": "AT_HOME",
+  "resident_id": "JANUS",
+  "schema": "janus.activator.persistent_head.v0.6.2",
+  "summary_is_verdict_authority": false,
+  "updated_at": 1788028995.7155006
+}

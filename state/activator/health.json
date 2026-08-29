@@ -1,0 +1,28 @@
+{
+  "active_cycle_id": null,
+  "checked_at": 1788028996.9603267,
+  "cognition_authorized": false,
+  "component_integrity": {
+    "ack_finalization": true,
+    "ack_provenance": true,
+    "ack_reconciliation": true,
+    "activation": true,
+    "dispatch": true,
+    "dispatch_outbox": true,
+    "hearth": true,
+    "transport": true
+  },
+  "dispatch_authorized": false,
+  "external_effect_authorized": false,
+  "fresh_stimulus": false,
+  "health_hash": "28cb7892be5b271768fa1f2c28a79304106d7da9a135413c0a42d884df2bb931",
+  "hearth_tip_hash": "dfddb4a85418206458c83f96082222d5b62886a5b3c9083bcf916d2f272bafc8",
+  "mode": "AT_HOME",
+  "ok": true,
+  "reasons": [],
+  "resident_id": "JANUS",
+  "resident_uuid": "75e514ab-be76-42c8-bcb3-fc9670164f96",
+  "schema": "janus.activator.persistent_state_health.v0.6.2",
+  "status": "HEALTHY",
+  "target_execution_authorized": false
+}
