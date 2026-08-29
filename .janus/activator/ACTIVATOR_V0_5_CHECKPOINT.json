@@ -1,0 +1,116 @@
+{
+  "schema": "janus.activator.checkpoint.v0.5",
+  "checkpoint_id": "JANUS_ACTIVATOR_V0_5_OFFLINE_ACK_STRUCTURAL_RECONCILIATION_CHECKPOINT",
+  "created_date": "2026-08-29",
+  "home": "Hawkar-usls/Hawkar-usls",
+  "status": "IMPLEMENTED_AND_TESTED_OFFLINE_ACK_STRUCTURAL_BINDING_WITH_SOURCE_AUTHENTICITY_CEILING",
+  "merge": {
+    "home_main_sha": "d9fe599325e20c62de26292a6bfb72133f79b721",
+    "exact_pr_head_sha": "c57283ea8ad9ded7d1ddea516c98e47b93031e29",
+    "pr_number": 6
+  },
+  "verification": {
+    "exact_pr_head_specialized_ack_run": 33266852764,
+    "exact_pr_head_specialized_ack_conclusion": "SUCCESS",
+    "exact_pr_head_specialized_tests": "14/14_PASS",
+    "exact_pr_head_home_ci_run": 33266852735,
+    "exact_pr_head_home_ci_conclusion": "SUCCESS",
+    "post_merge_specialized_ack_run": 33266888003,
+    "post_merge_specialized_ack_conclusion": "SUCCESS",
+    "post_merge_home_ci_run": 33266887996,
+    "post_merge_home_ci_conclusion": "SUCCESS"
+  },
+  "runtime": {
+    "module": "src/janus_spi/ack.py",
+    "entrypoint": "run_janus_ack_reconcile.py",
+    "constitution": ".janus/activator/ACK_RECONCILIATION_CONSTITUTION.json",
+    "receipt_schema": ".janus/activator/ACK_RECONCILIATION_RECEIPT.schema.json",
+    "ledger": "state/activator/ack_reconciliation_ledger.jsonl"
+  },
+  "verified_home_lineage_membership": {
+    "dispatch_packet": "MUST_EXACTLY_MATCH_state/activator/dispatch_outbox/<packet_id>.json",
+    "transport_receipt": "MUST_EXACTLY_MATCH_ROW_IN_state/activator/transport_ledger.jsonl",
+    "packet_transport_binding": ["packet_id", "packet_hash", "target_organ"]
+  },
+  "verified_ack_structural_properties": [
+    "ACK self-hash and schema are checked",
+    "ACK packet_id and packet_hash must match exact HOME dispatch lineage",
+    "ACK authority escalation fails closed",
+    "accepted and rejected receiver terminal semantics remain distinct",
+    "duplicate structural reconciliation cannot create a second state transition",
+    "structurally valid rejected ACK is preserved rather than erased",
+    "candidate ACK after TRANSPORT_OUTCOME_UNDETERMINED does not resolve transport ambiguity without source provenance"
+  ],
+  "adversarial_tests": [
+    "accepted ACK reaches only SOURCE_UNVERIFIED structural bound",
+    "fabricated but perfectly self-hashed ACK cannot authenticate its source",
+    "self-hashed packet absent from HOME outbox is blocked",
+    "self-hashed transport receipt absent from HOME ledger is blocked",
+    "late candidate ACK after timeout leaves ambiguity unresolved",
+    "tampered ACK is blocked",
+    "resealed ACK for different packet is blocked",
+    "tampered transport receipt is blocked",
+    "pre-effect transport state is not ACK-reconcilable",
+    "real local packet crossed with another real local transport receipt is blocked",
+    "resealed ACK authority escalation is blocked",
+    "inconsistent accepted/terminal ACK state is blocked",
+    "structurally valid rejection is preserved source-unverified",
+    "duplicate reconciliation is idempotent"
+  ],
+  "critical_laws": [
+    "ACK_RECEIVED != ACK_VALID",
+    "ACK_HASH_INTEGRITY != ACK_SOURCE_AUTHENTICITY",
+    "ACK_STRUCTURAL_MATCH != DELIVERY_CONFIRMATION",
+    "ACK_STRUCTURAL_MATCH != EXECUTION",
+    "ACK_STRUCTURAL_MATCH != EVIDENCE",
+    "ACK_STRUCTURAL_MATCH != WORLD_TRUTH",
+    "HASH != TRUTH",
+    "SELF_HASHED_PACKET != HOME_PACKET_WITHOUT_OUTBOX_MEMBERSHIP",
+    "SELF_HASHED_TRANSPORT_RECEIPT != HOME_TRANSPORT_RECEIPT_WITHOUT_LEDGER_MEMBERSHIP",
+    "OUTCOME_UNDETERMINED_REMAINS_UNRESOLVED_UNTIL_ACK_SOURCE_PROVENANCE_IS_VERIFIED",
+    "RECONCILIATION != TARGET_EXECUTION"
+  ],
+  "current_trust_ceiling": {
+    "home_packet_lineage_authenticated_locally": true,
+    "home_transport_lineage_authenticated_locally": true,
+    "ack_internal_integrity_checkable": true,
+    "ack_source_authenticated": false,
+    "delivery_confirmed": false,
+    "transport_ambiguity_resolved": false,
+    "target_execution_authorized": false,
+    "target_execution_observed": false,
+    "claim_authority_granted": false,
+    "external_effect_authorized": false
+  },
+  "not_established": [
+    "ACK_SOURCE_AUTHENTICITY",
+    "GITHUB_ACTIONS_ACK_ARTIFACT_PROVENANCE",
+    "LIVE_HOME_TO_DEMIURGE_REPOSITORY_DISPATCH",
+    "LIVE_RECEIVER_ACK_RECONCILED_WITH_SOURCE_PROVENANCE",
+    "DELIVERY_CONFIRMED",
+    "TARGET_EXECUTION",
+    "AUTOMATIC_TARGET_AGENT_OR_SCOUT_EXECUTION",
+    "EXTERNAL_EFFECT_EXECUTION",
+    "PHYSICAL_RUNTIME_EFFECT_AUTHORITY",
+    "AUTOMATED_TOPA_SPIDER_RUNTIME_RECEIPT",
+    "FULL_RUNTIME_PATH_COVERAGE_ACROSS_ALL_ORGANS"
+  ],
+  "next_gate": {
+    "id": "ACTIVATOR_V0_6_GITHUB_ACK_ARTIFACT_PROVENANCE",
+    "purpose": "Authenticate that an ACK object actually originated from the admitted Janus-Demiurge receiver workflow artifact under an explicit GitHub trust model.",
+    "required_bindings": [
+      "repository == Hawkar-usls/Janus-Demiurge",
+      "workflow_id == 345454851",
+      "workflow_path == .github/workflows/janus-activator-dispatch-receiver.yml",
+      "receiver workflow blob pinned to admitted revision",
+      "receiver protocol blob pinned to admitted revision",
+      "run event is repository_dispatch or workflow_dispatch",
+      "run completed successfully",
+      "artifact belongs to exact run and expected artifact name",
+      "artifact archive is safe and contains exactly one ACK JSON",
+      "ACK hash and packet lineage match v0.5 structural receipt"
+    ],
+    "trust_model_ceiling": "SOURCE_AUTHENTICATED_UNDER_GITHUB_ACTIONS_TRUST_MODEL != INDEPENDENT_SCIENTIFIC_EVIDENCE"
+  },
+  "claim_ceiling": "Activator v0.5 establishes tested offline structural binding of an ACK candidate to exact locally authenticated HOME dispatch and transport lineage. It verifies ACK self-integrity but explicitly does not authenticate ACK origin, confirm delivery, resolve an ambiguous transport outcome, infer target execution, grant claim authority, or authorize any external-world effect."
+}
