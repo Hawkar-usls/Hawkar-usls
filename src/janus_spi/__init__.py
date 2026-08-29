@@ -9,6 +9,7 @@ from .execution_return import GitHubExecutionReturnVerifier, JanusExecutionResul
 from .execution_transport import ExecutionTransportLedger, JanusExecutionTransportBroker, verify_execution_transport_receipt
 from .github_observer import GitHubObserver
 from .habitat_bus import HabitatEventBus
+from .live_cycle import HardenedJanusPersistentStateV09, JanusLiveCycle, LiveCycleLedger
 from .local_lineage import HardenedJanusAckReconciler, HardenedJanusAuthenticatedAckFinalizer
 from .persistent_state import HearthLedger, JanusPersistentState as LegacyJanusPersistentState
 from .persistent_state_v07 import HardenedJanusPersistentState as V07JanusPersistentState
@@ -17,7 +18,7 @@ from .transport import JanusTransportBroker, TransportLedger
 
 JanusAckReconciler = HardenedJanusAckReconciler
 JanusAuthenticatedAckFinalizer = HardenedJanusAuthenticatedAckFinalizer
-JanusPersistentState = HardenedJanusPersistentStateV08
+JanusPersistentState = HardenedJanusPersistentStateV09
 
 __all__ = [
     "AckReconciliationLedger",
@@ -38,6 +39,7 @@ __all__ = [
     "HardenedJanusAckReconciler",
     "HardenedJanusAuthenticatedAckFinalizer",
     "HardenedJanusPersistentStateV08",
+    "HardenedJanusPersistentStateV09",
     "HashLedger",
     "HearthLedger",
     "JanusAckReconciler",
@@ -47,12 +49,14 @@ __all__ = [
     "JanusExecutionGrantIssuer",
     "JanusExecutionResultFinalizer",
     "JanusExecutionTransportBroker",
+    "JanusLiveCycle",
     "JanusPersistentState",
     "JanusSPICore",
     "JanusTransportBroker",
     "LegacyJanusAckReconciler",
     "LegacyJanusAuthenticatedAckFinalizer",
     "LegacyJanusPersistentState",
+    "LiveCycleLedger",
     "V07JanusPersistentState",
     "Ledger",
     "SemanticEvent",
