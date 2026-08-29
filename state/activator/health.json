@@ -1,6 +1,6 @@
 {
   "active_cycle_id": null,
-  "checked_at": 1788029464.559232,
+  "checked_at": 1788030097.943806,
   "cognition_authorized": false,
   "component_integrity": {
     "ack_finalization": true,
@@ -10,14 +10,17 @@
     "dispatch": true,
     "dispatch_outbox": true,
     "execution_grant": true,
+    "execution_provenance": true,
+    "execution_result_finalization": true,
+    "execution_transport": true,
     "hearth": true,
     "transport": true
   },
   "dispatch_authorized": false,
   "external_effect_authorized": false,
   "fresh_stimulus": false,
-  "health_hash": "9b1fa5dda0045eca2b343fdb877ed6dd3e7922a5cebfd0320c7ad27ffc8c2588",
-  "hearth_tip_hash": "6fd0b52231c73b1d3d8d0e1f3895a1444e92cae53efc99781f4da5bdf202e709",
+  "health_hash": "676c034016efbf2dde391e9a9a53c4d520345f8b3f1e31431bdb9775fb1b2e34",
+  "hearth_tip_hash": "36c7187ed0f74444174c19a8207eaf036abe2bfcd8fa1615dd21bf26e654c83d",
   "mode": "AT_HOME",
   "ok": true,
   "reasons": [],
