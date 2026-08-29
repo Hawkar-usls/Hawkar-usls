@@ -1,0 +1,107 @@
+{
+  "schema": "janus.activator.checkpoint.v0.4",
+  "checkpoint_id": "JANUS_ACTIVATOR_V0_4_TRANSPORT_BOUNDARY_CHECKPOINT",
+  "created_date": "2026-08-29",
+  "home": "Hawkar-usls/Hawkar-usls",
+  "status": "IMPLEMENTED_AND_TESTED_BOUNDED_INTERNAL_ACTIVATION_DISPATCH_AND_TRANSPORT_MECHANICS",
+  "layers": {
+    "root_activation": {
+      "version": "0.2",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "runtime": "src/janus_spi/activator.py",
+      "entrypoint": "run_janus_activator.py"
+    },
+    "internal_dispatch": {
+      "version": "0.3",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "home_merge_sha": "55832c6ca33f2c70591940cc8c883a60cd5a566c",
+      "runtime": "src/janus_spi/dispatch.py",
+      "entrypoint": "run_janus_dispatch.py",
+      "scope": "GITHUB_INTERNAL_READ_ONLY_ORGAN_WAKE",
+      "external_effect_authorized": false
+    },
+    "demiurge_receiver": {
+      "version": "0.1",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "repository": "Hawkar-usls/Janus-Demiurge",
+      "merge_sha": "e2dbef1b0fff64115e9d300a5963411efdb7b119",
+      "post_merge_receiver_run": 33266143914,
+      "pre_merge_receiver_run": 33266113336,
+      "pre_merge_receiver_tests": "5/5_PASS",
+      "accepted_terminal": "ACK_ACCEPTED_NO_EXECUTION",
+      "execution_authorized": false,
+      "execution_performed": false
+    },
+    "github_transport": {
+      "version": "0.4",
+      "status": "IMPLEMENTED_AND_TESTED_MECHANISM__LIVE_E2E_ACK_NOT_ESTABLISHED",
+      "home_merge_sha": "9a515f699770551f796d4a10a45d7013210db38d",
+      "exact_pr_head_sha": "641e2c1dd824b318b5b97b3512ca713090518abc",
+      "exact_pr_head_home_ci_run": 33266355844,
+      "exact_pr_head_transport_run": 33266355870,
+      "exact_pr_head_transport_tests": "7/7_PASS",
+      "post_merge_home_ci_run": 33266386101,
+      "post_merge_transport_run": 33266386096,
+      "runtime": "src/janus_spi/transport.py",
+      "entrypoint": "run_janus_transport.py",
+      "credential_source": "ENV:JANUS_DEMIURGE_DISPATCH_TOKEN",
+      "credential_value_persisted": false,
+      "initial_target": "Hawkar-usls/Janus-Demiurge",
+      "live_repository_dispatch_observed": false,
+      "live_receiver_ack_observed": false
+    }
+  },
+  "verified_boundaries": [
+    "TRIGGER != INTENT != ROUTE != CLAIM != CAPABILITY != AUTHORIZATION != ACTION != EFFECT",
+    "ACTIVATION != AUTHORIZATION",
+    "ROUTE_PROPOSAL != DISPATCH_AUTHORITY",
+    "DISPATCH_AUTHORITY != EXTERNAL_EFFECT_AUTHORITY",
+    "PACKET_EMISSION != TRANSPORT",
+    "TRANSPORT != DELIVERY_ACK",
+    "DELIVERY_ACK != EXECUTION",
+    "EXECUTION != EVIDENCE",
+    "ACK != WORLD_TRUTH",
+    "PRE_EFFECT_REJECTED != OUTCOME_UNDETERMINED",
+    "OUTCOME_UNDETERMINED != AUTO_RETRY",
+    "SAME_PACKET_ID_AFTER_NETWORK_BOUNDARY != AUTOMATIC_SECOND_SEND",
+    "WORKFLOW_PASS != WORLD_TRUTH"
+  ],
+  "mechanical_properties_verified": [
+    "activation receipts are hash-bound and lineage-preserving",
+    "dispatch packets have deterministic packet identity",
+    "duplicate local dispatch does not emit a second packet",
+    "tampered activation receipts are rejected before dispatch",
+    "unselected targets and write-like operations are rejected",
+    "Terminal human-effect surface is not auto-dispatchable",
+    "Demiurge receiver verifies packet integrity target and authority ceiling",
+    "Demiurge receiver ACK explicitly performs no execution",
+    "transport credential value is not persisted in transport ledger",
+    "invalid packet missing credential and unsupported target are pre-network states",
+    "timeout and unexpected post-boundary outcomes remain ambiguous rather than negative evidence",
+    "automatic resend is blocked after network-boundary entry"
+  ],
+  "not_established": [
+    "LIVE_HOME_TO_DEMIURGE_REPOSITORY_DISPATCH",
+    "LIVE_RECEIVER_ACK_RECONCILED_IN_HOME",
+    "TARGET_EXECUTION",
+    "AUTOMATIC_TARGET_AGENT_OR_SCOUT_EXECUTION",
+    "CLAIM_PROMOTION_FROM_DISPATCH_OR_ACK",
+    "EXTERNAL_EFFECT_EXECUTION",
+    "PHYSICAL_RUNTIME_EFFECT_AUTHORITY",
+    "AUTOMATED_TOPA_SPIDER_RUNTIME_RECEIPT",
+    "FULL_RUNTIME_PATH_COVERAGE_ACROSS_ALL_ORGANS"
+  ],
+  "next_gate": {
+    "id": "ACTIVATOR_V0_5_ACK_RECONCILIATION",
+    "purpose": "Verify and bind a receiver ACK to the exact packet and transport receipt without equating ACK with execution or evidence.",
+    "required_semantics": [
+      "ACK_HASH_MUST_VERIFY",
+      "ACK_PACKET_ID_AND_HASH_MUST_MATCH_TRANSPORT_LINEAGE",
+      "ACK_MISMATCH_FAILS_CLOSED",
+      "ACK_ACCEPTED_NO_EXECUTION != EXECUTED",
+      "ACK_REJECTED_PRESERVED",
+      "NO_NETWORK_CREDENTIAL_REQUIRED_FOR_OFFLINE_RECONCILIATION"
+    ]
+  },
+  "claim_ceiling": "Activator v0.4 establishes tested GitHub-internal activation, deterministic read-only dispatch packet emission, a tested Janus-Demiurge no-execution receiver, and a tested Third-Wish transport mechanism. It does not establish that a live HOME-to-Demiurge dispatch has occurred, that an ACK has been observed end-to-end, that a target organ executed work, or that any external-world effect or scientific claim is authorized."
+}
