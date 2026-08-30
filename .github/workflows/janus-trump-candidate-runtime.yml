@@ -1,0 +1,102 @@
+name: JANUS TRUMP Candidate Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/TRUMP_CANDIDATE_RUNTIME_CONTRACT.json'
+      - '.janus/activator/JANUS_PNP_BOUNDARY_CERTIFICATE_ELIMINATION_CANDIDATE_LINK.json'
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/trump_candidate.py'
+      - 'src/janus_spi/trump_runtime.py'
+      - 'run_janus_trump_candidate.py'
+      - 'tests/test_trump_candidate_runtime.py'
+      - '.github/workflows/janus-trump-candidate-runtime.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/TRUMP_CANDIDATE_RUNTIME_CONTRACT.json'
+      - '.janus/activator/JANUS_PNP_BOUNDARY_CERTIFICATE_ELIMINATION_CANDIDATE_LINK.json'
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/trump_candidate.py'
+      - 'src/janus_spi/trump_runtime.py'
+      - 'run_janus_trump_candidate.py'
+      - 'tests/test_trump_candidate_runtime.py'
+      - '.github/workflows/janus-trump-candidate-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install --quiet pytest
+      - name: Validate TRUMP candidate contract and routing
+        run: |
+          python -m json.tool .janus/activator/TRUMP_CANDIDATE_RUNTIME_CONTRACT.json >/dev/null
+          python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
+          python - <<'PY'
+          import json
+          c=json.load(open('.janus/activator/TRUMP_CANDIDATE_RUNTIME_CONTRACT.json'))
+          r=json.load(open('.janus/activator/ROUTING_TABLE.json'))
+          formal=next(x for x in r['routes'] if x['match']=='formal_or_theorem_claim')
+          assert c['component']['candidate_runtime_allowed'] is True
+          assert c['candidate_authority']['repository_write_authorized'] is False
+          assert c['candidate_authority']['claim_promotion_authority'] is False
+          assert c['candidate_authority']['theorem_authority'] is False
+          assert c['scientific_boundary']['P_VS_NP']=='OPEN'
+          assert 'TRUMP' in formal['candidate_tissues']
+          assert formal['candidate_use_allowed'] is True
+          assert formal['candidate_proof_authority'] is False
+          print('TRUMP_CANDIDATE_RUNTIME_CONTRACT=PASS')
+          PY
+      - name: Compile candidate runtime
+        run: python -m compileall -q src/janus_spi/trump_candidate.py src/janus_spi/trump_runtime.py run_janus_trump_candidate.py tests/test_trump_candidate_runtime.py
+      - name: Run adversarial candidate runtime tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_trump_candidate_runtime.py
+
+  live-resolve:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Resolve current TRUMP candidate tissue and future rendezvous
+        env:
+          PYTHONPATH: src
+        run: python run_janus_trump_candidate.py --output runtime/trump-candidate/context.json
+      - name: Adjudicate candidate availability without proof promotion
+        run: |
+          python - <<'PY'
+          import json
+          c=json.load(open('runtime/trump-candidate/context.json'))
+          assert c['state']=='CANDIDATE_BOUNDED_RUNTIME_AVAILABLE'
+          assert c['claim_state']=='OPEN'
+          assert c['improvement_proposal_allowed'] is True
+          for key in ('repository_write_authorized','claim_promotion_authority','theorem_authority','scientific_evidence_authority','external_effect_authorized','physical_runtime_effect_authorized'):
+              assert c[key] is False,(key,c[key])
+          print('JANUS_TRUMP_CANDIDATE_WAKE=ALLOWED')
+          print('P_VS_NP=OPEN')
+          print('FUTURE_MANIFEST_STATE='+c['future_runtime']['state'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-trump-candidate-${{ github.run_id }}
+          path: runtime/trump-candidate/context.json
+          retention-days: 14

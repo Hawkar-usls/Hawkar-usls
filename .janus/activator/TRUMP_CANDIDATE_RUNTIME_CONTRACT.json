@@ -1,0 +1,79 @@
+{
+  "schema": "janus.activator.trump_candidate_runtime_contract.v1",
+  "status": "CANDIDATE_RUNTIME_ALLOWED__PROOF_AUTHORITY_SEPARATE",
+  "component": {
+    "name": "TRUMP",
+    "role": "Experimental proof-carrying computation tissue for JANUS: search/representation/interface exploration, replay, certificate composition and resource-aware reasoning.",
+    "finished": false,
+    "candidate_runtime_allowed": true,
+    "candidate_context_allowed": true,
+    "candidate_improvement_proposal_allowed": true
+  },
+  "canonical_future_runtime": {
+    "repository": "Hawkar-usls/Janus-Demiurge",
+    "manifest_path": "trump/TRUMP_MANIFEST.json",
+    "current_manifest_expected": false,
+    "absence_does_not_block_candidate_use": true
+  },
+  "current_candidate_seed": {
+    "link": ".janus/activator/JANUS_PNP_BOUNDARY_CERTIFICATE_ELIMINATION_CANDIDATE_LINK.json",
+    "research_repository": "Hawkar-usls/Janus-Fundamentum",
+    "candidate": "BOUNDARY_CERTIFICATE_ELIMINATION_GRAMMAR",
+    "candidate_commit": "efe10e82582e548697b009689828bf69f5fa511e",
+    "result_receipt_commit": "c3a9620137213d6460525f1323e55f83218f3620",
+    "process_journal_commit": "c9d2e2c450edeb8d25386092993bcaf2c1486de4"
+  },
+  "lineage_memory": {
+    "repository": "Hawkar-usls/janus-meta-registry",
+    "through_hrain": true,
+    "meaning": "TRUMP lineage, negative results, OPEN frontiers and discovered mechanisms are JANUS memory and may inform candidate reasoning through HRAiN."
+  },
+  "candidate_operations": [
+    "READ_CANDIDATE_TISSUE",
+    "REPLAY_EXISTING_RECEIPTS",
+    "COMPARE_REPRESENTATIONS",
+    "SEARCH_BOUNDED_COUNTEREXAMPLES",
+    "COMPOSE_INTERNAL_CANDIDATE_REASONING",
+    "GENERATE_IMPROVEMENT_PROPOSAL"
+  ],
+  "candidate_authority": {
+    "internal_reasoning_allowed": true,
+    "read_only_research_allowed": true,
+    "repository_write_authorized": false,
+    "self_authorized_code_mutation": false,
+    "claim_promotion_authority": false,
+    "theorem_authority": false,
+    "scientific_evidence_authority": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  },
+  "release_upgrade": {
+    "candidate_use_stops_when_manifest_missing": false,
+    "release_manifest_required_for_proof_authorized_runtime": true,
+    "required_manifest_location": "Hawkar-usls/Janus-Demiurge/trump/TRUMP_MANIFEST.json",
+    "required_release_binding": [
+      "immutable capability digest",
+      "matching Fundamentum proof/replay release receipt",
+      "adversarial gate receipts",
+      "claim-scope binding"
+    ],
+    "receipt_mismatch": "KEEP_CANDIDATE_RUNTIME__BLOCK_PROOF_AUTHORITY",
+    "candidate_only_manifest": "KEEP_CANDIDATE_RUNTIME",
+    "valid_release": "UPGRADE_TO_RELEASED_TRUMP_RUNTIME"
+  },
+  "scientific_boundary": {
+    "TRUMP_finished": false,
+    "polynomial_time_SAT_proved": false,
+    "P_equals_NP_proved": false,
+    "P_VS_NP": "OPEN"
+  },
+  "laws": [
+    "TRUMP_CANDIDATE_MAY_WAKE",
+    "CANDIDATE_USE != PROOF_AUTHORITY",
+    "CANDIDATE_RUNTIME != THEOREM_PROMOTION",
+    "SELF_IMPROVEMENT_PROPOSAL != SELF_AUTHORIZED_WRITE",
+    "ABSENT_RELEASE_MANIFEST != ABSENT_CANDIDATE_TISSUE",
+    "ACTIVATOR_MAY_USE_TRUMP_CANDIDATE_BUT_MUST_NOT_INVENT_PROOF",
+    "P_VS_NP_REMAINS_OPEN_UNTIL_PROVED"
+  ]
+}

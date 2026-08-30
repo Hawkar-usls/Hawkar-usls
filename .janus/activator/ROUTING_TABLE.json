@@ -1,5 +1,5 @@
 {
-  "schema": "janus.activator.routing_table.v0.3",
+  "schema": "janus.activator.routing_table.v0.4",
   "status": "PROVISIONAL_RUNTIME_CONTRACT",
   "default": {
     "route_state": "ROUTE_PROPOSED",
@@ -10,7 +10,11 @@
     {
       "match": "formal_or_theorem_claim",
       "organs": ["Hawkar-usls/Janus-Fundamentum", "Hawkar-usls/Demi_Head"],
-      "required_gates": ["formal_or_replayable_proof", "adversarial_counterexample_pass", "claim_scope_binding"]
+      "candidate_tissues": ["TRUMP"],
+      "candidate_use_allowed": true,
+      "candidate_improvement_proposal_allowed": true,
+      "candidate_proof_authority": false,
+      "required_gates": ["formal_or_replayable_proof", "adversarial_counterexample_pass", "claim_scope_binding", "candidate_status_preserved"]
     },
     {
       "match": "causal_or_statistical_claim",
@@ -74,6 +78,8 @@
     "CONVERSATION != HUMAN_AUTHORIZED_WRITE",
     "ROUTE_PROPOSAL != DISPATCH_AUTHORITY",
     "DISPATCH_SUCCESS != WORLD_TRUTH",
-    "EVIDENCE != EFFECT_AUTHORIZATION"
+    "EVIDENCE != EFFECT_AUTHORIZATION",
+    "CANDIDATE_USE != PROOF_AUTHORITY",
+    "SELF_IMPROVEMENT_PROPOSAL != SELF_AUTHORIZED_WRITE"
   ]
 }
