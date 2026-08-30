@@ -1,0 +1,68 @@
+name: JANUS Terminal HRAiN Memory Constitution
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
+      - 'src/janus_spi/hrain_context_bridge.py'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'run_janus_terminal_conversation.py'
+      - 'tests/test_terminal_hrain_memory_constitution.py'
+      - '.github/workflows/janus-terminal-hrain-memory-constitution.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
+      - 'src/janus_spi/hrain_context_bridge.py'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'run_janus_terminal_conversation.py'
+      - 'tests/test_terminal_hrain_memory_constitution.py'
+      - '.github/workflows/janus-terminal-hrain-memory-constitution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  constitution:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pytest
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Validate constitutional JSON
+        run: python -m json.tool .janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json >/dev/null
+      - name: Compile memory-bound conversation seam
+        run: |
+          python -m compileall -q \
+            src/janus_spi/hrain_context_bridge.py \
+            src/janus_spi/terminal_conversation.py \
+            run_janus_terminal_conversation.py \
+            tests/test_terminal_hrain_memory_constitution.py
+      - name: Enforce HRAiN-mediated Terminal memory law
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_terminal_hrain_memory_constitution.py
+      - name: Check control-plane text for forbidden direct Meta Registry conversation client
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files=[
+            Path('src/janus_spi/hrain_context_bridge.py'),
+            Path('run_janus_terminal_conversation.py'),
+          ]
+          forbidden=[
+            'raw.githubusercontent.com/Hawkar-usls/janus-meta-registry',
+            'api.github.com/repos/Hawkar-usls/janus-meta-registry',
+          ]
+          for path in files:
+              text=path.read_text(encoding='utf-8')
+              for marker in forbidden:
+                  assert marker not in text, f'DIRECT_META_REGISTRY_CONVERSATION_CLIENT_FORBIDDEN:{path}:{marker}'
+          print('HOME_DIRECT_META_REGISTRY_CONVERSATION_CLIENT=ABSENT')
+          PY
