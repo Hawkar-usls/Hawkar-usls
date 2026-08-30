@@ -6,20 +6,27 @@ on:
     paths:
       - 'src/janus_spi/oidc_mailbox.py'
       - 'src/janus_spi/oidc_roundtrip.py'
+      - 'src/janus_spi/oidc_reconcile.py'
       - 'run_janus_oidc_roundtrip.py'
+      - 'run_janus_oidc_reconcile.py'
       - 'tests/test_oidc_mailbox.py'
+      - 'tests/test_oidc_reconcile.py'
       - '.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'
       - '.janus/activator/OIDC_ROUNDTRIP_ARM.json'
       - '.github/workflows/janus-oidc-mailbox-roundtrip.yml'
+      - '.github/workflows/janus-oidc-mailbox-reconcile.yml'
   push:
     branches: [main]
     paths:
       - 'src/janus_spi/oidc_mailbox.py'
       - 'src/janus_spi/oidc_roundtrip.py'
+      - 'src/janus_spi/oidc_reconcile.py'
       - 'run_janus_oidc_roundtrip.py'
+      - 'run_janus_oidc_reconcile.py'
       - '.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'
       - '.janus/activator/OIDC_ROUNDTRIP_ARM.json'
       - '.github/workflows/janus-oidc-mailbox-roundtrip.yml'
+      - '.github/workflows/janus-oidc-mailbox-reconcile.yml'
   workflow_dispatch:
 
 permissions:
@@ -45,8 +52,11 @@ jobs:
           python -m compileall -q \
             src/janus_spi/oidc_mailbox.py \
             src/janus_spi/oidc_roundtrip.py \
+            src/janus_spi/oidc_reconcile.py \
             run_janus_oidc_roundtrip.py \
-            tests/test_oidc_mailbox.py
+            run_janus_oidc_reconcile.py \
+            tests/test_oidc_mailbox.py \
+            tests/test_oidc_reconcile.py
       - name: Validate frozen OIDC constitution and arm
         run: |
           python -m json.tool .janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json >/dev/null
@@ -68,7 +78,7 @@ jobs:
       - name: Run HOME OIDC adversarial tests
         env:
           PYTHONPATH: src
-        run: python -m pytest -q tests/test_oidc_mailbox.py tests/test_dual_transport.py
+        run: python -m pytest -q tests/test_oidc_mailbox.py tests/test_oidc_reconcile.py tests/test_dual_transport.py
 
   roundtrip:
     if: github.event_name != 'pull_request'
@@ -113,7 +123,7 @@ jobs:
           }
           json.dump(payload,open('runtime/oidc-roundtrip/payload.json','w'),indent=2,sort_keys=True)
           PY
-      - name: Attempt both lanes and wait for target-signed OIDC ACK
+      - name: Attempt both lanes and boundedly observe target-signed OIDC ACK
         env:
           GITHUB_TOKEN: ${{ github.token }}
           JANUS_DEMIURGE_DISPATCH_TOKEN: ${{ secrets.JANUS_DEMIURGE_DISPATCH_TOKEN }}
@@ -127,9 +137,8 @@ jobs:
             --state-dir runtime/oidc-roundtrip/state \
             --poll-interval 10 \
             --max-wait 660 \
-            --output runtime/oidc-roundtrip/result.json \
-            --require-complete
-      - name: Adjudicate bidirectional identity without P12
+            --output runtime/oidc-roundtrip/result.json
+      - name: Adjudicate verified ACK or honest pending state without P12
         if: always()
         shell: bash
         run: |
@@ -138,28 +147,33 @@ jobs:
           python - <<'PY'
           import json
           r=json.load(open('runtime/oidc-roundtrip/result.json'))
-          required={
-              'terminal':'OIDC_BIDIRECTIONAL_PACKET_ROUNDTRIP_VERIFIED_NO_EXECUTION',
-              'secret_lane_attempted':True,
-              'oidc_lane_attempted':True,
-              'oidc_lane_emitted':True,
-              'oidc_source_identity_verified':True,
-              'oidc_target_identity_verified':True,
-              'bidirectional_identity_proof':True,
-              'target_execution_observed':False,
-              'p12_execution_authority_granted':False,
-              'is_launch_witness':False,
-              'command_authority_granted':False,
-              'claim_authority_granted':False,
-              'scientific_evidence_authority_granted':False,
-              'world_truth_authority_granted':False,
-              'external_effect_authorized':False,
-              'physical_runtime_effect_authorized':False,
-          }
-          for k,v in required.items(): assert r.get(k)==v,(k,r.get(k),v)
+          terminal=r.get('terminal')
+          authority_fields=(
+              'command_authority_granted','claim_authority_granted',
+              'scientific_evidence_authority_granted','world_truth_authority_granted',
+              'external_effect_authorized','physical_runtime_effect_authorized',
+              'target_execution_observed','p12_execution_authority_granted','is_launch_witness',
+          )
+          for key in authority_fields:
+              assert r.get(key) is False,(key,r.get(key))
+          assert r.get('secret_lane_attempted') is True
+          assert r.get('oidc_lane_attempted') is True
+          assert r.get('oidc_lane_emitted') is True
+          assert r.get('oidc_source_identity_verified') is True
           assert r.get('oidc_request_message_hash')
-          assert r.get('oidc_response_hash')
-          print('JANUS_OIDC_BIDIRECTIONAL_PACKET_ACK=PASS')
+          if terminal=='OIDC_BIDIRECTIONAL_PACKET_ROUNDTRIP_VERIFIED_NO_EXECUTION':
+              assert r.get('oidc_target_identity_verified') is True
+              assert r.get('bidirectional_identity_proof') is True
+              assert r.get('oidc_response_hash')
+              print('JANUS_OIDC_BIDIRECTIONAL_PACKET_ACK=PASS')
+          elif terminal=='OIDC_ROUNDTRIP_ACK_WAIT_UNRESOLVED':
+              assert r.get('oidc_target_identity_verified') is False
+              assert r.get('bidirectional_identity_proof') is False
+              assert r.get('oidc_response_hash') is None
+              assert any('silence is not negative evidence' in str(x).lower() for x in r.get('reasons',[]))
+              print('JANUS_OIDC_REQUEST=PUBLISHED_PENDING_TARGET_POLL')
+          else:
+              raise AssertionError(('unexpected OIDC roundtrip terminal',terminal,r.get('reasons')))
           print('P12_EXECUTION_AUTHORITY=FALSE')
           print('STRICT_LAUNCH_WITNESS=FALSE')
           PY
