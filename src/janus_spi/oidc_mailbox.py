@@ -50,12 +50,18 @@ HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 DISPATCH_PACKET_SCHEMA = "janus.activator.dispatch_packet.v0.3"
-DISPATCH_DELIVERY_TERMINALS = {"AUTHORIZED_INTERNAL_HANDOFF", "ALREADY_EMITTED"}
+DISPATCH_DELIVERY_TERMINAL = "AUTHORIZED_INTERNAL_HANDOFF"
 DISPATCH_PACKET_KEYS = {
     "schema", "packet_id", "created_at", "activation_id", "activation_receipt_hash",
     "route_match", "target_organ", "operation", "risk_class", "required_gates",
     "dispatch_authorized", "external_effect_authorized", "claim_authority_granted",
     "command_authority_granted", "effect_scope", "delivery_terminal", "packet_hash",
+}
+ACK_SCHEMA = "janus.demiurge.activator_dispatch_ack.v0.1"
+ACK_KEYS = {
+    "schema", "created_at", "packet_id", "packet_hash", "accepted", "terminal",
+    "reasons", "execution_authorized", "execution_performed", "claim_authority_granted",
+    "external_effect_authorized", "ack_hash",
 }
 
 Decoder = Callable[[str, str], Dict[str, Any]]
@@ -212,7 +218,7 @@ def _admitted_dispatch_packet(packet: Mapping[str, Any]) -> bool:
         or packet.get("operation") != READ_ONLY_OPERATION
         or packet.get("risk_class") != READ_ONLY_RISK_CLASS
         or packet.get("effect_scope") != READ_ONLY_EFFECT_SCOPE
-        or packet.get("delivery_terminal") not in DISPATCH_DELIVERY_TERMINALS
+        or packet.get("delivery_terminal") != DISPATCH_DELIVERY_TERMINAL
         or packet.get("dispatch_authorized") is not True
         or packet.get("external_effect_authorized") is not False
         or packet.get("claim_authority_granted") is not False
@@ -232,7 +238,12 @@ def _verification_hash_matches(row: Mapping[str, Any]) -> bool:
     return HASH_RE.fullmatch(claimed) is not None and canonical_hash(body) == claimed
 
 
-def _source_identity_attestation_matches(core: Mapping[str, Any], request: Mapping[str, Any]) -> bool:
+def _source_identity_attestation_matches(
+    core: Mapping[str, Any],
+    request: Mapping[str, Any],
+    *,
+    expected_verification: Mapping[str, Any] | None = None,
+) -> bool:
     verification = core.get("source_identity_verification")
     if not isinstance(verification, dict):
         return False
@@ -251,6 +262,34 @@ def _source_identity_attestation_matches(core: Mapping[str, Any], request: Mappi
         isinstance(identity, dict) and identity.get("ok") is True,
         isinstance(identity, dict) and identity.get("identity_proof") is True,
         isinstance(identity, dict) and _verification_hash_matches(identity),
+        expected_verification is None or verification == expected_verification,
+    ))
+
+
+def _admitted_no_execution_ack(ack: Mapping[str, Any], request: Mapping[str, Any]) -> bool:
+    if set(ack) != ACK_KEYS:
+        return False
+    created_at = ack.get("created_at")
+    reasons = ack.get("reasons")
+    claimed = str(ack.get("ack_hash") or "")
+    body = dict(ack)
+    body.pop("ack_hash", None)
+    return all((
+        ack.get("schema") == ACK_SCHEMA,
+        isinstance(created_at, (int, float)) and not isinstance(created_at, bool) and created_at >= 0,
+        ack.get("packet_id") == request.get("object_id"),
+        ack.get("packet_hash") == request.get("object_hash"),
+        ack.get("accepted") is True,
+        ack.get("terminal") == "ACK_ACCEPTED_NO_EXECUTION",
+        isinstance(reasons, list),
+        isinstance(reasons, list) and all(isinstance(reason, str) and bool(reason) for reason in reasons),
+        isinstance(reasons, list) and len(set(reasons)) == len(reasons),
+        ack.get("execution_authorized") is False,
+        ack.get("execution_performed") is False,
+        ack.get("claim_authority_granted") is False,
+        ack.get("external_effect_authorized") is False,
+        HASH_RE.fullmatch(claimed) is not None,
+        canonical_hash(body) == claimed,
     ))
 
 
@@ -450,7 +489,7 @@ def verify_signed_response(
         return _failure("OIDC_RESPONSE_REQUEST_BINDING_REJECTED", "Response does not bind exact request hash.")
     if core.get("request_object_kind") != "DISPATCH_PACKET" or core.get("request_object_id") != request_envelope.get("object_id") or core.get("request_object_hash") != request_envelope.get("object_hash"):
         return _failure("OIDC_RESPONSE_OBJECT_BINDING_REJECTED", "Response object binding mismatch.")
-    if not _source_identity_attestation_matches(core, request_envelope):
+    if not _source_identity_attestation_matches(core, request_envelope, expected_verification=req):
         return _failure(
             "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED",
             "Target did not attest a hash-valid source verification bound to the exact request and object.",
@@ -473,29 +512,22 @@ def verify_signed_response(
     return result
 
 
-def verify_no_execution_ack(response: Dict[str, Any], request: Dict[str, Any]) -> bool:
+def verify_no_execution_ack(
+    response: Dict[str, Any],
+    request: Dict[str, Any],
+    *,
+    expected_request_verification: Mapping[str, Any] | None = None,
+) -> bool:
     core = response.get("response_core") if isinstance(response, dict) else None
-    if not isinstance(core, dict) or not _source_identity_attestation_matches(core, request):
+    if not isinstance(core, dict) or not _source_identity_attestation_matches(
+        core,
+        request,
+        expected_verification=expected_request_verification,
+    ):
         return False
     payload = core.get("payload")
     ack = payload.get("ack") if isinstance(payload, dict) else None
-    if not isinstance(ack, dict):
-        return False
-    claimed = str(ack.get("ack_hash") or "")
-    body = dict(ack)
-    body.pop("ack_hash", None)
-    return all([
-        HASH_RE.fullmatch(claimed) is not None,
-        canonical_hash(body) == claimed,
-        ack.get("packet_id") == request.get("object_id"),
-        ack.get("packet_hash") == request.get("object_hash"),
-        ack.get("accepted") is True,
-        ack.get("terminal") == "ACK_ACCEPTED_NO_EXECUTION",
-        ack.get("execution_authorized") is False,
-        ack.get("execution_performed") is False,
-        ack.get("claim_authority_granted") is False,
-        ack.get("external_effect_authorized") is False,
-    ])
+    return isinstance(ack, dict) and _admitted_no_execution_ack(ack, request)
 
 
 class JanusOIDCMailboxTransport:
@@ -673,7 +705,11 @@ class JanusOIDCMailboxReader:
                 return None
             raise
         verification = verify_signed_response(row, request_envelope=request_envelope, decoder=self.decoder)
-        if verification.get("ok") is not True or not verify_no_execution_ack(row, request_envelope):
+        if verification.get("ok") is not True or not verify_no_execution_ack(
+            row,
+            request_envelope,
+            expected_request_verification=source,
+        ):
             raise ValueError("OIDC_TARGET_RESPONSE_NOT_VERIFIED")
         return row, verification
 

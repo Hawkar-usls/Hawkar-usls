@@ -246,6 +246,16 @@ def test_well_hashed_embedded_authority_escalation_is_rejected_before_publish():
             raise AssertionError("authority-bearing embedded packet reached OIDC publication")
 
 
+def test_impossible_already_emitted_packet_terminal_is_rejected():
+    request = oidc_request()
+    mutated = dict(request["object"])
+    mutated["delivery_terminal"] = "ALREADY_EMITTED"
+    request = rebind_packet(request, mutated)
+    verified = verify_request_envelope(request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_REQUEST_PACKET_SCOPE_REJECTED"
+
+
 def test_publisher_uses_local_repo_token_and_preserves_exact_verified_request(tmp_path):
     calls = []
 
@@ -328,6 +338,48 @@ def test_target_source_verification_hash_must_bind_embedded_result():
     verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
     assert verified["ok"] is False
     assert verified["terminal"] == "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED"
+
+
+def test_target_source_verification_must_equal_independent_home_result():
+    request = oidc_request()
+    response = signed_response(request)
+    fabricated_identity = {"ok": True, "identity_proof": True}
+    fabricated_identity["verification_hash"] = canonical_hash(fabricated_identity)
+    fabricated_source = dict(response["response_core"]["source_identity_verification"])
+    fabricated_source["identity_verification"] = fabricated_identity
+    fabricated_source.pop("verification_hash", None)
+    fabricated_source["verification_hash"] = canonical_hash(fabricated_source)
+    response["response_core"]["source_identity_verification"] = fabricated_source
+    response["response_core"]["source_identity_verification_hash"] = fabricated_source["verification_hash"]
+    response = resign_response(request, response)
+
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED"
+
+
+def test_embedded_ack_must_match_complete_v01_contract():
+    request = oidc_request()
+    response = signed_response(request)
+    ack = response["response_core"]["payload"]["ack"]
+    ack["command_authority_granted"] = True
+    ack.pop("ack_hash", None)
+    ack["ack_hash"] = canonical_hash(ack)
+    response = resign_response(request, response)
+
+    assert verify_signed_response(response, request_envelope=request, decoder=decoder)["ok"] is True
+    assert verify_no_execution_ack(response, request) is False
+
+
+def test_embedded_ack_schema_is_exact():
+    request = oidc_request()
+    response = signed_response(request)
+    ack = response["response_core"]["payload"]["ack"]
+    ack["schema"] = "janus.demiurge.activator_dispatch_ack.v9"
+    ack.pop("ack_hash", None)
+    ack["ack_hash"] = canonical_hash(ack)
+    response = resign_response(request, response)
+    assert verify_no_execution_ack(response, request) is False
 
 
 def test_wrong_target_repository_id_rejects_signed_response():
