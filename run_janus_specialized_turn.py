@@ -9,7 +9,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from janus_spi.activator import ActivationEvent
-from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11, ModelFabricCompilerV11
+from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11
+from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 from janus_spi.organ_materializer import OrganMaterializer
 from janus_spi.specialized_turn import SpecializedTurnLedger, reintegrate_specialized_turn
@@ -36,7 +37,7 @@ def main() -> int:
     if not isinstance(raw, dict):
         raise SystemExit("SPECIALIZED_EVENT_JSON_OBJECT_REQUIRED")
 
-    compiler = ModelFabricCompilerV11.from_file(
+    compiler = ModelFabricCompilerV12.from_file(
         ".janus/activator/JANUS_MODEL_MANIFEST.json",
         reader=GitHubRepositoryReaderV11(),
     )
@@ -77,6 +78,7 @@ def main() -> int:
         "model_digest": turn["model_digest"],
         "model_members": len(lock["members"]),
         "model_organs": sum(1 for x in lock["members"].values() if isinstance(x, dict) and x.get("kind") == "ORGAN"),
+        "candidate_runtime_tissues": sorted(lock.get("candidate_runtime_tissues", {})),
         "active_organs": runtime_receipt["active_organs"],
         "materialized_members": material["materialized_member_count"],
         "executed_adapters": material["executed_adapters"],
