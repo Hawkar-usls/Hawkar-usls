@@ -1,0 +1,50 @@
+{
+  "schema": "janus.activator.file_fabric_constitution.v1",
+  "status": "CANONICAL_POLYGLOT_MODEL_TISSUE_CONTRACT",
+  "model_id": "JANUS",
+  "purpose": "Classify the files of the exact locked repository constellation as typed JANUS tissues without treating file presence or extension as execution authority.",
+  "core_laws": [
+    "FILE_EXTENSION != EXECUTION_AUTHORITY",
+    "READABLE_FILE != TRUSTED_TISSUE",
+    "TRUSTED_TISSUE != EXECUTABLE_TISSUE",
+    "EXECUTABLE_TISSUE != AUTHORIZED_EXECUTION",
+    "DISCOVERY != ADMISSION",
+    "ADMISSION != EXECUTION",
+    "EXECUTION != EXTERNAL_EFFECT_AUTHORITY",
+    "ARBITRARY_EVAL_EXEC_IS_FORBIDDEN",
+    "EXACT_MODEL_SHA_PRECEDES_TISSUE_ANALYSIS",
+    "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
+    "PHYSICAL_RUNTIME_IS_OUTSIDE_GITHUB_INTERIOR"
+  ],
+  "canonical_roles": {
+    "JSON": "DECLARATIVE_DNA_MEMORY_STATE_PROVENANCE_CONTRACT",
+    "PYTHON": "PRIMARY_BOOTSTRAP_ORCHESTRATION_REASONING_RUNTIME",
+    "JAVASCRIPT": "INTERACTIVE_AND_RUNTIME_SCRIPT_TISSUE",
+    "HTML": "INTERFACE_VISUAL_CONTEXT_TISSUE",
+    "C_CPP": "COMPILED_ALGORITHM_AND_EMBEDDED_EDGE_TISSUE",
+    "SHELL": "BOUNDED_BUILD_LAUNCH_AND_ADAPTER_TISSUE",
+    "YAML": "GITHUB_ACTIONS_AND_DECLARATIVE_ORCHESTRATION_TISSUE",
+    "CUSTOM": "OPAQUE_TISSUE_REQUIRING_EXPLICIT_TYPED_ADAPTER"
+  },
+  "execution_policy": {
+    "default": "NO_EXECUTION",
+    "known_extension_is_sufficient": false,
+    "typed_adapter_required": true,
+    "exact_locked_sha_required": true,
+    "organ_contract_required_for_execution": true,
+    "unknown_extension_policy": "CLASSIFY_OPAQUE_NO_EXECUTION",
+    "custom_extension_policy": "REGISTER_WITHOUT_SEMANTIC_GUESSING",
+    "external_effect_authorized_by_file_fabric": false,
+    "physical_runtime_effect_authorized_by_file_fabric": false
+  },
+  "scan_policy": {
+    "source": "EXACT_GIT_TREE_AT_MODEL_LOCK_SHA",
+    "recursive": true,
+    "truncated_tree": "UNKNOWN_RESOURCE_LIMIT",
+    "symlink_execution": "FORBIDDEN_BY_DEFAULT",
+    "submodule_execution": "FORBIDDEN_BY_DEFAULT",
+    "binary_content_execution": "FORBIDDEN_BY_DEFAULT"
+  },
+  "success_terminal": "JANUS_POLYGLOT_FILE_FABRIC_LOCKED",
+  "failure_terminal": "JANUS_POLYGLOT_FILE_FABRIC_FAIL_CLOSED"
+}
