@@ -1,0 +1,9 @@
+{
+  "schema": "janus.activator.mailbox_branch.v1.0",
+  "repository": "Hawkar-usls/Hawkar-usls",
+  "branch": "janus/transport-mailbox",
+  "role": "HOME_OUTBOX",
+  "working_tree_scope": "MAILBOX_ONLY",
+  "cross_repository_boundary": "PUBLIC_READ_ONLY",
+  "external_effect_authorized": false
+}
