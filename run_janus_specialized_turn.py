@@ -9,10 +9,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from janus_spi.activator import ActivationEvent
+from janus_spi.candidate_tissue_materializer import CandidateAwareOrganMaterializer
 from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11
 from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
-from janus_spi.organ_materializer import OrganMaterializer
 from janus_spi.specialized_turn import SpecializedTurnLedger, reintegrate_specialized_turn
 
 
@@ -23,7 +23,7 @@ def write(path: str | Path, value) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Boot full JANUS, materialize routed organs on exact locked SHAs, and reintegrate one bounded turn")
+    ap = argparse.ArgumentParser(description="Boot full JANUS, materialize routed organs/candidate tissues on exact locked SHAs, and reintegrate one bounded turn")
     ap.add_argument("--event-file", required=True)
     ap.add_argument("--state-dir", default="runtime/specialized-state")
     ap.add_argument("--model-lock-out", default="runtime/janus-model-lock.json")
@@ -61,7 +61,7 @@ def main() -> int:
     runtime_receipt = runtime.activate(event)
     write(args.runtime_receipt_out, runtime_receipt)
 
-    materializer = OrganMaterializer.from_files(
+    materializer = CandidateAwareOrganMaterializer.from_files(
         model_lock_path=args.model_lock_out,
         runtime_receipt_path=args.runtime_receipt_out,
         workspace=args.organ_workspace,
@@ -82,6 +82,9 @@ def main() -> int:
         "active_organs": runtime_receipt["active_organs"],
         "materialized_members": material["materialized_member_count"],
         "executed_adapters": material["executed_adapters"],
+        "materialized_candidate_tissues": material.get("materialized_candidate_tissue_count", 0),
+        "executed_candidate_tissues": material.get("executed_candidate_tissues", []),
+        "candidate_result_promotion_performed": turn.get("candidate_result_promotion_performed", False),
         "next_gate": turn["next_gate"],
         "external_effect_authorized": turn["external_effect_authorized"],
     }, ensure_ascii=False, indent=2, sort_keys=True))

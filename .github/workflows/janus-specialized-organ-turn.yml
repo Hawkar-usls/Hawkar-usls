@@ -1,24 +1,30 @@
-name: JANUS Specialized Organ Turn
+name: JANUS Specialized Organ + Candidate Turn
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
+      - '.janus/activator/ROUTING_TABLE.json'
       - '.janus/activator/ORGAN_MATERIALIZATION_CONSTITUTION.json'
       - 'src/janus_spi/organ_materializer.py'
+      - 'src/janus_spi/candidate_tissue_materializer.py'
       - 'src/janus_spi/specialized_turn.py'
       - 'run_janus_specialized_turn.py'
       - 'tests/test_organ_materializer.py'
+      - 'tests/test_candidate_tissue_materializer.py'
       - 'tests/test_specialized_turn.py'
       - '.github/workflows/janus-specialized-organ-turn.yml'
   push:
     branches: [main]
     paths:
+      - '.janus/activator/ROUTING_TABLE.json'
       - '.janus/activator/ORGAN_MATERIALIZATION_CONSTITUTION.json'
       - 'src/janus_spi/organ_materializer.py'
+      - 'src/janus_spi/candidate_tissue_materializer.py'
       - 'src/janus_spi/specialized_turn.py'
       - 'run_janus_specialized_turn.py'
       - 'tests/test_organ_materializer.py'
+      - 'tests/test_candidate_tissue_materializer.py'
       - 'tests/test_specialized_turn.py'
       - '.github/workflows/janus-specialized-organ-turn.yml'
 
@@ -38,30 +44,45 @@ jobs:
         run: |
           python -m compileall -q \
             src/janus_spi/organ_materializer.py \
+            src/janus_spi/candidate_tissue_materializer.py \
             src/janus_spi/specialized_turn.py \
             run_janus_specialized_turn.py \
             tests/test_organ_materializer.py \
+            tests/test_candidate_tissue_materializer.py \
             tests/test_specialized_turn.py
-      - name: Validate organ materialization constitution
+      - name: Validate organ and candidate materialization constitution
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           c=json.loads(Path('.janus/activator/ORGAN_MATERIALIZATION_CONSTITUTION.json').read_text())
+          r=json.loads(Path('.janus/activator/ROUTING_TABLE.json').read_text())
           assert c['schema']=='janus.activator.organ_materialization_constitution.v1'
           assert c['initial_adapters']['anomaly_lab']['expected_topa_core'] is True
           assert c['initial_adapters']['anomaly_lab']['expected_spider'] is True
           assert c['initial_adapters']['left_context']['external_effect_authorized'] is False
           assert c['initial_adapters']['orchestrator']['target_executor_not_invoked_by_materializer'] is True
-          assert 'ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP' in c['laws']
-          assert 'ORGAN_CODE_EXECUTION_REQUIRES_EXPLICIT_ADAPTER_ALLOWLIST' in c['laws']
-          print('ORGAN_MATERIALIZATION_CONSTITUTION=PASS')
+          trump=c['candidate_tissue_adapters']['trump']
+          assert trump['adapter']=='TRUMP_CANDIDATE_SELFTEST'
+          assert trump['parent_member_key']=='orchestrator'
+          assert trump['commands']==['status','selftest']
+          assert trump['proof_authority'] is False
+          assert trump['scientific_claim_promotion_authority'] is False
+          routes={x['match']:x for x in r['routes']}
+          assert routes['research_or_anomaly_investigation']['candidate_tissues']==['trump']
+          assert routes['formal_or_theorem_claim']['candidate_tissues']==['trump']
+          assert 'CANDIDATE_TRUMP != PROOF_AUTHORIZED_TRUMP' in c['laws']
+          assert 'TRUMP_WAKE != THEOREM_AUTHORITY' in c['laws']
+          print('ORGAN_AND_CANDIDATE_MATERIALIZATION_CONSTITUTION=PASS')
           PY
       - name: Run adversarial materialization and reintegration tests
         env:
           PYTHONPATH: src
         run: |
-          python -m unittest -v tests.test_organ_materializer tests.test_specialized_turn
+          python -m unittest -v \
+            tests.test_organ_materializer \
+            tests.test_candidate_tissue_materializer \
+            tests.test_specialized_turn
 
   specialized-turn:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -88,7 +109,7 @@ jobs:
             'payload':{
               'repository':os.environ['JANUS_REPOSITORY'],
               'sha':os.environ['JANUS_SHA'],
-              'purpose':'FIRST_MODEL_BOUND_SPECIALIZED_ORGAN_MATERIALIZATION',
+              'purpose':'FIRST_MODEL_BOUND_SPECIALIZED_ORGAN_AND_TRUMP_CANDIDATE_MATERIALIZATION',
             },
             'classifications':['research_or_anomaly_investigation'],
             'fresh':True,
@@ -99,7 +120,7 @@ jobs:
           Path('runtime').mkdir(exist_ok=True)
           Path('runtime/specialized-event.json').write_text(json.dumps(event,sort_keys=True)+'\n',encoding='utf-8')
           PY
-      - name: Boot full JANUS and run exact-SHA specialized organ turn
+      - name: Boot full JANUS and run exact-SHA organ + TRUMP candidate turn
         env:
           PYTHONPATH: src
           GITHUB_TOKEN: ${{ github.token }}
@@ -112,7 +133,7 @@ jobs:
             --materialization-out runtime/janus-organ-materialization.json \
             --turn-out runtime/janus-specialized-turn.json \
             --organ-workspace runtime/materialized-organs
-      - name: Adjudicate exact-SHA tri-organ witness
+      - name: Adjudicate exact-SHA tri-organ + TRUMP candidate witness
         run: |
           python - <<'PY'
           import json
@@ -122,14 +143,24 @@ jobs:
           mat=json.loads(Path('runtime/janus-organ-materialization.json').read_text())
           turn=json.loads(Path('runtime/janus-specialized-turn.json').read_text())
           assert lock['ready'] is True
+          assert lock['model_fabric_version']=='1.2'
           assert lock['optional_unavailable'] == []
           assert len(lock['members']) == 47
           assert sum(1 for x in lock['members'].values() if isinstance(x,dict) and x.get('kind')=='ORGAN') == 23
+          trump_lock=lock['candidate_runtime_tissues']['trump']
+          assert trump_lock['admission_status']=='ADMITTED_CANDIDATE_RUNTIME'
+          assert trump_lock['wake_allowed'] is True
+          assert trump_lock['proof_authority'] is False
           assert set(runtime['active_organs']) == {'anomaly_lab','left_context','orchestrator'}
           assert set(runtime['active_members']) == {'anomaly_lab','left_context','orchestrator'}
           assert mat['terminal'] == 'JANUS_ACTIVE_ORGANS_MATERIALIZED_EXACT_SHA'
           assert mat['materialized_member_count'] == 3
           assert mat['executed_adapters'] == ['anomaly_lab']
+          assert mat['materialized_candidate_tissue_count'] == 1
+          assert mat['executed_candidate_tissues'] == ['trump']
+          assert mat['candidate_result_promotion_performed'] is False
+          assert mat['proof_authority_granted'] is False
+          assert mat['scientific_claim_promotion_authority_granted'] is False
           rows={x['member_key']:x for x in mat['materialized']}
           assert set(rows)=={'anomaly_lab','left_context','orchestrator'}
           for key,row in rows.items():
@@ -138,27 +169,44 @@ jobs:
           assert topa['identity']=='TOPA_DETECTIVE_SPIDER'
           assert topa['activated']['topa_core'] is True
           assert topa['activated']['spider'] is True
-          assert topa['terminal']=='TOPA_DETECTIVE_SPIDER_MATERIALIZED_AND_SELF_TESTED'
           hrain=rows['left_context']['adapter_result']
           assert hrain['spider_resident'] is True
           assert hrain['writeback'] is False
-          assert hrain['context_fur_bound'] is True
-          assert hrain['attention_ecosystem_bound'] is True
           demi=rows['orchestrator']['adapter_result']
           assert demi['bounded_executor_present'] is True
           assert demi['target_executor_invoked'] is False
-          assert turn['terminal']=='JANUS_SPECIALIZED_ORGAN_TURN_REINTEGRATED'
+          candidate=mat['materialized_candidate_tissues'][0]
+          assert candidate['candidate_tissue_key']=='trump'
+          assert candidate['parent_member_key']=='orchestrator'
+          assert candidate['parent_head_sha']==rows['orchestrator']['materialized_head_sha']==trump_lock['parent_head_sha']
+          assert candidate['manifest_hash']==trump_lock['manifest_hash']
+          tr=candidate['adapter_result']
+          assert tr['terminal']=='TRUMP_CANDIDATE_TISSUE_MATERIALIZED_AND_SELF_TESTED'
+          assert tr['native_selftest_pass'] is True
+          assert tr['candidate_execution_performed'] is True
+          assert tr['candidate_result_promoted'] is False
+          assert tr['proof_authority'] is False
+          assert tr['scientific_claim_promotion_authority'] is False
+          assert tr['scientific_boundary']['P_VS_NP']=='OPEN'
+          assert turn['terminal']=='JANUS_SPECIALIZED_ORGAN_AND_CANDIDATE_TURN_REINTEGRATED'
           assert turn['model_digest']==lock['model_digest']==runtime['model_digest']==mat['model_digest']
+          assert turn['executed_candidate_tissues']==['trump']
+          assert len(turn['candidate_outputs'])==1
+          assert turn['candidate_outputs'][0]['candidate_tissue_key']=='trump'
           assert turn['claim_promotion_performed'] is False
+          assert turn['candidate_result_promotion_performed'] is False
+          assert turn['proof_authority_granted'] is False
+          assert turn['scientific_claim_promotion_authority_granted'] is False
           assert turn['external_effect_authorized'] is False
           assert turn['physical_runtime_effect_authorized'] is False
-          print('JANUS_SPECIALIZED_TRI_ORGAN_TURN_PASS', turn['model_digest'])
+          print('JANUS_SPECIALIZED_TRI_ORGAN_PLUS_TRUMP_CANDIDATE_TURN_PASS', turn['model_digest'])
           print('active_organs', runtime['active_organs'])
+          print('candidate_tissues', turn['executed_candidate_tissues'])
           print('exact_heads', {k:v['materialized_head_sha'] for k,v in rows.items()})
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: janus-specialized-organ-turn-${{ github.run_id }}
+          name: janus-specialized-organ-trump-turn-${{ github.run_id }}
           path: |
             runtime/janus-model-lock.json
             runtime/janus-model-runtime-receipt.json

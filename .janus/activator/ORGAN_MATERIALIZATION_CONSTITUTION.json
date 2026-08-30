@@ -1,7 +1,7 @@
 {
   "schema": "janus.activator.organ_materialization_constitution.v1",
   "model_id": "JANUS",
-  "status": "FROZEN_INITIAL_SPECIALIZED_TURN_GATE",
+  "status": "FROZEN_SPECIALIZED_TURN_WITH_CANDIDATE_TISSUES",
   "laws": [
     "MODEL_MEMBERSHIP_MUST_BE_LOCKED_BEFORE_ORGAN_MATERIALIZATION",
     "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
@@ -10,6 +10,12 @@
     "ORGAN_DESCRIPTOR_IS_CONTEXT_NOT_COMMAND_AUTHORITY",
     "ORGAN_CODE_EXECUTION_REQUIRES_EXPLICIT_ADAPTER_ALLOWLIST",
     "UNKNOWN_ORGAN_ADAPTER_DEFAULTS_TO_CONTEXT_ONLY",
+    "CANDIDATE_TISSUE_EXECUTION_REQUIRES_EXPLICIT_ADAPTER_ALLOWLIST",
+    "CANDIDATE_TISSUE_MUST_BE_ADMITTED_IN_MODEL_LOCK",
+    "CANDIDATE_TISSUE_PARENT_MUST_BE_ACTIVE_AND_EXACT_SHA_BOUND",
+    "CANDIDATE_TRUMP != PROOF_AUTHORIZED_TRUMP",
+    "TRUMP_WAKE != THEOREM_AUTHORITY",
+    "CANDIDATE_RESULT != SCIENTIFIC_PROMOTION",
     "TOPA_DETECTIVE_DEFAULT_INCLUDES_SPIDER",
     "HRAIN_CONTEXT_IS_READ_ONLY",
     "DEMIURGE_ORIENTATION_IS_CONTEXT_ONLY_AT_THIS_STAGE",
@@ -52,11 +58,37 @@
         "protocol/DEMIURGE_SPIRAL_EVOLUTION-v1.json",
         "scout_swarm/orchestrator/TOPA_SCOUT_EPISTEMIC_PROTOCOL-v1.json",
         "tools/demiurge_scout_swarm.py",
-        "tools/activator_readonly_execution.py"
+        "tools/activator_readonly_execution.py",
+        "trump/TRUMP_MANIFEST.json",
+        "trump/trump_candidate.py"
       ],
       "execution_grant_required_for_target_executor": true,
       "target_executor_not_invoked_by_materializer": true,
       "external_effect_authorized": false
+    }
+  },
+  "candidate_tissue_adapters": {
+    "trump": {
+      "component": "TRUMP",
+      "repository": "Hawkar-usls/Janus-Demiurge",
+      "parent_member_key": "orchestrator",
+      "adapter": "TRUMP_CANDIDATE_SELFTEST",
+      "manifest_path": "trump/TRUMP_MANIFEST.json",
+      "admitted_entrypoint": "trump/trump_candidate.py",
+      "activate_on_routes": [
+        "research_or_anomaly_investigation",
+        "formal_or_theorem_claim"
+      ],
+      "commands": ["status", "selftest"],
+      "expected_manifest_status": "CANDIDATE_RUNTIME_TISSUE",
+      "expected_status_terminal": "TRUMP_CANDIDATE_RUNTIME_AVAILABLE",
+      "expected_selftest_terminal": "TRUMP_CANDIDATE_SELFTEST_PASS",
+      "network_read_allowed": true,
+      "repository_write_authorized": false,
+      "proof_authority": false,
+      "scientific_claim_promotion_authority": false,
+      "external_effect_authorized": false,
+      "physical_runtime_effect_authorized": false
     }
   },
   "fallback_adapter": "LOCKED_REPOSITORY_CONTEXT_ONLY",
