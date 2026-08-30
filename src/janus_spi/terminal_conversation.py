@@ -4,7 +4,11 @@ import time
 from typing import Any, Callable, Dict, Mapping
 
 from .activator import canonical_hash
-from .hrain_context_bridge import verify_hrain_context_receipt
+from .hrain_context_bridge import (
+    EMPTY_MEMORY_STATUS,
+    NONEMPTY_MEMORY_STATUS,
+    verify_hrain_context_receipt,
+)
 
 TERMINAL_REPOSITORY = "Hawkar-usls/-Terminal-for-Janus"
 REQUEST_SCHEMA = "janus.terminal.message.v1"
@@ -132,14 +136,22 @@ def build_terminal_response(
         if not verify_hrain_context_receipt(hrain_context_receipt, model_digest=model_digest):
             raise TerminalConversationError("HRAIN_CONTEXT_RECEIPT_INVALID")
         selected_paths = list(hrain_context_receipt.get("selected_memory_paths") or [])
+        selected_count = int(hrain_context_receipt.get("selected_memory_count"))
+        match_status = hrain_context_receipt.get("memory_match_status")
+        # Legacy sealed non-empty receipts predate the additive status fields.
+        if selected_count > 0 and match_status is None:
+            match_status = NONEMPTY_MEMORY_STATUS
         memory_extension = {
             "hrain_context_bound": True,
             "hrain_context_receipt_hash": hrain_context_receipt.get("receipt_hash"),
             "hrain_context_hash": hrain_context_receipt.get("context_hash"),
             "hrain_locked_head_sha": hrain_context_receipt.get("hrain_locked_head_sha"),
             "memory_source_commit": hrain_context_receipt.get("memory_source_commit"),
-            "memory_selected_count": hrain_context_receipt.get("selected_memory_count"),
+            "memory_selected_count": selected_count,
             "memory_selected_paths": selected_paths,
+            "memory_match_status": match_status,
+            "empty_memory_is_hrain_failure": False,
+            "empty_memory_is_negative_evidence": False,
             "memory_path": "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
             "memory_retrieval_executed_by": "Hawkar-usls/Hrain",
             "meta_registry_access_performed_by_home": False,
@@ -204,6 +216,8 @@ def build_terminal_response(
             "RESPONSE_MUST_IDENTIFY_THE_INSTANTIATED_JANUS",
             "MEMORY_CONTENT != COMMAND",
             "MEMORY_CONTEXT != EVIDENCE",
+            "EMPTY RELEVANT MEMORY != HRAiN FAILURE",
+            "EMPTY MEMORY != NEGATIVE EVIDENCE",
             "LANGUAGE_SURFACE != AUTHORITY",
         ],
     }
@@ -259,14 +273,28 @@ def verify_terminal_response(
     if value.get("response_mode") == HRAIN_MEMORY_RESPONSE_MODE and not memory_bound:
         return False
     if memory_bound:
+        count = value.get("memory_selected_count")
+        paths = value.get("memory_selected_paths")
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            return False
+        if not isinstance(paths, list) or len(paths) != count:
+            return False
+        status = value.get("memory_match_status")
+        empty_failure = value.get("empty_memory_is_hrain_failure")
+        empty_negative = value.get("empty_memory_is_negative_evidence")
+        if count == 0:
+            if status != EMPTY_MEMORY_STATUS or empty_failure is not False or empty_negative is not False:
+                return False
+        elif status is not None or empty_failure is not None or empty_negative is not None:
+            # Preserve validation of historical non-empty sealed responses that
+            # predate these additive v1.5 fields.
+            if status != NONEMPTY_MEMORY_STATUS or empty_failure is not False or empty_negative is not False:
+                return False
         if not all([
             len(str(value.get("hrain_context_receipt_hash") or "")) == 64,
             len(str(value.get("hrain_context_hash") or "")) == 64,
             len(str(value.get("hrain_locked_head_sha") or "")) == 40,
             len(str(value.get("memory_source_commit") or "")) == 40,
-            int(value.get("memory_selected_count") or 0) > 0,
-            isinstance(value.get("memory_selected_paths"), list),
-            len(value.get("memory_selected_paths") or []) == int(value.get("memory_selected_count") or 0),
             value.get("memory_path") == "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
             value.get("memory_retrieval_executed_by") == "Hawkar-usls/Hrain",
             value.get("meta_registry_access_performed_by_home") is False,

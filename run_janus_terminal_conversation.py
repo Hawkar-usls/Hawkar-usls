@@ -8,6 +8,7 @@ from pathlib import Path
 from janus_spi.activator import ActivationEvent, canonical_hash
 from janus_spi.file_fabric import FileFabricCompiler, GitHubTreeReader
 from janus_spi.hrain_context_bridge import (
+    EMPTY_MEMORY_STATUS,
     HrainConversationContextBridge,
     verify_hrain_context_receipt,
 )
@@ -121,6 +122,7 @@ def main() -> int:
             "turn_id": previous["turn_id"],
             "hrain_context_bound": previous.get("hrain_context_bound") is True,
             "hrain_context_hash": previous.get("hrain_context_hash"),
+            "memory_match_status": previous.get("memory_match_status"),
             "mode": "AT_HOME",
             "retry_delivery_is_new_cognition": False,
             "command_authority_granted": False,
@@ -201,16 +203,27 @@ def main() -> int:
     trump = (model_lock.get("candidate_runtime_tissues") or {}).get("trump") or {}
     trump_state = str(trump.get("admission_status") or "NOT_PRESENT")
     memory_readout = _memory_readout(hrain_context)
+    selected_count = int(hrain_receipt["selected_memory_count"])
+    memory_status = str(hrain_receipt["memory_match_status"])
     response_text = (
         "JANUS ONLINE. Persistent resident "
         f"{resident_uuid}. Model {model_lock['model_digest'][:12]} / file-fabric "
         f"{file_fabric['file_fabric_digest'][:12]}. The Terminal turn is read-only and HRAiN memory is mounted "
         f"from Meta Registry source commit {hrain_receipt['memory_source_commit'][:12]} through exact HRAiN "
         f"{hrain_receipt['hrain_locked_head_sha'][:12]}. Active organs: {', '.join(active_organs)}. "
-        f"TRUMP: {trump_state}. HRAiN selected {hrain_receipt['selected_memory_count']} relevant memory objects."
+        f"TRUMP: {trump_state}."
     )
-    if memory_readout:
-        response_text += " Relevant memory: " + memory_readout
+    if selected_count == 0:
+        if memory_status != EMPTY_MEMORY_STATUS:
+            raise SystemExit("TERMINAL_EMPTY_MEMORY_STATUS_MISMATCH")
+        response_text += (
+            " HRAiN selected no strong relevant memory objects. This is a valid empty retrieval outcome, "
+            "not HRAiN failure and not negative evidence."
+        )
+    else:
+        response_text += f" HRAiN selected {selected_count} relevant memory objects."
+        if memory_readout:
+            response_text += " Relevant memory: " + memory_readout
 
     response = build_terminal_response(
         request,
@@ -241,7 +254,11 @@ def main() -> int:
         "hrain_context_receipt_hash": hrain_receipt["receipt_hash"],
         "hrain_context_hash": hrain_receipt["context_hash"],
         "memory_source_commit": hrain_receipt["memory_source_commit"],
+        "memory_selected_count": selected_count,
         "memory_selected_paths": hrain_receipt["selected_memory_paths"],
+        "memory_match_status": memory_status,
+        "empty_memory_is_hrain_failure": False,
+        "empty_memory_is_negative_evidence": False,
         "candidate_runtime_tissues": {
             key: row.get("admission_status")
             for key, row in (model_lock.get("candidate_runtime_tissues") or {}).items()
@@ -277,7 +294,10 @@ def main() -> int:
         "hrain_context_hash": hrain_receipt["context_hash"],
         "hrain_locked_head_sha": hrain_receipt["hrain_locked_head_sha"],
         "memory_source_commit": hrain_receipt["memory_source_commit"],
-        "memory_selected_count": hrain_receipt["selected_memory_count"],
+        "memory_selected_count": selected_count,
+        "memory_match_status": memory_status,
+        "empty_memory_is_hrain_failure": False,
+        "empty_memory_is_negative_evidence": False,
         "candidate_runtime_tissues": {
             key: row.get("admission_status")
             for key, row in (model_lock.get("candidate_runtime_tissues") or {}).items()

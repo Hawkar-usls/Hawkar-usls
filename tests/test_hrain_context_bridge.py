@@ -7,6 +7,8 @@ from pathlib import Path
 
 from janus_spi.activator import canonical_hash
 from janus_spi.hrain_context_bridge import (
+    EMPTY_MEMORY_STATUS,
+    NONEMPTY_MEMORY_STATUS,
     HrainContextBridgeError,
     HrainConversationContextBridge,
     verify_hrain_context_receipt,
@@ -62,7 +64,14 @@ def contract(*, authority_escalation: bool = False, omit_law: bool = False):
     }
 
 
-def fake_compiler(*, memory_command: bool = False, claim_verified: bool = False, tamper_hash: bool = False):
+def fake_compiler(
+    *,
+    memory_command: bool = False,
+    claim_verified: bool = False,
+    tamper_hash: bool = False,
+    empty_memory: bool = False,
+    empty_semantics: bool = True,
+):
     return f'''#!/usr/bin/env python3
 import argparse, hashlib, json
 p=argparse.ArgumentParser()
@@ -82,15 +91,28 @@ row={{
   'content_grants_authority':False,
   'content_excerpt':'fixture memory',
 }}
+empty={str(empty_memory)}
+semantics={str(empty_semantics)}
+memories=[] if empty else [row]
 body={{
   'schema':'janus.hrain.conversation_context.v1',
   'status':'HRAIN_QUERY_BOUND_CONTEXT_READY',
   'query':a.query,
   'source_repository':'Hawkar-usls/janus-meta-registry',
   'source_commit':'2'*40,
-  'selected_memory_count':1,
-  'selected_memories':[row],
+  'selected_memory_count':len(memories),
+  'selected_memories':memories,
   'hydration_performed':True,
+  'selection_limit':a.limit,
+  'selection_limit_is_target_count':False if semantics else True,
+  'attention_profile':{{
+    'no_match_policy':'RETURN_FEWER_OR_ZERO_NOT_NOISE_FILL' if semantics else 'UNSPECIFIED',
+  }},
+  'laws':[
+    'LIMIT != TARGET_COUNT',
+    'NO_STRONG_MATCH != FILL_WITH_NOISE',
+    'EMPTY MEMORY != NEGATIVE EVIDENCE',
+  ] if semantics else [],
   'authority':{{
     'read_only':True,
     'registry_write_authority':False,
@@ -108,7 +130,17 @@ print(json.dumps({{'status':body['status'],'context_hash':body['context_hash']}}
 '''
 
 
-def fixture_root(root: Path, *, authority_escalation=False, omit_law=False, memory_command=False, claim_verified=False, tamper_hash=False):
+def fixture_root(
+    root: Path,
+    *,
+    authority_escalation=False,
+    omit_law=False,
+    memory_command=False,
+    claim_verified=False,
+    tamper_hash=False,
+    empty_memory=False,
+    empty_semantics=True,
+):
     hrain = root / "hrain"
     (hrain / ".janus").mkdir(parents=True, exist_ok=True)
     (hrain / "tools").mkdir(parents=True, exist_ok=True)
@@ -117,7 +149,13 @@ def fixture_root(root: Path, *, authority_escalation=False, omit_law=False, memo
         encoding="utf-8",
     )
     (hrain / "tools/hrain_conversation_context.py").write_text(
-        fake_compiler(memory_command=memory_command, claim_verified=claim_verified, tamper_hash=tamper_hash),
+        fake_compiler(
+            memory_command=memory_command,
+            claim_verified=claim_verified,
+            tamper_hash=tamper_hash,
+            empty_memory=empty_memory,
+            empty_semantics=empty_semantics,
+        ),
         encoding="utf-8",
     )
     return hrain
@@ -138,7 +176,15 @@ class FixtureBridge(HrainConversationContextBridge):
 
 class HrainConversationContextBridgeTests(unittest.TestCase):
     def make(self, root: Path, **fixture_kwargs):
-        fixture_keys = {"authority_escalation", "omit_law", "memory_command", "claim_verified", "tamper_hash"}
+        fixture_keys = {
+            "authority_escalation",
+            "omit_law",
+            "memory_command",
+            "claim_verified",
+            "tamper_hash",
+            "empty_memory",
+            "empty_semantics",
+        }
         actual_sha = fixture_kwargs.pop("actual_sha", HRAIN_SHA)
         selected = {k: fixture_kwargs.pop(k) for k in list(fixture_kwargs) if k in fixture_keys}
         hrain = fixture_root(root / "fixture", **selected)
@@ -159,9 +205,34 @@ class HrainConversationContextBridgeTests(unittest.TestCase):
             self.assertEqual(receipt["hrain_locked_head_sha"], HRAIN_SHA)
             self.assertEqual(receipt["hrain_materialized_head_sha"], HRAIN_SHA)
             self.assertEqual(receipt["selected_memory_paths"], ["data/MEMORY.json"])
+            self.assertEqual(receipt["memory_match_status"], NONEMPTY_MEMORY_STATUS)
             self.assertFalse(receipt["meta_registry_access_performed_by_home"])
             self.assertFalse(receipt["memory_context_is_evidence"])
             self.assertFalse(receipt["command_authority_granted"])
+
+    def test_explicit_empty_relevant_memory_is_valid_not_failure_or_negative_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            receipt = self.make(root, empty_memory=True).build(
+                "banana submarine velvet",
+                context_output=root / "context.json",
+            )
+            self.assertTrue(verify_hrain_context_receipt(receipt, model_digest=MODEL_DIGEST))
+            self.assertEqual(receipt["selected_memory_count"], 0)
+            self.assertEqual(receipt["selected_memory_paths"], [])
+            self.assertEqual(receipt["memory_match_status"], EMPTY_MEMORY_STATUS)
+            self.assertFalse(receipt["empty_memory_is_hrain_failure"])
+            self.assertFalse(receipt["empty_memory_is_negative_evidence"])
+            context = json.loads((root / "context.json").read_text(encoding="utf-8"))
+            self.assertEqual(context["selected_memories"], [])
+            self.assertFalse(context["selection_limit_is_target_count"])
+
+    def test_empty_memory_without_explicit_no_fill_semantics_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bridge = self.make(root, empty_memory=True, empty_semantics=False)
+            with self.assertRaisesRegex(HrainContextBridgeError, "EMPTY_CONTEXT"):
+                bridge.build("banana submarine velvet", context_output=root / "context.json")
 
     def test_missing_hrain_member_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -210,6 +281,16 @@ class HrainConversationContextBridgeTests(unittest.TestCase):
             receipt = self.make(root).build("memory", context_output=root / "context.json")
             self.assertTrue(verify_hrain_context_receipt(receipt, model_digest=MODEL_DIGEST))
             receipt["memory_source_commit"] = "3" * 40
+            self.assertFalse(verify_hrain_context_receipt(receipt, model_digest=MODEL_DIGEST))
+
+    def test_empty_receipt_status_tamper_is_detected_even_with_rehashed_body(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            receipt = self.make(root, empty_memory=True).build("banana", context_output=root / "context.json")
+            receipt["memory_match_status"] = NONEMPTY_MEMORY_STATUS
+            body = dict(receipt)
+            body.pop("receipt_hash")
+            receipt["receipt_hash"] = canonical_hash(body)
             self.assertFalse(verify_hrain_context_receipt(receipt, model_digest=MODEL_DIGEST))
 
 
