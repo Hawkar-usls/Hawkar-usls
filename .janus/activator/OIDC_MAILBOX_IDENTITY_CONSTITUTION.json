@@ -1,0 +1,43 @@
+{
+  "schema": "janus.activator.oidc_mailbox_identity_constitution.v1.1",
+  "status": "BIDIRECTIONAL_PACKET_ACK_WITNESS_CANDIDATE",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "home_repository": "Hawkar-usls/Hawkar-usls",
+  "home_repository_id": "1328314567",
+  "target_repository": "Hawkar-usls/Janus-Demiurge",
+  "target_repository_id": "1188744620",
+  "repository_owner": "Hawkar-usls",
+  "repository_owner_id": "242020399",
+  "home_workflow_ref": "Hawkar-usls/Hawkar-usls/.github/workflows/janus-oidc-mailbox-roundtrip.yml@refs/heads/main",
+  "target_workflow_ref": "Hawkar-usls/Janus-Demiurge/.github/workflows/janus-activator-credentialless-mailbox.yml@refs/heads/main",
+  "request_audience": "urn:janus:mailbox-request:v1.1:<object_kind>:<object_id>:<object_hash>",
+  "response_audience": "urn:janus:mailbox-response:v1.1:<request_message_hash>:<response_core_hash>",
+  "stage": {
+    "object_kind": "DISPATCH_PACKET",
+    "target_execution_authorized": false,
+    "target_execution_performed": false,
+    "p12_enabled": false,
+    "is_launch_witness": false
+  },
+  "requirements": [
+    "GITHUB_SIGNATURE_VALID",
+    "ISSUER_EXACT",
+    "CUSTOM_AUDIENCE_EXACT",
+    "REPOSITORY_NAME_AND_IMMUTABLE_ID_EXACT",
+    "OWNER_NAME_AND_IMMUTABLE_ID_EXACT",
+    "REF_MAIN_EXACT",
+    "WORKFLOW_REF_EXACT",
+    "BOUND_AT_WITHIN_IAT_NBF_EXP",
+    "TOKEN_LIFETIME_LE_900_SECONDS",
+    "ALL_AUTHORITY_CEILINGS_EXPLICIT_FALSE"
+  ],
+  "laws": [
+    "BOTH_TRANSPORT_LANES_ARE_ATTEMPTED",
+    "OIDC_IDENTITY != COMMAND_AUTHORITY",
+    "OIDC_PACKET_ACK != P12_EXECUTION_AUTHORITY",
+    "SOURCE_VERIFIED + TARGET_UNSIGNED != BIDIRECTIONAL_IDENTITY",
+    "LEGACY_ACK != OIDC_ACK",
+    "JWT_IS_HISTORICAL_OBJECT_IDENTITY_NOT_BEARER_AUTHORIZATION",
+    "SILENCE != NEGATIVE_EVIDENCE"
+  ]
+}
