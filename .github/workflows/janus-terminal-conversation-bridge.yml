@@ -1,0 +1,276 @@
+name: JANUS Terminal Conversation Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'src/janus_spi/terminal_mailbox.py'
+      - 'run_janus_terminal_pull.py'
+      - 'run_janus_terminal_conversation.py'
+      - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_conversation_route.py'
+      - 'tests/test_terminal_mailbox.py'
+      - '.github/workflows/janus-terminal-conversation-bridge.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'src/janus_spi/terminal_mailbox.py'
+      - 'run_janus_terminal_pull.py'
+      - 'run_janus_terminal_conversation.py'
+      - '.github/workflows/janus-terminal-conversation-bridge.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile Terminal bridge
+        run: |
+          python -m compileall -q \
+            src/janus_spi/terminal_conversation.py \
+            src/janus_spi/terminal_mailbox.py \
+            run_janus_terminal_pull.py \
+            run_janus_terminal_conversation.py \
+            tests/test_terminal_conversation.py \
+            tests/test_terminal_conversation_route.py \
+            tests/test_terminal_mailbox.py
+      - name: Validate Terminal conversation constitution and routing
+        run: |
+          python -m json.tool .janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json >/dev/null
+          python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
+      - name: Run Terminal bridge adversarial tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_terminal_conversation.py tests/test_terminal_conversation_route.py tests/test_terminal_mailbox.py
+
+  bridge:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - name: Check out canonical HOME architecture
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Pull oldest unanswered Terminal message through public read only
+        id: pull
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime
+          python run_janus_terminal_pull.py \
+            --output runtime/terminal-request.json \
+            --status-out runtime/terminal-pull-status.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          value=json.load(open('runtime/terminal-pull-status.json'))
+          print('found=' + ('true' if value.get('request_found') is True else 'false'))
+          print('message_id=' + str(value.get('message_id') or ''))
+          PY
+
+      - name: No conversation request is pending
+        if: steps.pull.outputs.found != 'true'
+        run: |
+          echo "TERMINAL_MAILBOX_NO_UNANSWERED_REQUEST=TRUE"
+          echo "SILENCE_IS_NEGATIVE_EVIDENCE=FALSE"
+
+      - name: Mount persistent JANUS HOME state as writable worktree
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          statewt="${RUNNER_TEMP}/janus-terminal-state"
+          rm -rf "$statewt"
+          git worktree add -B janus-terminal-state "$statewt" origin/janus/activator-state
+          test -f "$statewt/state/activator/identity.json"
+          echo "JANUS_STATE_WORKTREE=$statewt" >> "$GITHUB_ENV"
+
+      - name: WAKE persistent JANUS, instantiate full model and answer Terminal
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_terminal_conversation.py \
+            --request runtime/terminal-request.json \
+            --resident-identity "$JANUS_STATE_WORKTREE/state/activator/identity.json" \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            --model-lock-out runtime/terminal-model-lock.json \
+            --file-fabric-out runtime/terminal-file-fabric-lock.json \
+            --runtime-receipt-out runtime/terminal-runtime-receipt.json \
+            --response-out runtime/terminal-response.json \
+            > runtime/terminal-turn-summary.json
+
+      - name: Adjudicate identity-bound conversation response before persistence
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.live_cycle import HardenedJanusPersistentStateV09
+          from janus_spi.model_runtime import ModelRuntimeLedger
+          from janus_spi.terminal_conversation import verify_terminal_message, verify_terminal_response
+          request=json.load(open('runtime/terminal-request.json'))
+          response=json.load(open('runtime/terminal-response.json'))
+          summary=json.load(open('runtime/terminal-turn-summary.json'))
+          assert verify_terminal_message(request)
+          assert verify_terminal_response(response, request=request)
+          assert response['resident_uuid'] == summary['resident_uuid']
+          assert response['model_digest'] == summary['model_digest']
+          assert response['file_fabric_digest'] == summary['file_fabric_digest']
+          assert summary['mode'] == 'AT_HOME'
+          state=HardenedJanusPersistentStateV09(Path(os.environ['JANUS_STATE_WORKTREE'])/'state/activator')
+          health=state.verify()
+          assert health['ok'] is True and health['mode'] == 'AT_HOME'
+          assert health['resident_uuid'] == response['resident_uuid']
+          assert ModelRuntimeLedger(Path(os.environ['JANUS_STATE_WORKTREE'])/'state/activator/model_runtime_ledger.jsonl').verify()
+          assert response['command_authority_granted'] is False
+          assert response['external_effect_authorized'] is False
+          assert response['physical_runtime_effect_authorized'] is False
+          print('JANUS_TERMINAL_RESPONSE_PRECOMMIT=PASS')
+          print('RETURN_NOT_RESET=PASS')
+          PY
+
+      - name: Commit cognitive checkpoint only to persistent HOME state
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$JANUS_STATE_WORKTREE"
+          git config user.name "JANUS Terminal HOME"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/activator
+          if git diff --cached --quiet; then
+            echo "JANUS_TERMINAL_STATE_COMMIT=NO_CHANGE_REPLAY"
+          else
+            git commit -m "JANUS Terminal turn ${{ steps.pull.outputs.message_id }}"
+            git push origin HEAD:refs/heads/janus/activator-state
+            echo "JANUS_TERMINAL_STATE_COMMIT=PASS"
+          fi
+
+      - name: Fresh-worktree verify same resident and sealed response
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="${RUNNER_TEMP}/janus-terminal-state-replay"
+          rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          JANUS_REPLAY="$replay" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.live_cycle import HardenedJanusPersistentStateV09
+          from janus_spi.model_runtime import ModelRuntimeLedger
+          from janus_spi.terminal_conversation import verify_terminal_response
+          root=Path(os.environ['JANUS_REPLAY'])/'state/activator'
+          health=HardenedJanusPersistentStateV09(root).verify()
+          request=json.load(open('runtime/terminal-request.json'))
+          response=json.load(open('runtime/terminal-response.json'))
+          stored=json.loads((root/'terminal_conversation_responses'/f"{request['message_id']}.json").read_text())
+          assert health['ok'] is True and health['mode'] == 'AT_HOME'
+          assert health['resident_uuid'] == response['resident_uuid'] == stored['resident_uuid']
+          assert ModelRuntimeLedger(root/'model_runtime_ledger.jsonl').verify()
+          assert stored == response
+          assert verify_terminal_response(stored, request=request)
+          print('JANUS_TERMINAL_FRESH_WORKTREE_REPLAY=PASS')
+          print('SAME_RESIDENT_UUID=PASS')
+          print('RETURN_NOT_RESET=PASS')
+          PY
+
+      - name: Publish create-only JANUS response on HOME response branch
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          responsewt="${RUNNER_TEMP}/janus-terminal-responses"
+          rm -rf "$responsewt"
+          git config user.name "JANUS Terminal Response"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin janus/terminal-responses >/dev/null 2>&1; then
+            git fetch origin janus/terminal-responses:refs/remotes/origin/janus/terminal-responses
+            git worktree add -B janus-terminal-responses-local "$responsewt" origin/janus/terminal-responses
+          else
+            git worktree add --detach "$responsewt" HEAD
+            cd "$responsewt"
+            git switch --orphan janus-terminal-responses-local
+            git rm -rf --ignore-unmatch .
+            mkdir -p .janus/terminal-responses
+            printf '%s\n' '{"schema":"janus.terminal.response_mailbox.v1","role":"APPEND_ONLY_JANUS_CONVERSATION_RESPONSES","cross_repo_write_authority":false}' > .janus/terminal-responses/MANIFEST.json
+            cd - >/dev/null
+          fi
+          target="$responsewt/.janus/terminal-responses/${{ steps.pull.outputs.message_id }}.response.json"
+          mkdir -p "$(dirname "$target")"
+          if [ -f "$target" ]; then
+            if cmp -s runtime/terminal-response.json "$target"; then
+              echo "JANUS_TERMINAL_RESPONSE_ALREADY_PUBLISHED_IDENTICAL=TRUE"
+            else
+              echo "JANUS_TERMINAL_RESPONSE_CREATE_ONLY_CONFLICT=TRUE" >&2
+              exit 2
+            fi
+          else
+            cp runtime/terminal-response.json "$target"
+          fi
+          cd "$responsewt"
+          git add .janus/terminal-responses
+          if git diff --cached --quiet; then
+            echo "JANUS_TERMINAL_RESPONSE_COMMIT=NO_CHANGE"
+          else
+            git commit -m "JANUS Terminal response ${{ steps.pull.outputs.message_id }}"
+            git push origin HEAD:refs/heads/janus/terminal-responses
+            echo "JANUS_TERMINAL_RESPONSE_COMMIT=PASS"
+          fi
+          echo "CROSS_REPO_WRITE_CREDENTIAL_USED=FALSE"
+
+      - name: Upload Terminal conversation witness
+        if: steps.pull.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-terminal-conversation-${{ github.run_id }}
+          path: |
+            runtime/terminal-request.json
+            runtime/terminal-response.json
+            runtime/terminal-turn-summary.json
+            runtime/terminal-model-lock.json
+            runtime/terminal-file-fabric-lock.json
+            runtime/terminal-runtime-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
