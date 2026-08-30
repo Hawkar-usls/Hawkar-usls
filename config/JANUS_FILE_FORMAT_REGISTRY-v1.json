@@ -1,0 +1,173 @@
+{
+  "schema": "janus.file_format_registry.v1",
+  "status": "ACTIVE_TYPED_FORMAT_REGISTRY",
+  "model_id": "JANUS",
+  "formats": {
+    ".json": {
+      "family": "JSON",
+      "role": "DECLARATIVE_DNA_MEMORY_STATE_PROVENANCE_CONTRACT",
+      "content_mode": "STRUCTURED_DATA",
+      "execution_mode": "NEVER_DIRECTLY_EXECUTE",
+      "adapter": "JSON_SCHEMA_AND_CONTRACT_LOADER",
+      "default_execution_authorized": false
+    },
+    ".py": {
+      "family": "PYTHON",
+      "role": "PRIMARY_BOOTSTRAP_ORCHESTRATION_REASONING_RUNTIME",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_ENTRYPOINT_ONLY",
+      "adapter": "PYTHON_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".js": {
+      "family": "JAVASCRIPT",
+      "role": "INTERACTIVE_AND_RUNTIME_SCRIPT_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_ENTRYPOINT_OR_BROWSER_CONTEXT_ONLY",
+      "adapter": "JAVASCRIPT_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".mjs": {
+      "family": "JAVASCRIPT",
+      "role": "ES_MODULE_RUNTIME_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_ENTRYPOINT_ONLY",
+      "adapter": "JAVASCRIPT_MODULE_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".html": {
+      "family": "HTML",
+      "role": "INTERFACE_VISUAL_CONTEXT_TISSUE",
+      "content_mode": "DOCUMENT_AND_BROWSER_INTERFACE",
+      "execution_mode": "BROWSER_RENDER_CONTEXT_ONLY",
+      "adapter": "HTML_INTERFACE_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".c": {
+      "family": "C_CPP",
+      "role": "COMPILED_ALGORITHM_OR_EMBEDDED_EDGE_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "BUILD_TEST_THEN_TYPED_RUN",
+      "adapter": "C_CPP_BUILD_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".cpp": {
+      "family": "C_CPP",
+      "role": "COMPILED_ALGORITHM_OR_EMBEDDED_EDGE_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "BUILD_TEST_THEN_TYPED_RUN",
+      "adapter": "C_CPP_BUILD_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".cc": {
+      "family": "C_CPP",
+      "role": "COMPILED_ALGORITHM_OR_EMBEDDED_EDGE_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "BUILD_TEST_THEN_TYPED_RUN",
+      "adapter": "C_CPP_BUILD_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".cxx": {
+      "family": "C_CPP",
+      "role": "COMPILED_ALGORITHM_OR_EMBEDDED_EDGE_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "BUILD_TEST_THEN_TYPED_RUN",
+      "adapter": "C_CPP_BUILD_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".h": {
+      "family": "C_CPP",
+      "role": "COMPILED_INTERFACE_HEADER_TISSUE",
+      "content_mode": "SOURCE_HEADER",
+      "execution_mode": "NEVER_DIRECTLY_EXECUTE",
+      "adapter": "C_CPP_HEADER_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".hpp": {
+      "family": "C_CPP",
+      "role": "COMPILED_INTERFACE_HEADER_TISSUE",
+      "content_mode": "SOURCE_HEADER",
+      "execution_mode": "NEVER_DIRECTLY_EXECUTE",
+      "adapter": "C_CPP_HEADER_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".sh": {
+      "family": "SHELL",
+      "role": "BOUNDED_BUILD_LAUNCH_AND_ADAPTER_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_WRAPPER_ONLY",
+      "adapter": "POSIX_SHELL_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".ps1": {
+      "family": "SHELL",
+      "role": "POWERSHELL_BUILD_LAUNCH_AND_ADAPTER_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_WRAPPER_ONLY",
+      "adapter": "POWERSHELL_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".bat": {
+      "family": "SHELL",
+      "role": "WINDOWS_BATCH_BUILD_LAUNCH_AND_ADAPTER_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_WRAPPER_ONLY",
+      "adapter": "WINDOWS_BATCH_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".cmd": {
+      "family": "SHELL",
+      "role": "WINDOWS_COMMAND_BUILD_LAUNCH_AND_ADAPTER_TISSUE",
+      "content_mode": "SOURCE_CODE",
+      "execution_mode": "ALLOWLISTED_WRAPPER_ONLY",
+      "adapter": "WINDOWS_COMMAND_TYPED_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".yml": {
+      "family": "YAML",
+      "role": "GITHUB_ACTIONS_AND_DECLARATIVE_ORCHESTRATION_TISSUE",
+      "content_mode": "STRUCTURED_CONFIGURATION",
+      "execution_mode": "PLATFORM_INTERPRETED_ONLY",
+      "adapter": "YAML_WORKFLOW_CONTRACT_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".yaml": {
+      "family": "YAML",
+      "role": "GITHUB_ACTIONS_AND_DECLARATIVE_ORCHESTRATION_TISSUE",
+      "content_mode": "STRUCTURED_CONFIGURATION",
+      "execution_mode": "PLATFORM_INTERPRETED_ONLY",
+      "adapter": "YAML_WORKFLOW_CONTRACT_ADAPTER",
+      "default_execution_authorized": false
+    },
+    ".vce": {
+      "family": "CUSTOM",
+      "role": "CUSTOM_TISSUE_SEMANTICS_UNDECLARED",
+      "content_mode": "OPAQUE_UNTIL_TYPED_CONTRACT",
+      "execution_mode": "TYPED_ADAPTER_REQUIRED_NO_SEMANTIC_GUESSING",
+      "adapter": null,
+      "default_execution_authorized": false
+    }
+  },
+  "observed_nonexecuting_formats": {
+    ".md": "DOCUMENTATION_CONTEXT",
+    ".txt": "TEXT_CONTEXT",
+    ".css": "INTERFACE_STYLE_TISSUE",
+    ".toml": "DECLARATIVE_CONFIGURATION",
+    ".ini": "DECLARATIVE_CONFIGURATION",
+    ".cfg": "DECLARATIVE_CONFIGURATION"
+  },
+  "unknown_extension": {
+    "family": "CUSTOM",
+    "role": "OPAQUE_TISSUE",
+    "execution_mode": "NO_EXECUTION",
+    "adapter": null,
+    "default_execution_authorized": false
+  },
+  "laws": [
+    "FILE_EXTENSION != EXECUTION_AUTHORITY",
+    "KNOWN_FORMAT != SAFE_TO_EXECUTE",
+    "CUSTOM_TISSUE_REQUIRES_EXPLICIT_TYPED_ADAPTER",
+    "VCE_SEMANTICS_ARE_NOT_GUESSED",
+    "PHYSICAL_EDGE_SOURCE_INSIDE_GITHUB != PHYSICAL_RUNTIME_EXECUTION"
+  ]
+}

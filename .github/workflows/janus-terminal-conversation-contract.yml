@@ -1,0 +1,47 @@
+name: JANUS Terminal Conversation Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_conversation_route.py'
+      - '.github/workflows/janus-terminal-conversation-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_conversation_route.py'
+      - '.github/workflows/janus-terminal-conversation-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile conversation boundary
+        run: python -m compileall -q src/janus_spi/terminal_conversation.py tests/test_terminal_conversation.py tests/test_terminal_conversation_route.py
+      - name: Validate conversation constitution and routing table
+        run: |
+          python -m json.tool .janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json >/dev/null
+          python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
+      - name: Run adversarial conversation and route tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_terminal_conversation.py tests/test_terminal_conversation_route.py

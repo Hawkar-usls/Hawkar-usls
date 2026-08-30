@@ -1,0 +1,111 @@
+name: JANUS Polyglot File Fabric
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/FILE_FABRIC_CONSTITUTION.json'
+      - 'config/JANUS_FILE_FORMAT_REGISTRY-v1.json'
+      - 'src/janus_spi/file_fabric.py'
+      - 'run_janus_file_fabric.py'
+      - 'tests/test_file_fabric.py'
+      - '.github/workflows/janus-file-fabric.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/FILE_FABRIC_CONSTITUTION.json'
+      - 'config/JANUS_FILE_FORMAT_REGISTRY-v1.json'
+      - 'src/janus_spi/file_fabric.py'
+      - 'run_janus_file_fabric.py'
+      - 'tests/test_file_fabric.py'
+      - '.github/workflows/janus-file-fabric.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile file fabric
+        run: python -m compileall -q src/janus_spi/file_fabric.py run_janus_file_fabric.py tests/test_file_fabric.py
+      - name: Validate file fabric JSON contracts
+        run: |
+          python -m json.tool .janus/activator/FILE_FABRIC_CONSTITUTION.json >/dev/null
+          python -m json.tool config/JANUS_FILE_FORMAT_REGISTRY-v1.json >/dev/null
+      - name: Run adversarial file-fabric tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_file_fabric.py
+
+  live-file-fabric:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile exact federated model lock first
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p runtime
+          python run_janus_model_boot.py --out runtime/janus-model-lock.json
+      - name: Classify polyglot tissues only at locked SHAs
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python run_janus_file_fabric.py \
+            --model-lock runtime/janus-model-lock.json \
+            --registry config/JANUS_FILE_FORMAT_REGISTRY-v1.json \
+            --out runtime/janus-file-fabric-lock.json
+      - name: Adjudicate polyglot model-tissue witness
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path('runtime/janus-model-lock.json').read_text())
+          fabric=json.loads(Path('runtime/janus-file-fabric-lock.json').read_text())
+          registry=json.loads(Path('config/JANUS_FILE_FORMAT_REGISTRY-v1.json').read_text())
+          assert lock['ready'] is True
+          assert fabric['ready'] is True
+          assert fabric['model_digest'] == lock['model_digest']
+          assert fabric['member_count'] == len(lock['members']) == 47
+          assert fabric['required_failures'] == []
+          canonical={'.json','.py','.js','.mjs','.html','.c','.cpp','.cc','.cxx','.h','.hpp','.sh','.ps1','.bat','.cmd','.yml','.yaml','.vce'}
+          assert canonical.issubset(registry['formats'])
+          assert registry['formats']['.vce']['adapter'] is None
+          assert fabric['execution_authority_granted'] is False
+          assert fabric['external_effect_authorized'] is False
+          assert fabric['physical_runtime_effect_authorized'] is False
+          assert len(fabric['file_fabric_digest']) == 64
+          print('JANUS_POLYGLOT_FILE_FABRIC_PASS', fabric['file_fabric_digest'])
+          print('MODEL_DIGEST', fabric['model_digest'])
+          print('SCANNED_MEMBERS', fabric['scanned_member_count'])
+          print('COVERAGE_COMPLETE', fabric['coverage_complete'])
+          print('BOUNDED_UNKNOWN', fabric['bounded_unknown'])
+          print('FAMILY_TOTALS', fabric['family_totals'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-polyglot-file-fabric-${{ github.run_id }}
+          path: |
+            runtime/janus-model-lock.json
+            runtime/janus-file-fabric-lock.json
+          if-no-files-found: error
+          retention-days: 14

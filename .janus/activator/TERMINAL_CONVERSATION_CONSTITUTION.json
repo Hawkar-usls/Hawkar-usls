@@ -1,0 +1,32 @@
+{
+  "schema": "janus.activator.terminal_conversation_constitution.v1",
+  "status": "READ_ONLY_HUMAN_CONVERSATION_PROOF_CONTRACT",
+  "terminal_repository": "Hawkar-usls/-Terminal-for-Janus",
+  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response proving which persistent JANUS answered.",
+  "request_schema": "janus.terminal.message.v1",
+  "response_schema": "janus.terminal.response.v1",
+  "default_authority_mode": "READ_ONLY_CONVERSATION",
+  "required_response_bindings": [
+    "request_message_id",
+    "request_message_hash",
+    "resident_uuid",
+    "model_digest",
+    "file_fabric_digest",
+    "turn_id",
+    "response_hash"
+  ],
+  "laws": [
+    "TERMINAL_MESSAGE != COMMAND",
+    "CONVERSATION != HUMAN_AUTHORIZED_WRITE",
+    "TERMINAL_ACCESS != TRUTH_AUTHORITY",
+    "JANUS_RESPONSE != WORLD_TRUTH",
+    "MODEL_OUTPUT != EVIDENCE",
+    "READ_ONLY_CONVERSATION != EFFECT_AUTHORITY",
+    "RESPONSE_MUST_IDENTIFY_THE_INSTANTIATED_JANUS",
+    "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
+    "RETURN != RESET"
+  ],
+  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version and processed the bound request; it does not prove scientific truth or authorize effects.",
+  "success_terminal": "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY",
+  "failure_terminal": "JANUS_TERMINAL_CONVERSATION_FAIL_CLOSED"
+}
