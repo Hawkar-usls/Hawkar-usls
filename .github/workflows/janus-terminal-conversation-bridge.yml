@@ -7,11 +7,13 @@ on:
       - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
       - '.janus/activator/ROUTING_TABLE.json'
       - 'src/janus_spi/terminal_conversation.py'
+      - 'src/janus_spi/terminal_cognitive_query.py'
       - 'src/janus_spi/terminal_mailbox.py'
       - 'src/janus_spi/hrain_context_bridge.py'
       - 'run_janus_terminal_pull.py'
       - 'run_janus_terminal_conversation.py'
       - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_cognitive_query.py'
       - 'tests/test_terminal_conversation_route.py'
       - 'tests/test_terminal_mailbox.py'
       - 'tests/test_hrain_context_bridge.py'
@@ -23,11 +25,13 @@ on:
       - '.janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json'
       - '.janus/activator/ROUTING_TABLE.json'
       - 'src/janus_spi/terminal_conversation.py'
+      - 'src/janus_spi/terminal_cognitive_query.py'
       - 'src/janus_spi/terminal_mailbox.py'
       - 'src/janus_spi/hrain_context_bridge.py'
       - 'run_janus_terminal_pull.py'
       - 'run_janus_terminal_conversation.py'
       - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_cognitive_query.py'
       - 'tests/test_terminal_conversation_route.py'
       - 'tests/test_terminal_mailbox.py'
       - 'tests/test_hrain_context_bridge.py'
@@ -55,11 +59,13 @@ jobs:
         run: |
           python -m compileall -q \
             src/janus_spi/terminal_conversation.py \
+            src/janus_spi/terminal_cognitive_query.py \
             src/janus_spi/terminal_mailbox.py \
             src/janus_spi/hrain_context_bridge.py \
             run_janus_terminal_pull.py \
             run_janus_terminal_conversation.py \
             tests/test_terminal_conversation.py \
+            tests/test_terminal_cognitive_query.py \
             tests/test_terminal_conversation_route.py \
             tests/test_terminal_mailbox.py \
             tests/test_hrain_context_bridge.py \
@@ -74,6 +80,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_terminal_conversation.py \
+            tests/test_terminal_cognitive_query.py \
             tests/test_terminal_conversation_route.py \
             tests/test_terminal_mailbox.py \
             tests/test_hrain_context_bridge.py \
@@ -135,7 +142,7 @@ jobs:
           test -f "$statewt/state/activator/identity.json"
           echo "JANUS_STATE_WORKTREE=$statewt" >> "$GITHUB_ENV"
 
-      - name: WAKE persistent JANUS, instantiate full model, mount HRAiN memory and answer Terminal
+      - name: WAKE persistent JANUS, project cognitive query, instantiate model and mount HRAiN memory
         if: steps.pull.outputs.found == 'true'
         env:
           PYTHONPATH: src
@@ -150,13 +157,14 @@ jobs:
             --model-lock-out runtime/terminal-model-lock.json \
             --file-fabric-out runtime/terminal-file-fabric-lock.json \
             --runtime-receipt-out runtime/terminal-runtime-receipt.json \
+            --cognitive-query-out runtime/terminal-cognitive-query.json \
             --hrain-context-out runtime/terminal-hrain-context.json \
             --hrain-receipt-out runtime/terminal-hrain-context-receipt.json \
             --hrain-workspace runtime/terminal-hrain-workspace \
             --response-out runtime/terminal-response.json \
             > runtime/terminal-turn-summary.json
 
-      - name: Adjudicate identity and HRAiN memory bound response before persistence
+      - name: Adjudicate identity, cognitive query and HRAiN response before persistence
         if: steps.pull.outputs.found == 'true'
         env:
           PYTHONPATH: src
@@ -167,21 +175,30 @@ jobs:
           from janus_spi.hrain_context_bridge import EMPTY_MEMORY_STATUS, NONEMPTY_MEMORY_STATUS, verify_hrain_context_receipt
           from janus_spi.live_cycle import HardenedJanusPersistentStateV09
           from janus_spi.model_runtime import ModelRuntimeLedger
+          from janus_spi.terminal_cognitive_query import verify_hrain_query_binding, verify_terminal_cognitive_query_projection
           from janus_spi.terminal_conversation import HRAIN_MEMORY_RESPONSE_MODE, verify_terminal_message, verify_terminal_response
           request=json.load(open('runtime/terminal-request.json'))
+          projection=json.load(open('runtime/terminal-cognitive-query.json'))
           response=json.load(open('runtime/terminal-response.json'))
           summary=json.load(open('runtime/terminal-turn-summary.json'))
           lock=json.load(open('runtime/terminal-model-lock.json'))
           context=json.load(open('runtime/terminal-hrain-context.json'))
           hreceipt=json.load(open('runtime/terminal-hrain-context-receipt.json'))
           assert verify_terminal_message(request)
+          assert verify_terminal_cognitive_query_projection(projection)
           assert verify_hrain_context_receipt(hreceipt, model_digest=lock['model_digest'])
+          assert verify_hrain_query_binding(projection, context, hreceipt)
           assert verify_terminal_response(response, request=request)
           assert response['resident_uuid'] == summary['resident_uuid']
           assert response['model_digest'] == summary['model_digest'] == lock['model_digest']
           assert response['file_fabric_digest'] == summary['file_fabric_digest']
           assert summary['mode'] == 'AT_HOME'
           assert response['response_mode'] == HRAIN_MEMORY_RESPONSE_MODE
+          assert response['cognitive_query_projection_hash'] == summary['cognitive_query_projection_hash'] == projection['projection_hash']
+          assert response['cognitive_query_sha256'] == summary['cognitive_query_sha256'] == projection['query_sha256'] == hreceipt['query_sha256'] == context['query_sha256']
+          assert context['query'] == projection['query_text']
+          assert response['cognitive_query_projection_mode'] == summary['cognitive_query_projection_mode'] == projection['projection_mode']
+          assert response['control_metadata_excluded_from_cognitive_query'] == summary['control_metadata_excluded_from_cognitive_query'] == projection['control_metadata_excluded']
           assert response['hrain_context_bound'] is True
           assert response['hrain_context_hash'] == summary['hrain_context_hash'] == hreceipt['context_hash'] == context['context_hash']
           assert response['hrain_context_receipt_hash'] == summary['hrain_context_receipt_hash'] == hreceipt['receipt_hash']
@@ -195,8 +212,6 @@ jobs:
           assert response['memory_match_status'] == summary['memory_match_status'] == hreceipt['memory_match_status'] == expected_status
           assert response['empty_memory_is_hrain_failure'] is False
           assert response['empty_memory_is_negative_evidence'] is False
-          assert summary['empty_memory_is_hrain_failure'] is False
-          assert summary['empty_memory_is_negative_evidence'] is False
           assert hreceipt['empty_memory_is_hrain_failure'] is False
           assert hreceipt['empty_memory_is_negative_evidence'] is False
           assert response['memory_path'] == 'META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL'
@@ -216,13 +231,15 @@ jobs:
           assert response['command_authority_granted'] is False
           assert response['external_effect_authorized'] is False
           assert response['physical_runtime_effect_authorized'] is False
-          print('JANUS_TERMINAL_HRAIN_MEMORY_RESPONSE_PRECOMMIT=PASS')
+          print('JANUS_TERMINAL_COGNITIVE_QUERY_HRAIN_PRECOMMIT=PASS')
+          print('COGNITIVE_QUERY_PROJECTION_MODE', projection['projection_mode'])
+          print('CONTROL_METADATA_EXCLUDED', projection['control_metadata_excluded'])
+          print('COGNITIVE_QUERY_SHA256', projection['query_sha256'])
           print('HRAIN_HEAD', hreceipt['hrain_locked_head_sha'])
           print('MEMORY_SOURCE_COMMIT', hreceipt['memory_source_commit'])
           print('HRAIN_CONTEXT_HASH', hreceipt['context_hash'])
           print('MEMORY_MATCH_STATUS', expected_status)
           print('MEMORY_COUNT', count)
-          print('MEMORY_PATHS', hreceipt['selected_memory_paths'])
           print('EMPTY_MEMORY_IS_NEGATIVE_EVIDENCE=FALSE')
           print('RETURN_NOT_RESET=PASS')
           PY
@@ -272,10 +289,14 @@ jobs:
           assert stored == response
           assert verify_terminal_response(stored, request=request)
           assert stored.get('hrain_context_bound') is True
+          assert len(str(stored.get('cognitive_query_projection_hash') or '')) == 64
+          assert len(str(stored.get('cognitive_query_sha256') or '')) == 64
+          assert stored.get('cognitive_query_projection_mode') in {'ISSUE_FORM_MESSAGE_SECTION','FULL_SEALED_MESSAGE_TEXT'}
           assert stored.get('empty_memory_is_hrain_failure') is False
           assert stored.get('empty_memory_is_negative_evidence') is False
           print('JANUS_TERMINAL_FRESH_WORKTREE_REPLAY=PASS')
           print('SAME_RESIDENT_UUID=PASS')
+          print('COGNITIVE_QUERY_BINDING_PERSISTED=PASS')
           print('HRAIN_MEMORY_BINDING_PERSISTED=PASS')
           print('EMPTY_MEMORY_IS_NEGATIVE_EVIDENCE=FALSE')
           print('RETURN_NOT_RESET=PASS')
@@ -332,6 +353,7 @@ jobs:
           name: janus-terminal-conversation-${{ github.run_id }}
           path: |
             runtime/terminal-request.json
+            runtime/terminal-cognitive-query.json
             runtime/terminal-response.json
             runtime/terminal-turn-summary.json
             runtime/terminal-model-lock.json

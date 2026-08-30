@@ -17,6 +17,11 @@ from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11
 from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 from janus_spi.persistent_state import JanusPersistentState
+from janus_spi.terminal_cognitive_query import (
+    project_terminal_cognitive_query,
+    verify_hrain_query_binding,
+    verify_terminal_cognitive_query_projection,
+)
 from janus_spi.terminal_conversation import (
     HRAIN_MEMORY_RESPONSE_MODE,
     build_terminal_response,
@@ -69,6 +74,26 @@ def _memory_readout(context: dict, *, limit: int = 4) -> str:
     return " | ".join(items)
 
 
+def _bind_cognitive_projection_to_response(response: dict, projection: dict) -> None:
+    response.pop("response_hash", None)
+    response.update({
+        "cognitive_query_projection_hash": projection["projection_hash"],
+        "cognitive_query_sha256": projection["query_sha256"],
+        "cognitive_query_projection_mode": projection["projection_mode"],
+        "control_metadata_excluded_from_cognitive_query": projection["control_metadata_excluded"],
+    })
+    laws = list(response.get("laws") or [])
+    for law in [
+        "CONTROL_METADATA != COGNITIVE_QUERY",
+        "SEALED_REQUEST_PROVENANCE != COGNITIVE_QUERY_SURFACE",
+        "VALID_CONTEXT_FOR_WRONG_QUERY != VALID_TURN",
+    ]:
+        if law not in laws:
+            laws.append(law)
+    response["laws"] = laws
+    response["response_hash"] = canonical_hash(response)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Process one sealed Terminal message as a persistent model-bound JANUS conversation turn")
     parser.add_argument("--request", required=True)
@@ -81,6 +106,7 @@ def main() -> int:
     parser.add_argument("--model-lock-out", default="runtime/terminal-model-lock.json")
     parser.add_argument("--file-fabric-out", default="runtime/terminal-file-fabric-lock.json")
     parser.add_argument("--runtime-receipt-out", default="runtime/terminal-runtime-receipt.json")
+    parser.add_argument("--cognitive-query-out", default="runtime/terminal-cognitive-query.json")
     parser.add_argument("--hrain-context-out", default="runtime/terminal-hrain-context.json")
     parser.add_argument("--hrain-receipt-out", default="runtime/terminal-hrain-context-receipt.json")
     parser.add_argument("--hrain-workspace", default="runtime/terminal-hrain-workspace")
@@ -123,6 +149,9 @@ def main() -> int:
             "hrain_context_bound": previous.get("hrain_context_bound") is True,
             "hrain_context_hash": previous.get("hrain_context_hash"),
             "memory_match_status": previous.get("memory_match_status"),
+            "cognitive_query_projection_hash": previous.get("cognitive_query_projection_hash"),
+            "cognitive_query_sha256": previous.get("cognitive_query_sha256"),
+            "cognitive_query_projection_mode": previous.get("cognitive_query_projection_mode"),
             "mode": "AT_HOME",
             "retry_delivery_is_new_cognition": False,
             "command_authority_granted": False,
@@ -130,15 +159,24 @@ def main() -> int:
         }, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
 
+    cognitive_projection = project_terminal_cognitive_query(str(request["message_text"]))
+    if not verify_terminal_cognitive_query_projection(cognitive_projection):
+        raise SystemExit("TERMINAL_COGNITIVE_QUERY_PROJECTION_INVALID")
+    _write_json(args.cognitive_query_out, cognitive_projection)
+
     cycle_id = "terminal-cycle-" + canonical_hash({
         "resident_uuid": resident_uuid,
         "request_message_hash": request["message_hash"],
+        "cognitive_query_projection_hash": cognitive_projection["projection_hash"],
         "parent_hearth_hash": state.hearth.tip_hash(),
     })
     wake = _hearth_append(state, event="WAKE_TERMINAL_CONVERSATION", cycle_id=cycle_id, payload={
         "message_id": request["message_id"],
         "message_hash": request["message_hash"],
         "source_ref": request["source_ref"],
+        "cognitive_query_projection_hash": cognitive_projection["projection_hash"],
+        "cognitive_query_sha256": cognitive_projection["query_sha256"],
+        "cognitive_query_projection_mode": cognitive_projection["projection_mode"],
     })
     state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=wake["receipt_hash"])
 
@@ -188,7 +226,7 @@ def main() -> int:
         model_lock,
         workspace=args.hrain_workspace,
     ).build(
-        str(request["message_text"]),
+        str(cognitive_projection["query_text"]),
         context_output=args.hrain_context_out,
         limit=12,
     )
@@ -196,8 +234,8 @@ def main() -> int:
         raise SystemExit("TERMINAL_HRAIN_CONTEXT_RECEIPT_INVALID")
     _write_json(args.hrain_receipt_out, hrain_receipt)
     hrain_context = json.loads(Path(args.hrain_context_out).read_text(encoding="utf-8"))
-    if hrain_context.get("context_hash") != hrain_receipt.get("context_hash"):
-        raise SystemExit("TERMINAL_HRAIN_CONTEXT_HASH_BINDING_MISMATCH")
+    if not verify_hrain_query_binding(cognitive_projection, hrain_context, hrain_receipt):
+        raise SystemExit("TERMINAL_HRAIN_COGNITIVE_QUERY_BINDING_MISMATCH")
 
     turn_id = "turn-" + str(runtime_receipt["runtime_receipt_hash"])
     trump = (model_lock.get("candidate_runtime_tissues") or {}).get("trump") or {}
@@ -235,6 +273,7 @@ def main() -> int:
         response_mode=HRAIN_MEMORY_RESPONSE_MODE,
         hrain_context_receipt=hrain_receipt,
     )
+    _bind_cognitive_projection_to_response(response, cognitive_projection)
     if not verify_terminal_response(response, request=request):
         raise SystemExit("TERMINAL_RESPONSE_SELF_VERIFY_FAILED")
 
@@ -251,6 +290,10 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "cognitive_query_projection_hash": cognitive_projection["projection_hash"],
+        "cognitive_query_sha256": cognitive_projection["query_sha256"],
+        "cognitive_query_projection_mode": cognitive_projection["projection_mode"],
+        "control_metadata_excluded_from_cognitive_query": cognitive_projection["control_metadata_excluded"],
         "hrain_context_receipt_hash": hrain_receipt["receipt_hash"],
         "hrain_context_hash": hrain_receipt["context_hash"],
         "memory_source_commit": hrain_receipt["memory_source_commit"],
@@ -268,6 +311,7 @@ def main() -> int:
     sleep = _hearth_append(state, event="SLEEP_TERMINAL_CONVERSATION_RETURN_HOME", cycle_id=cycle_id, payload={
         "message_id": request["message_id"],
         "response_hash": response["response_hash"],
+        "cognitive_query_projection_hash": cognitive_projection["projection_hash"],
         "hrain_context_hash": hrain_receipt["context_hash"],
         "return_not_reset": True,
     })
@@ -289,6 +333,10 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "cognitive_query_projection_hash": cognitive_projection["projection_hash"],
+        "cognitive_query_sha256": cognitive_projection["query_sha256"],
+        "cognitive_query_projection_mode": cognitive_projection["projection_mode"],
+        "control_metadata_excluded_from_cognitive_query": cognitive_projection["control_metadata_excluded"],
         "hrain_context_bound": True,
         "hrain_context_receipt_hash": hrain_receipt["receipt_hash"],
         "hrain_context_hash": hrain_receipt["context_hash"],
