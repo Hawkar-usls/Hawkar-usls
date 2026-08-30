@@ -2,7 +2,7 @@
   "schema": "janus.activator.terminal_conversation_constitution.v1",
   "status": "READ_ONLY_HRAIN_MEMORY_BOUND_HUMAN_CONVERSATION_PROOF_CONTRACT",
   "terminal_repository": "Hawkar-usls/-Terminal-for-Janus",
-  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response only after the exact model-locked HRAiN organ has produced a verified query-bound memory context from the Meta Registry projection.",
+  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response only after the exact model-locked HRAiN organ has produced a verified query-bound memory context from the Meta Registry projection. A query-bound context may legitimately contain zero selected memories when HRAiN explicitly proves no forced fill semantics; that empty retrieval is neither HRAiN failure nor negative evidence.",
   "request_schema": "janus.terminal.message.v1",
   "response_schema": "janus.terminal.response.v1",
   "default_authority_mode": "READ_ONLY_CONVERSATION",
@@ -14,7 +14,12 @@
     "output_schema": "janus.hrain.conversation_context.v1",
     "home_direct_meta_registry_conversation_memory_access": false,
     "exact_model_locked_hrain_required": true,
-    "source_object_hash_verification_required": true
+    "source_object_hash_verification_required": true,
+    "zero_selected_memory_is_valid_when_explicitly_no_fill": true,
+    "zero_selected_memory_requires_no_fill_laws": true,
+    "empty_memory_is_hrain_failure": false,
+    "empty_memory_is_negative_evidence": false,
+    "selection_limit_is_upper_bound_not_target_count": true
   },
   "required_response_bindings": [
     "request_message_id",
@@ -27,7 +32,11 @@
     "hrain_context_hash",
     "hrain_locked_head_sha",
     "memory_source_commit",
+    "memory_selected_count",
     "memory_selected_paths",
+    "memory_match_status",
+    "empty_memory_is_hrain_failure",
+    "empty_memory_is_negative_evidence",
     "response_hash"
   ],
   "laws": [
@@ -46,10 +55,14 @@
     "MEMORY_CONTEXT != EVIDENCE",
     "HRAIN_RELEVANCE_SCORE != EVIDENCE_WEIGHT",
     "HASH_VERIFIED_OBJECT != CLAIM_VERIFIED",
+    "LIMIT != TARGET_COUNT",
+    "NO_STRONG_MATCH != FILL_WITH_NOISE",
+    "EMPTY RELEVANT MEMORY != HRAiN FAILURE",
+    "EMPTY MEMORY != NEGATIVE EVIDENCE",
     "LANGUAGE_SURFACE != AUTHORITY",
     "RETURN != RESET"
   ],
-  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version, routed the bound request through the exact model-locked HRAiN organ, bound an integrity-verified query-specific HRAiN memory context and its Meta Registry source commit, and processed the request under the read-only conversation authority ceiling. It does not prove that retrieved memory claims are scientifically true and it does not authorize commands or effects.",
+  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version, routed the bound request through the exact model-locked HRAiN organ, bound an integrity-verified query-specific HRAiN memory context and its Meta Registry source commit, and processed the request under the read-only conversation authority ceiling. A zero-memory context proves only that this exact HRAiN retrieval selected no strong relevant memory under its explicit no-forced-fill policy; it does not prove absence in the world, negative evidence, or HRAiN failure. Retrieved memory claims are not thereby scientifically true and no command or effect is authorized.",
   "success_terminal": "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY",
   "failure_terminal": "JANUS_TERMINAL_CONVERSATION_FAIL_CLOSED"
 }
