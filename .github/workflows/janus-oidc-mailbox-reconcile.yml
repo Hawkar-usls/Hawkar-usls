@@ -1,0 +1,83 @@
+name: JANUS OIDC Mailbox Reconcile
+
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out canonical HOME code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: home
+      - name: Check out immutable HOME mailbox snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: janus/transport-mailbox
+          path: mailbox
+          sparse-checkout: |
+            .janus/mailbox/outbox
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install OIDC verifier
+        working-directory: home
+        run: |
+          pip install -r requirements.txt
+          pip install 'PyJWT[crypto]>=2.10,<3'
+      - name: Reconcile historical object-bound packet identity
+        working-directory: home
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python run_janus_oidc_reconcile.py \
+            --request-dir ../mailbox/.janus/mailbox/outbox \
+            --output ../runtime/oidc-reconcile/result.json
+      - name: Adjudicate without manufacturing freshness or authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          r=json.load(open('runtime/oidc-reconcile/result.json'))
+          assert r['terminal'] in {
+              'OIDC_ASYNC_RECONCILIATION_NO_REQUESTS',
+              'OIDC_ASYNC_RECONCILIATION_PENDING_TARGET_POLL',
+              'OIDC_ASYNC_RECONCILIATION_VERIFIED_NO_EXECUTION',
+          }, r['terminal']
+          for key in (
+              'command_authority_granted','claim_authority_granted',
+              'scientific_evidence_authority_granted','world_truth_authority_granted',
+              'external_effect_authorized','physical_runtime_effect_authorized',
+              'target_execution_observed','p12_execution_authority_granted','is_launch_witness',
+          ):
+              assert r[key] is False,(key,r[key])
+          if r['terminal']=='OIDC_ASYNC_RECONCILIATION_VERIFIED_NO_EXECUTION':
+              assert r['verified_ack_count'] > 0
+              print('JANUS_OIDC_ASYNC_BIDIRECTIONAL_IDENTITY=PASS')
+          elif r['terminal']=='OIDC_ASYNC_RECONCILIATION_PENDING_TARGET_POLL':
+              assert r['pending_count'] > 0
+              print('JANUS_OIDC_ASYNC_STATUS=PENDING_TARGET_POLL')
+          else:
+              print('JANUS_OIDC_ASYNC_STATUS=NO_REQUESTS')
+          print('P12_EXECUTION_AUTHORITY=FALSE')
+          print('STRICT_LAUNCH_WITNESS=FALSE')
+          PY
+      - name: Upload reconciliation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-oidc-reconcile-${{ github.run_id }}
+          path: runtime/oidc-reconcile/result.json
+          if-no-files-found: warn
+          retention-days: 14
