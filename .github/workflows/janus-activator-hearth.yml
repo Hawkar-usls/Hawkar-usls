@@ -18,10 +18,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: janus-activator-hearth
-  cancel-in-progress: false
-
 jobs:
   contract:
     runs-on: ubuntu-24.04
@@ -86,6 +82,9 @@ jobs:
   hearth:
     if: github.event_name != 'pull_request'
     needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

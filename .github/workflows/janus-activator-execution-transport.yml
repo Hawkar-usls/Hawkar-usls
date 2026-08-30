@@ -27,10 +27,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: janus-activator-execution-transport
-  cancel-in-progress: false
-
 jobs:
   contract:
     runs-on: ubuntu-24.04
@@ -58,6 +54,9 @@ jobs:
   send:
     if: github.event_name == 'workflow_dispatch'
     needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

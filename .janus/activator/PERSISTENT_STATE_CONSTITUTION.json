@@ -1,14 +1,16 @@
 {
-  "schema": "janus.activator.persistent_state_constitution.v0.8",
-  "status": "PERSISTENT_HOME_STATE_THROUGH_AUTHENTICATED_EXECUTION_RETURN",
+  "schema": "janus.activator.persistent_state_constitution.v0.9",
+  "status": "PERSISTENT_HOME_STATE_WITH_LIVE_CYCLE_LINEAGE",
   "architecture_branch": "main",
   "living_state_branch": "janus/activator-state",
   "state_root": "state/activator",
   "resident_id": "JANUS",
+  "state_writer_concurrency_group": "janus-activator-state-writer",
   "laws": [
     "RETURN != RESET",
     "STATE_BRANCH != ARCHITECTURE_BRANCH",
     "STATE_BRANCH_WRITE != MAIN_WRITE",
+    "PERSISTENT_STATE_WRITERS_ARE_SERIALIZED",
     "HEARTBEAT != FRESH_TRIGGER",
     "SCHEDULE != COGNITIVE_STIMULUS",
     "ARCHITECTURE_OBSERVATION != COMMAND",
@@ -20,8 +22,10 @@
     "EXECUTION_TRANSPORT_LINEAGE_IS_PART_OF_HOME_HEALTH",
     "EXECUTION_PROVENANCE_LINEAGE_IS_PART_OF_HOME_HEALTH",
     "EXECUTION_RESULT_LINEAGE_IS_PART_OF_HOME_HEALTH",
+    "LIVE_CYCLE_LINEAGE_IS_PART_OF_HOME_HEALTH",
     "EXECUTION_GRANT != TARGET_EXECUTION",
     "EXECUTION_OBSERVED != SCIENTIFIC_EVIDENCE",
+    "LIVE_CYCLE_SUCCESS != WORLD_TRUTH",
     "STATE_SUMMARY != VERDICT_AUTHORITY",
     "HEARTH_PASS != WORLD_TRUTH",
     "PERSISTENCE != CONSCIOUSNESS",
@@ -44,6 +48,17 @@
     "target_execution_authorized": false,
     "external_effect_authorized": false
   },
+  "fresh_live_cycle": {
+    "fresh_stimulus": true,
+    "cognition_generation_opened": true,
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "world_truth_authority_granted": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false,
+    "must_checkpoint_and_return_home_after_wake": true
+  },
   "persistent_ledgers": [
     "activation_ledger.jsonl",
     "dispatch_ledger.jsonl",
@@ -55,6 +70,7 @@
     "execution_transport_ledger.jsonl",
     "execution_provenance_ledger.jsonl",
     "execution_result_finalization_ledger.jsonl",
+    "live_cycle_ledger.jsonl",
     "hearth_ledger.jsonl"
   ],
   "mutable_summaries": [
