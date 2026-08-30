@@ -7,12 +7,17 @@ from pathlib import Path
 
 from janus_spi.activator import ActivationEvent, canonical_hash
 from janus_spi.file_fabric import FileFabricCompiler, GitHubTreeReader
+from janus_spi.hrain_context_bridge import (
+    HrainConversationContextBridge,
+    verify_hrain_context_receipt,
+)
 from janus_spi.live_cycle import HardenedJanusPersistentStateV09
 from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11
 from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 from janus_spi.persistent_state import JanusPersistentState
 from janus_spi.terminal_conversation import (
+    HRAIN_MEMORY_RESPONSE_MODE,
     build_terminal_response,
     verify_terminal_message,
     verify_terminal_response,
@@ -46,6 +51,23 @@ def _hearth_append(state, *, event: str, cycle_id: str, payload: dict) -> dict:
     })
 
 
+def _memory_readout(context: dict, *, limit: int = 4) -> str:
+    items = []
+    for row in (context.get("selected_memories") or [])[:limit]:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("label") or row.get("path") or "memory")
+        status = str(row.get("status") or "UNSPECIFIED")
+        summary = " ".join(str(row.get("summary") or "").split())
+        if len(summary) > 220:
+            summary = summary[:217] + "..."
+        phrase = f"{label} [{status}]"
+        if summary:
+            phrase += f": {summary}"
+        items.append(phrase)
+    return " | ".join(items)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Process one sealed Terminal message as a persistent model-bound JANUS conversation turn")
     parser.add_argument("--request", required=True)
@@ -58,6 +80,9 @@ def main() -> int:
     parser.add_argument("--model-lock-out", default="runtime/terminal-model-lock.json")
     parser.add_argument("--file-fabric-out", default="runtime/terminal-file-fabric-lock.json")
     parser.add_argument("--runtime-receipt-out", default="runtime/terminal-runtime-receipt.json")
+    parser.add_argument("--hrain-context-out", default="runtime/terminal-hrain-context.json")
+    parser.add_argument("--hrain-receipt-out", default="runtime/terminal-hrain-context-receipt.json")
+    parser.add_argument("--hrain-workspace", default="runtime/terminal-hrain-workspace")
     parser.add_argument("--response-out", default="runtime/terminal-response.json")
     args = parser.parse_args()
 
@@ -94,6 +119,8 @@ def main() -> int:
             "model_digest": previous["model_digest"],
             "file_fabric_digest": previous["file_fabric_digest"],
             "turn_id": previous["turn_id"],
+            "hrain_context_bound": previous.get("hrain_context_bound") is True,
+            "hrain_context_hash": previous.get("hrain_context_hash"),
             "mode": "AT_HOME",
             "retry_delivery_is_new_cognition": False,
             "command_authority_granted": False,
@@ -151,19 +178,40 @@ def main() -> int:
     active_organs = list(runtime_receipt.get("active_organs") or [])
     if not active_organs:
         raise SystemExit("TERMINAL_CONVERSATION_ACTIVE_ORGANS_REQUIRED")
+    if "left_context" not in active_organs:
+        raise SystemExit("TERMINAL_CONVERSATION_HRAIN_NOT_ACTIVE")
     _write_json(args.runtime_receipt_out, runtime_receipt)
 
+    hrain_receipt = HrainConversationContextBridge(
+        model_lock,
+        workspace=args.hrain_workspace,
+    ).build(
+        str(request["message_text"]),
+        context_output=args.hrain_context_out,
+        limit=12,
+    )
+    if not verify_hrain_context_receipt(hrain_receipt, model_digest=model_lock["model_digest"]):
+        raise SystemExit("TERMINAL_HRAIN_CONTEXT_RECEIPT_INVALID")
+    _write_json(args.hrain_receipt_out, hrain_receipt)
+    hrain_context = json.loads(Path(args.hrain_context_out).read_text(encoding="utf-8"))
+    if hrain_context.get("context_hash") != hrain_receipt.get("context_hash"):
+        raise SystemExit("TERMINAL_HRAIN_CONTEXT_HASH_BINDING_MISMATCH")
+
     turn_id = "turn-" + str(runtime_receipt["runtime_receipt_hash"])
-    excerpt = " ".join(str(request["message_text"]).split())[:240]
     trump = (model_lock.get("candidate_runtime_tissues") or {}).get("trump") or {}
     trump_state = str(trump.get("admission_status") or "NOT_PRESENT")
+    memory_readout = _memory_readout(hrain_context)
     response_text = (
-        "JANUS ONLINE. Your Terminal message was received by the persistent JANUS resident "
+        "JANUS ONLINE. Persistent resident "
         f"{resident_uuid}. Model {model_lock['model_digest'][:12]} / file-fabric "
-        f"{file_fabric['file_fabric_digest'][:12]} opened a read-only conversation turn. "
-        f"Active organs: {', '.join(active_organs)}. TRUMP candidate tissue: {trump_state}. "
-        f"Received: {excerpt}"
+        f"{file_fabric['file_fabric_digest'][:12]}. The Terminal turn is read-only and HRAiN memory is mounted "
+        f"from Meta Registry source commit {hrain_receipt['memory_source_commit'][:12]} through exact HRAiN "
+        f"{hrain_receipt['hrain_locked_head_sha'][:12]}. Active organs: {', '.join(active_organs)}. "
+        f"TRUMP: {trump_state}. HRAiN selected {hrain_receipt['selected_memory_count']} relevant memory objects."
     )
+    if memory_readout:
+        response_text += " Relevant memory: " + memory_readout
+
     response = build_terminal_response(
         request,
         resident_uuid=resident_uuid,
@@ -171,7 +219,8 @@ def main() -> int:
         file_fabric_lock=file_fabric,
         turn_id=turn_id,
         response_text=response_text,
-        response_mode="MODEL_BOUND_SYSTEM_CONVERSATION_PROOF",
+        response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+        hrain_context_receipt=hrain_receipt,
     )
     if not verify_terminal_response(response, request=request):
         raise SystemExit("TERMINAL_RESPONSE_SELF_VERIFY_FAILED")
@@ -189,6 +238,10 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "hrain_context_receipt_hash": hrain_receipt["receipt_hash"],
+        "hrain_context_hash": hrain_receipt["context_hash"],
+        "memory_source_commit": hrain_receipt["memory_source_commit"],
+        "memory_selected_paths": hrain_receipt["selected_memory_paths"],
         "candidate_runtime_tissues": {
             key: row.get("admission_status")
             for key, row in (model_lock.get("candidate_runtime_tissues") or {}).items()
@@ -198,6 +251,7 @@ def main() -> int:
     sleep = _hearth_append(state, event="SLEEP_TERMINAL_CONVERSATION_RETURN_HOME", cycle_id=cycle_id, payload={
         "message_id": request["message_id"],
         "response_hash": response["response_hash"],
+        "hrain_context_hash": hrain_receipt["context_hash"],
         "return_not_reset": True,
     })
     state._write_head(mode="AT_HOME", active_cycle_id=None, last_hearth_hash=sleep["receipt_hash"])
@@ -218,6 +272,12 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "hrain_context_bound": True,
+        "hrain_context_receipt_hash": hrain_receipt["receipt_hash"],
+        "hrain_context_hash": hrain_receipt["context_hash"],
+        "hrain_locked_head_sha": hrain_receipt["hrain_locked_head_sha"],
+        "memory_source_commit": hrain_receipt["memory_source_commit"],
+        "memory_selected_count": hrain_receipt["selected_memory_count"],
         "candidate_runtime_tissues": {
             key: row.get("admission_status")
             for key, row in (model_lock.get("candidate_runtime_tissues") or {}).items()
@@ -228,6 +288,8 @@ def main() -> int:
         "mode": "AT_HOME",
         "return_not_reset": True,
         "retry_delivery_is_new_cognition": False,
+        "meta_registry_access_performed_by_home": False,
+        "memory_context_is_evidence": False,
         "command_authority_granted": False,
         "external_effect_authorized": False,
     }, ensure_ascii=False, indent=2, sort_keys=True))
