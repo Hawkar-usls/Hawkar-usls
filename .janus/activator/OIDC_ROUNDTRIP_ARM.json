@@ -1,0 +1,20 @@
+{
+  "schema": "janus.activator.oidc_roundtrip_arm.v1.1",
+  "armed": true,
+  "purpose": "FIRST_REAL_BIDIRECTIONAL_OIDC_PACKET_ACK_WITNESS",
+  "target_repository": "Hawkar-usls/Janus-Demiurge",
+  "target_oidc_main_present": true,
+  "lanes_attempted": ["SECRET_PUSH", "OIDC_CREDENTIALLESS_PULL"],
+  "required_success_terminal": "OIDC_BIDIRECTIONAL_PACKET_ROUNDTRIP_VERIFIED_NO_EXECUTION",
+  "bidirectional_identity_proof_required": true,
+  "target_execution_observed": false,
+  "p12_execution_authority_granted": false,
+  "is_launch_witness": false,
+  "command_authority_granted": false,
+  "claim_authority_granted": false,
+  "scientific_evidence_authority_granted": false,
+  "world_truth_authority_granted": false,
+  "external_effect_authorized": false,
+  "physical_runtime_effect_authorized": false,
+  "silence_semantics": "UNRESOLVED_NOT_NEGATIVE_EVIDENCE"
+}
