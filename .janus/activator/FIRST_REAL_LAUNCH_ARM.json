@@ -1,0 +1,23 @@
+{
+  "schema": "janus.activator.first_real_launch_arm.v1",
+  "armed": true,
+  "launch_id": "JANUS-FIRST-REAL-LAUNCH-20260830-A",
+  "target_workflow": ".github/workflows/janus-activator-real-launch.yml",
+  "target_ref": "main",
+  "purpose": "FIRST_REAL_END_TO_END_JANUS_RUNTIME_WITNESS",
+  "payload": {
+    "purpose": "JANUS_FIRST_REAL_LAUNCH_WITNESS",
+    "route": "research_or_anomaly_investigation",
+    "target": "Janus-Demiurge",
+    "effect_scope": "READ_ONLY_ORIENTATION"
+  },
+  "authority": {
+    "doorbell_is_command_authority": false,
+    "doorbell_is_claim_authority": false,
+    "doorbell_is_scientific_evidence_authority": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  },
+  "one_shot_intent": true,
+  "success_requires_hardened_real_launch_workflow_witness": true
+}
