@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
@@ -15,7 +16,7 @@ class CandidateTissueMaterializationError(OrganMaterializationError):
 class CandidateAwareOrganMaterializer(OrganMaterializer):
     """Extend exact-SHA organ materialization with admitted child candidate tissues.
 
-    A candidate tissue is not model membership and is never arbitrary code.  It
+    A candidate tissue is not model membership and is never arbitrary code. It
     can run only when:
       * the model lock admitted it;
       * its parent organ is active and materialized on the exact locked SHA;
@@ -116,7 +117,7 @@ class CandidateAwareOrganMaterializer(OrganMaterializer):
         if manifest.get("status") != spec.get("expected_manifest_status"):
             raise CandidateTissueMaterializationError("TRUMP_MANIFEST_STATUS_MISMATCH")
 
-        status_cp = self._run([str(Path(__import__('sys').executable)), str(entrypoint), "status"], cwd=root, timeout=120.0)
+        status_cp = self._run([sys.executable, str(entrypoint), "status"], cwd=root, timeout=120.0)
         if status_cp.returncode != 0:
             raise CandidateTissueMaterializationError(f"TRUMP_STATUS_FAILED:{status_cp.stderr[-400:]}")
         status_receipt = self._json_suffix(status_cp.stdout)
@@ -126,7 +127,7 @@ class CandidateAwareOrganMaterializer(OrganMaterializer):
             execution_performed=False,
         )
 
-        selftest_cp = self._run([str(Path(__import__('sys').executable)), str(entrypoint), "selftest"], cwd=root, timeout=240.0)
+        selftest_cp = self._run([sys.executable, str(entrypoint), "selftest"], cwd=root, timeout=240.0)
         if selftest_cp.returncode != 0:
             raise CandidateTissueMaterializationError(f"TRUMP_SELFTEST_FAILED:{selftest_cp.stderr[-500:]}:{selftest_cp.stdout[-500:]}")
         if "PASS: C025 unified exact-cap Akinator/JEC selftest" not in selftest_cp.stdout:
