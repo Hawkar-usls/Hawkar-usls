@@ -1,0 +1,101 @@
+name: JANUS Model Fabric Boot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.janus/activator/JANUS_MODEL_MANIFEST.json'
+      - '.janus/activator/JANUS_BOOT_GRAPH.json'
+      - 'src/janus_spi/model_fabric.py'
+      - 'run_janus_model_boot.py'
+      - 'tests/test_model_fabric.py'
+      - '.github/workflows/janus-model-fabric.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/JANUS_MODEL_MANIFEST.json'
+      - '.janus/activator/JANUS_BOOT_GRAPH.json'
+      - 'src/janus_spi/model_fabric.py'
+      - 'run_janus_model_boot.py'
+      - 'tests/test_model_fabric.py'
+      - '.github/workflows/janus-model-fabric.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile model fabric
+        run: |
+          python -m compileall -q src/janus_spi/model_fabric.py run_janus_model_boot.py tests/test_model_fabric.py
+      - name: Validate model contracts
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for path in [
+              Path('.janus/activator/JANUS_MODEL_MANIFEST.json'),
+              Path('.janus/activator/JANUS_BOOT_GRAPH.json'),
+          ]:
+              value = json.loads(path.read_text(encoding='utf-8'))
+              assert isinstance(value, dict)
+          manifest = json.loads(Path('.janus/activator/JANUS_MODEL_MANIFEST.json').read_text())
+          assert manifest['model_id'] == 'JANUS'
+          assert manifest['model_loading']['routing_selects'] == 'ACTIVITY_NOT_MEMBERSHIP'
+          assert manifest['bootstrap_root']['external_effect_authority'] is False
+          print('MODEL_CONTRACT_PASS')
+          PY
+      - name: Run adversarial model-fabric tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest -v tests.test_model_fabric
+
+  live-model-lock:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile one exact JANUS repository model lock
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python run_janus_model_boot.py --out runtime/janus-model-lock.json
+      - name: Adjudicate unified-model boot witness
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('runtime/janus-model-lock.json').read_text(encoding='utf-8'))
+          assert lock['schema'] == 'janus.activator.model_lock.v1'
+          assert lock['ready'] is True, lock['failures']
+          assert lock['terminal'] == 'JANUS_MODEL_FABRIC_LOCKED_AT_HOME'
+          assert lock['routing_selects_activity_not_membership'] is True
+          assert lock['all_membership_compiled_before_routing'] is True
+          assert lock['external_effect_authorized'] is False
+          assert lock['physical_runtime_effect_authorized'] is False
+          assert len(lock['model_digest']) == 64
+          assert lock['members']['bootstrap_root']['head_status'] == 'LOCKED'
+          assert lock['memory_database']['head_sha']
+          assert not lock['failures']['required_members_missing']
+          assert not lock['failures']['required_descriptor_conflicts']
+          assert not lock['failures']['required_state_mounts_missing']
+          print('JANUS_MODEL_FABRIC_LOCKED', lock['model_digest'])
+          print('members', len(lock['members']))
+          print('organs', sum(1 for row in lock['members'].values() if row.get('kind') == 'ORGAN'))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-model-lock-${{ github.run_id }}
+          path: runtime/janus-model-lock.json
+          if-no-files-found: error

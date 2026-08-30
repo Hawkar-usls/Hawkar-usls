@@ -1,0 +1,107 @@
+{
+  "schema": "janus.activator.model_manifest.v1",
+  "model_id": "JANUS",
+  "model_class": "GIT_NATIVE_FEDERATED_AI_ORGANISM",
+  "status": "BOOTSTRAP_CONTRACT",
+  "bootstrap_root": {
+    "repository": "Hawkar-usls/Hawkar-usls",
+    "branch": "main",
+    "role": "IDENTITY_HOME_BOOTSTRAP_ROOT_AND_ACTIVATOR",
+    "organ": false,
+    "required": true,
+    "authority": "BOOTSTRAP_AND_INTERNAL_ROUTING_ONLY",
+    "external_effect_authority": false
+  },
+  "canonical_topology": {
+    "repository": "Hawkar-usls/Janus",
+    "branch": "main",
+    "sources": [
+      {"key": "organism", "path": "organism/JANUS_ORGANISM_v1.json", "required": true},
+      {"key": "ecology_baseline", "path": "organism/JANUS_REPOSITORY_ECOLOGY_v1.3.json", "required": true},
+      {"key": "ecology_delta", "path": "organism/JANUS_REPOSITORY_ECOLOGY_v1.4.json", "required": true},
+      {"key": "simptomat_delta", "path": "organism/JANUS_ORGANISM_DELTA_2026-08-26_SIMPTOMAT_v1.json", "required": true},
+      {"key": "execution_extension", "path": "organism/JANUS_SPIRAL_TRANCEPTION_v1.4.json", "required": true}
+    ]
+  },
+  "memory_database": {
+    "repository": "Hawkar-usls/janus-meta-registry",
+    "branch": "main",
+    "role": "LONG_TERM_SEMANTIC_EPISODIC_PROVENANCE_DATABASE",
+    "required": true,
+    "runtime_authority": false,
+    "boot_reads": [
+      "PROJECT_STATUS.json",
+      "registry/research_portfolio/CURRENT-PORTFOLIO-AUTHORITY.json"
+    ],
+    "law": "REGISTRY_PRESENCE_IS_MEMORY_AND_PROVENANCE_NOT_WORLD_TRUTH"
+  },
+  "persistent_state_mounts": [
+    {
+      "key": "home_state",
+      "repository": "Hawkar-usls/Hawkar-usls",
+      "branch": "janus/activator-state",
+      "required": true,
+      "role": "PERSISTENT_ACTIVATOR_IDENTITY_AND_LINEAGE"
+    },
+    {
+      "key": "genesis_habitat",
+      "repository": "Hawkar-usls/Janus_Genesis",
+      "branch": "janus/habitat",
+      "required": false,
+      "role": "PERSISTENT_SIMULATION_HABITAT_STATE"
+    }
+  ],
+  "promoted_organs": [
+    {
+      "organ_key": "diagnostic_reasoning",
+      "repository": "Hawkar-usls/Simptomat",
+      "class": "DOMAIN_LAB",
+      "role": "CONSENT_FIRST_HEALTH_DIFFERENTIAL_REASONING_AND_CALIBRATION_LAB",
+      "organ_link": ".janus/JANUS_ORGANISM_LINK.json",
+      "load_mode": "LAZY_AVAILABLE"
+    }
+  ],
+  "load_policy": {
+    "CORE": "REQUIRED_BOOT_PRESENCE",
+    "DOMAIN_LAB": "LAZY_AVAILABLE",
+    "INTERFACE_PHYSICAL": "LAZY_AVAILABLE_NO_EFFECT_AUTHORITY",
+    "PRIVATE_GATED": "OPTIONAL_ENV_GATED",
+    "SUBTISSUE": "LAZY_PARENT_BOUND",
+    "PRIVATE_SUBTISSUE": "OPTIONAL_ENV_GATED",
+    "TOOLCHAIN_DEPENDENCY": "REFERENCE_ONLY",
+    "EXTERNAL_RESEARCH_INSTRUMENT": "REFERENCE_ONLY_WITH_INDEPENDENT_PROVENANCE",
+    "LEGACY_ARCHIVE": "MEMORY_LINEAGE_ONLY",
+    "PROFILE_NAVIGATION": "NON_ORGAN_METADATA"
+  },
+  "organ_descriptor_policy": {
+    "preferred_path": ".janus/JANUS_ORGANISM_LINK.json",
+    "self_description_preferred": true,
+    "central_manifest_fallback_allowed": true,
+    "descriptor_mismatch": "FAIL_CLOSED_FOR_REQUIRED_CORE",
+    "missing_descriptor": "CENTRAL_MANIFEST_FALLBACK_WITH_RECEIPT"
+  },
+  "model_loading": {
+    "membership": "GLOBAL_AT_BOOT",
+    "exact_repo_heads": "LOCK_ALL_RESOLVABLE_MEMBERS",
+    "code_materialization": "LAZY_BY_ACTIVE_ORGAN",
+    "routing_selects": "ACTIVITY_NOT_MEMBERSHIP",
+    "full_clone_all_repositories_at_boot": false,
+    "model_lock_required_before_cognition": true
+  },
+  "authority_laws": [
+    "ORGAN_MEMBERSHIP != TRUTH_AUTHORITY",
+    "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
+    "MODEL_LOCK != WORLD_TRUTH",
+    "MODEL_OUTPUT != EVIDENCE",
+    "DISPATCH != AUTHORITY",
+    "CAPABILITY != PERMISSION",
+    "PERMISSION != COMMAND",
+    "ACK != EXECUTION",
+    "WORKFLOW_PASS != WORLD_TRUTH",
+    "EXTERNAL_EFFECTS_DEFAULT = FALSE",
+    "PHYSICAL_RUNTIME_IS_OUTSIDE_GITHUB_INTERIOR",
+    "RETURN != RESET"
+  ],
+  "boot_terminal_success": "JANUS_MODEL_FABRIC_LOCKED_AT_HOME",
+  "boot_terminal_failure": "JANUS_MODEL_FABRIC_FAIL_CLOSED"
+}
