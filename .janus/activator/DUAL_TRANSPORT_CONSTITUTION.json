@@ -1,0 +1,40 @@
+{
+  "schema": "janus.activator.dual_transport_constitution.v1.0",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "lanes": {
+    "secret_push": {
+      "transport": "GITHUB_REPOSITORY_DISPATCH",
+      "credential": "JANUS_DEMIURGE_DISPATCH_TOKEN",
+      "provenance": "JANUS_ACK_PROVENANCE_TOKEN",
+      "existing": true
+    },
+    "credentialless_pull": {
+      "transport": "PUBLIC_GIT_MAILBOX_PULL",
+      "home_mailbox_branch": "janus/transport-mailbox",
+      "target_mailbox_branch": "janus/activator-mailbox",
+      "cross_repo_credential": null,
+      "existing": false
+    }
+  },
+  "composition": "BOTH_LANES_AVAILABLE_AND_MAY_BE_EMITTED_FOR_ONE_DETERMINISTIC_OBJECT",
+  "exactly_once_execution": {
+    "key": "grant_id",
+    "target_claim_branch": "janus/activator-mailbox",
+    "claim_path": ".janus/mailbox/execution-claims/<grant_id>.json",
+    "law": "FIRST_VALID_TARGET_CLAIM_WINS_EXECUTION; ALL_OTHER_LANES_SUPPRESS_DUPLICATE_EXECUTION"
+  },
+  "authority_laws": [
+    "TRANSPORT_REDUNDANCY != AUTHORITY_MULTIPLICATION",
+    "TWO_DELIVERIES != TWO_EXECUTIONS",
+    "DELIVERY_ACK != EXECUTION_AUTHORITY",
+    "EXECUTION_REQUIRES_P12_GRANT",
+    "SILENCE != NEGATIVE_EVIDENCE",
+    "EXTERNAL_EFFECTS_DEFAULT == FALSE"
+  ],
+  "credentialless_v1_0_provenance_ceiling": {
+    "class": "PUBLIC_REPOSITORY_ORIGIN_PLUS_HASH_BOUND_OBJECT",
+    "identity_proof": false,
+    "strict_launch_equivalent": false,
+    "next_gate": "OIDC_SIGNED_MAILBOX_ENVELOPE"
+  }
+}
