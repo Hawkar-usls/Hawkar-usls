@@ -8,11 +8,13 @@ on:
       - '.janus/activator/ROUTING_TABLE.json'
       - 'src/janus_spi/terminal_conversation.py'
       - 'src/janus_spi/terminal_mailbox.py'
+      - 'src/janus_spi/hrain_context_bridge.py'
       - 'run_janus_terminal_pull.py'
       - 'run_janus_terminal_conversation.py'
       - 'tests/test_terminal_conversation.py'
       - 'tests/test_terminal_conversation_route.py'
       - 'tests/test_terminal_mailbox.py'
+      - 'tests/test_hrain_context_bridge.py'
       - '.github/workflows/janus-terminal-conversation-bridge.yml'
   push:
     branches: [main]
@@ -21,8 +23,13 @@ on:
       - '.janus/activator/ROUTING_TABLE.json'
       - 'src/janus_spi/terminal_conversation.py'
       - 'src/janus_spi/terminal_mailbox.py'
+      - 'src/janus_spi/hrain_context_bridge.py'
       - 'run_janus_terminal_pull.py'
       - 'run_janus_terminal_conversation.py'
+      - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_conversation_route.py'
+      - 'tests/test_terminal_mailbox.py'
+      - 'tests/test_hrain_context_bridge.py'
       - '.github/workflows/janus-terminal-conversation-bridge.yml'
   workflow_dispatch:
   schedule:
@@ -47,19 +54,26 @@ jobs:
           python -m compileall -q \
             src/janus_spi/terminal_conversation.py \
             src/janus_spi/terminal_mailbox.py \
+            src/janus_spi/hrain_context_bridge.py \
             run_janus_terminal_pull.py \
             run_janus_terminal_conversation.py \
             tests/test_terminal_conversation.py \
             tests/test_terminal_conversation_route.py \
-            tests/test_terminal_mailbox.py
+            tests/test_terminal_mailbox.py \
+            tests/test_hrain_context_bridge.py
       - name: Validate Terminal conversation constitution and routing
         run: |
           python -m json.tool .janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json >/dev/null
           python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
-      - name: Run Terminal bridge adversarial tests
+      - name: Run Terminal and HRAiN bridge adversarial tests
         env:
           PYTHONPATH: src
-        run: python -m pytest -q tests/test_terminal_conversation.py tests/test_terminal_conversation_route.py tests/test_terminal_mailbox.py
+        run: |
+          python -m pytest -q \
+            tests/test_terminal_conversation.py \
+            tests/test_terminal_conversation_route.py \
+            tests/test_terminal_mailbox.py \
+            tests/test_hrain_context_bridge.py
 
   bridge:
     if: github.event_name != 'pull_request'
@@ -68,7 +82,7 @@ jobs:
       group: janus-activator-state-writer
       cancel-in-progress: false
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -117,7 +131,7 @@ jobs:
           test -f "$statewt/state/activator/identity.json"
           echo "JANUS_STATE_WORKTREE=$statewt" >> "$GITHUB_ENV"
 
-      - name: WAKE persistent JANUS, instantiate full model and answer Terminal
+      - name: WAKE persistent JANUS, instantiate full model, mount HRAiN memory and answer Terminal
         if: steps.pull.outputs.found == 'true'
         env:
           PYTHONPATH: src
@@ -132,10 +146,13 @@ jobs:
             --model-lock-out runtime/terminal-model-lock.json \
             --file-fabric-out runtime/terminal-file-fabric-lock.json \
             --runtime-receipt-out runtime/terminal-runtime-receipt.json \
+            --hrain-context-out runtime/terminal-hrain-context.json \
+            --hrain-receipt-out runtime/terminal-hrain-context-receipt.json \
+            --hrain-workspace runtime/terminal-hrain-workspace \
             --response-out runtime/terminal-response.json \
             > runtime/terminal-turn-summary.json
 
-      - name: Adjudicate identity-bound conversation response before persistence
+      - name: Adjudicate identity and HRAiN memory bound response before persistence
         if: steps.pull.outputs.found == 'true'
         env:
           PYTHONPATH: src
@@ -143,18 +160,39 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
+          from janus_spi.hrain_context_bridge import verify_hrain_context_receipt
           from janus_spi.live_cycle import HardenedJanusPersistentStateV09
           from janus_spi.model_runtime import ModelRuntimeLedger
-          from janus_spi.terminal_conversation import verify_terminal_message, verify_terminal_response
+          from janus_spi.terminal_conversation import HRAIN_MEMORY_RESPONSE_MODE, verify_terminal_message, verify_terminal_response
           request=json.load(open('runtime/terminal-request.json'))
           response=json.load(open('runtime/terminal-response.json'))
           summary=json.load(open('runtime/terminal-turn-summary.json'))
+          lock=json.load(open('runtime/terminal-model-lock.json'))
+          context=json.load(open('runtime/terminal-hrain-context.json'))
+          hreceipt=json.load(open('runtime/terminal-hrain-context-receipt.json'))
           assert verify_terminal_message(request)
+          assert verify_hrain_context_receipt(hreceipt, model_digest=lock['model_digest'])
           assert verify_terminal_response(response, request=request)
           assert response['resident_uuid'] == summary['resident_uuid']
-          assert response['model_digest'] == summary['model_digest']
+          assert response['model_digest'] == summary['model_digest'] == lock['model_digest']
           assert response['file_fabric_digest'] == summary['file_fabric_digest']
           assert summary['mode'] == 'AT_HOME'
+          assert response['response_mode'] == HRAIN_MEMORY_RESPONSE_MODE
+          assert response['hrain_context_bound'] is True
+          assert response['hrain_context_hash'] == summary['hrain_context_hash'] == hreceipt['context_hash'] == context['context_hash']
+          assert response['hrain_context_receipt_hash'] == summary['hrain_context_receipt_hash'] == hreceipt['receipt_hash']
+          assert response['memory_source_commit'] == summary['memory_source_commit'] == hreceipt['memory_source_commit'] == context['source_commit']
+          assert response['memory_selected_count'] == summary['memory_selected_count'] == hreceipt['selected_memory_count'] > 0
+          assert response['memory_selected_paths'] == hreceipt['selected_memory_paths']
+          assert response['memory_path'] == 'META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL'
+          assert response['memory_retrieval_executed_by'] == 'Hawkar-usls/Hrain'
+          assert response['meta_registry_access_performed_by_home'] is False
+          assert response['memory_content_is_command'] is False
+          assert response['memory_context_is_evidence'] is False
+          assert response['memory_grants_authority'] is False
+          assert summary['meta_registry_access_performed_by_home'] is False
+          assert hreceipt['hrain_locked_head_sha'] == hreceipt['hrain_materialized_head_sha']
+          assert hreceipt['hrain_locked_head_sha'] == lock['members']['left_context']['head_sha']
           state=HardenedJanusPersistentStateV09(Path(os.environ['JANUS_STATE_WORKTREE'])/'state/activator')
           health=state.verify()
           assert health['ok'] is True and health['mode'] == 'AT_HOME'
@@ -163,7 +201,11 @@ jobs:
           assert response['command_authority_granted'] is False
           assert response['external_effect_authorized'] is False
           assert response['physical_runtime_effect_authorized'] is False
-          print('JANUS_TERMINAL_RESPONSE_PRECOMMIT=PASS')
+          print('JANUS_TERMINAL_HRAIN_MEMORY_RESPONSE_PRECOMMIT=PASS')
+          print('HRAIN_HEAD', hreceipt['hrain_locked_head_sha'])
+          print('MEMORY_SOURCE_COMMIT', hreceipt['memory_source_commit'])
+          print('HRAIN_CONTEXT_HASH', hreceipt['context_hash'])
+          print('MEMORY_PATHS', hreceipt['selected_memory_paths'])
           print('RETURN_NOT_RESET=PASS')
           PY
 
@@ -211,8 +253,10 @@ jobs:
           assert ModelRuntimeLedger(root/'model_runtime_ledger.jsonl').verify()
           assert stored == response
           assert verify_terminal_response(stored, request=request)
+          assert stored.get('hrain_context_bound') is True
           print('JANUS_TERMINAL_FRESH_WORKTREE_REPLAY=PASS')
           print('SAME_RESIDENT_UUID=PASS')
+          print('HRAIN_MEMORY_BINDING_PERSISTED=PASS')
           print('RETURN_NOT_RESET=PASS')
           PY
 
@@ -272,5 +316,7 @@ jobs:
             runtime/terminal-model-lock.json
             runtime/terminal-file-fabric-lock.json
             runtime/terminal-runtime-receipt.json
+            runtime/terminal-hrain-context.json
+            runtime/terminal-hrain-context-receipt.json
           if-no-files-found: warn
           retention-days: 14
