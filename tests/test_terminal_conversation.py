@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+from janus_spi.activator import canonical_hash
 from janus_spi.terminal_conversation import (
+    HRAIN_MEMORY_RESPONSE_MODE,
     TerminalConversationError,
     build_terminal_message,
     build_terminal_response,
@@ -33,6 +35,44 @@ def locks():
         "file_fabric_digest": "b" * 64,
     }
     return model, fabric
+
+
+def hrain_receipt():
+    value = {
+        "schema": "janus.activator.hrain_conversation_context_receipt.v1",
+        "model_id": "JANUS",
+        "model_digest": "a" * 64,
+        "hrain_member_key": "left_context",
+        "hrain_repository": "Hawkar-usls/Hrain",
+        "hrain_locked_head_sha": "1" * 40,
+        "hrain_materialized_head_sha": "1" * 40,
+        "hrain_contract_path": ".janus/HRAIN_CONVERSATION_CONTEXT_CONTRACT.json",
+        "hrain_contract_hash": "2" * 64,
+        "hrain_compiler_path": "tools/hrain_conversation_context.py",
+        "hrain_compiler_sha256": "3" * 64,
+        "query_sha256": "4" * 64,
+        "context_hash": "5" * 64,
+        "context_file_sha256": "6" * 64,
+        "memory_source_commit": "7" * 40,
+        "selected_memory_count": 2,
+        "selected_memory_paths": ["data/A.json", "data/B.json"],
+        "hydration_performed": True,
+        "memory_retrieval_executed_by": "Hawkar-usls/Hrain",
+        "meta_registry_access_performed_by_home": False,
+        "network_read_performed": True,
+        "repository_write_performed": False,
+        "memory_content_is_command": False,
+        "memory_context_is_evidence": False,
+        "claim_promotion_performed": False,
+        "command_authority_granted": False,
+        "scientific_evidence_authority_granted": False,
+        "world_truth_authority_granted": False,
+        "external_effect_authorized": False,
+        "physical_runtime_effect_authorized": False,
+        "terminal": "HRAIN_QUERY_BOUND_CONVERSATION_CONTEXT_MATERIALIZED",
+    }
+    value["receipt_hash"] = canonical_hash(value)
+    return value
 
 
 def test_message_is_read_only_human_stimulus_not_command():
@@ -67,6 +107,84 @@ def test_response_binds_request_persistent_identity_and_both_model_digests():
     assert response["terminal_interface_bound"] is True
     assert response["terminal"] == "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY"
     assert response["world_truth_authority_granted"] is False
+
+
+def test_hrain_memory_response_binds_exact_context_receipt():
+    request = message()
+    model, fabric = locks()
+    receipt = hrain_receipt()
+    response = build_terminal_response(
+        request,
+        resident_uuid="resident-uuid-1",
+        model_lock=model,
+        file_fabric_lock=fabric,
+        turn_id="turn-memory",
+        response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+        hrain_context_receipt=receipt,
+        response_text="Memory-bound JANUS response",
+        now_fn=lambda: 2001.0,
+    )
+    assert verify_terminal_response(response, request=request)
+    assert response["hrain_context_bound"] is True
+    assert response["hrain_context_hash"] == receipt["context_hash"]
+    assert response["hrain_context_receipt_hash"] == receipt["receipt_hash"]
+    assert response["memory_source_commit"] == receipt["memory_source_commit"]
+    assert response["memory_selected_paths"] == receipt["selected_memory_paths"]
+    assert response["memory_path"] == "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL"
+    assert response["meta_registry_access_performed_by_home"] is False
+    assert response["memory_content_is_command"] is False
+    assert response["memory_context_is_evidence"] is False
+    assert response["memory_grants_authority"] is False
+
+
+def test_hrain_memory_mode_requires_verified_context():
+    request = message()
+    model, fabric = locks()
+    with pytest.raises(TerminalConversationError, match="HRAIN_MEMORY_RESPONSE_REQUIRES_CONTEXT"):
+        build_terminal_response(
+            request,
+            resident_uuid="resident-uuid-1",
+            model_lock=model,
+            file_fabric_lock=fabric,
+            turn_id="turn-memory",
+            response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+        )
+
+
+def test_hrain_receipt_model_digest_mismatch_is_rejected():
+    request = message()
+    model, fabric = locks()
+    receipt = hrain_receipt()
+    receipt["model_digest"] = "c" * 64
+    body = dict(receipt)
+    body.pop("receipt_hash")
+    receipt["receipt_hash"] = canonical_hash(body)
+    with pytest.raises(TerminalConversationError, match="HRAIN_CONTEXT_RECEIPT_INVALID"):
+        build_terminal_response(
+            request,
+            resident_uuid="resident-uuid-1",
+            model_lock=model,
+            file_fabric_lock=fabric,
+            turn_id="turn-memory",
+            response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+            hrain_context_receipt=receipt,
+        )
+
+
+def test_tampered_memory_binding_is_rejected():
+    request = message()
+    model, fabric = locks()
+    response = build_terminal_response(
+        request,
+        resident_uuid="resident-uuid-1",
+        model_lock=model,
+        file_fabric_lock=fabric,
+        turn_id="turn-memory",
+        response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+        hrain_context_receipt=hrain_receipt(),
+    )
+    response["memory_content_is_command"] = True
+    assert verify_terminal_response(response, request=request) is False
 
 
 def test_tampered_message_is_rejected():
