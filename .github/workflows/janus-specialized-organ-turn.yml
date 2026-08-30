@@ -1,0 +1,168 @@
+name: JANUS Specialized Organ Turn
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.janus/activator/ORGAN_MATERIALIZATION_CONSTITUTION.json'
+      - 'src/janus_spi/organ_materializer.py'
+      - 'src/janus_spi/specialized_turn.py'
+      - 'run_janus_specialized_turn.py'
+      - 'tests/test_organ_materializer.py'
+      - 'tests/test_specialized_turn.py'
+      - '.github/workflows/janus-specialized-organ-turn.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/ORGAN_MATERIALIZATION_CONSTITUTION.json'
+      - 'src/janus_spi/organ_materializer.py'
+      - 'src/janus_spi/specialized_turn.py'
+      - 'run_janus_specialized_turn.py'
+      - 'tests/test_organ_materializer.py'
+      - 'tests/test_specialized_turn.py'
+      - '.github/workflows/janus-specialized-organ-turn.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile materializer and reintegration layer
+        run: |
+          python -m compileall -q \
+            src/janus_spi/organ_materializer.py \
+            src/janus_spi/specialized_turn.py \
+            run_janus_specialized_turn.py \
+            tests/test_organ_materializer.py \
+            tests/test_specialized_turn.py
+      - name: Validate organ materialization constitution
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('.janus/activator/ORGAN_MATERIALIZATION_CONSTITUTION.json').read_text())
+          assert c['schema']=='janus.activator.organ_materialization_constitution.v1'
+          assert c['initial_adapters']['anomaly_lab']['expected_topa_core'] is True
+          assert c['initial_adapters']['anomaly_lab']['expected_spider'] is True
+          assert c['initial_adapters']['left_context']['external_effect_authorized'] is False
+          assert c['initial_adapters']['orchestrator']['target_executor_not_invoked_by_materializer'] is True
+          assert 'ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP' in c['laws']
+          assert 'ORGAN_CODE_EXECUTION_REQUIRES_EXPLICIT_ADAPTER_ALLOWLIST' in c['laws']
+          print('ORGAN_MATERIALIZATION_CONSTITUTION=PASS')
+          PY
+      - name: Run adversarial materialization and reintegration tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m unittest -v tests.test_organ_materializer tests.test_specialized_turn
+
+  specialized-turn:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Materialize one genuine research-route stimulus
+        env:
+          JANUS_SHA: ${{ github.sha }}
+          JANUS_REPOSITORY: ${{ github.repository }}
+          JANUS_RUN_ID: ${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          event={
+            'source_kind':'GITHUB',
+            'source_ref':f"specialized-turn:{os.environ['JANUS_RUN_ID']}:{os.environ['JANUS_SHA']}",
+            'payload':{
+              'repository':os.environ['JANUS_REPOSITORY'],
+              'sha':os.environ['JANUS_SHA'],
+              'purpose':'FIRST_MODEL_BOUND_SPECIALIZED_ORGAN_MATERIALIZATION',
+            },
+            'classifications':['research_or_anomaly_investigation'],
+            'fresh':True,
+            'self_generated':False,
+            'command_authority':False,
+            'effect_authorized':False,
+          }
+          Path('runtime').mkdir(exist_ok=True)
+          Path('runtime/specialized-event.json').write_text(json.dumps(event,sort_keys=True)+'\n',encoding='utf-8')
+          PY
+      - name: Boot full JANUS and run exact-SHA specialized organ turn
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python run_janus_specialized_turn.py \
+            --event-file runtime/specialized-event.json \
+            --state-dir runtime/specialized-state \
+            --model-lock-out runtime/janus-model-lock.json \
+            --runtime-receipt-out runtime/janus-model-runtime-receipt.json \
+            --materialization-out runtime/janus-organ-materialization.json \
+            --turn-out runtime/janus-specialized-turn.json \
+            --organ-workspace runtime/materialized-organs
+      - name: Adjudicate exact-SHA tri-organ witness
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path('runtime/janus-model-lock.json').read_text())
+          runtime=json.loads(Path('runtime/janus-model-runtime-receipt.json').read_text())
+          mat=json.loads(Path('runtime/janus-organ-materialization.json').read_text())
+          turn=json.loads(Path('runtime/janus-specialized-turn.json').read_text())
+          assert lock['ready'] is True
+          assert lock['optional_unavailable'] == []
+          assert len(lock['members']) == 47
+          assert sum(1 for x in lock['members'].values() if isinstance(x,dict) and x.get('kind')=='ORGAN') == 23
+          assert set(runtime['active_organs']) == {'anomaly_lab','left_context','orchestrator'}
+          assert set(runtime['active_members']) == {'anomaly_lab','left_context','orchestrator'}
+          assert mat['terminal'] == 'JANUS_ACTIVE_ORGANS_MATERIALIZED_EXACT_SHA'
+          assert mat['materialized_member_count'] == 3
+          assert mat['executed_adapters'] == ['anomaly_lab']
+          rows={x['member_key']:x for x in mat['materialized']}
+          assert set(rows)=={'anomaly_lab','left_context','orchestrator'}
+          for key,row in rows.items():
+              assert row['locked_head_sha'] == row['materialized_head_sha'] == lock['members'][key]['head_sha']
+          topa=rows['anomaly_lab']['adapter_result']
+          assert topa['identity']=='TOPA_DETECTIVE_SPIDER'
+          assert topa['activated']['topa_core'] is True
+          assert topa['activated']['spider'] is True
+          assert topa['terminal']=='TOPA_DETECTIVE_SPIDER_MATERIALIZED_AND_SELF_TESTED'
+          hrain=rows['left_context']['adapter_result']
+          assert hrain['spider_resident'] is True
+          assert hrain['writeback'] is False
+          assert hrain['context_fur_bound'] is True
+          assert hrain['attention_ecosystem_bound'] is True
+          demi=rows['orchestrator']['adapter_result']
+          assert demi['bounded_executor_present'] is True
+          assert demi['target_executor_invoked'] is False
+          assert turn['terminal']=='JANUS_SPECIALIZED_ORGAN_TURN_REINTEGRATED'
+          assert turn['model_digest']==lock['model_digest']==runtime['model_digest']==mat['model_digest']
+          assert turn['claim_promotion_performed'] is False
+          assert turn['external_effect_authorized'] is False
+          assert turn['physical_runtime_effect_authorized'] is False
+          print('JANUS_SPECIALIZED_TRI_ORGAN_TURN_PASS', turn['model_digest'])
+          print('active_organs', runtime['active_organs'])
+          print('exact_heads', {k:v['materialized_head_sha'] for k,v in rows.items()})
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-specialized-organ-turn-${{ github.run_id }}
+          path: |
+            runtime/janus-model-lock.json
+            runtime/janus-model-runtime-receipt.json
+            runtime/janus-organ-materialization.json
+            runtime/janus-specialized-turn.json
+          if-no-files-found: error
+          retention-days: 14

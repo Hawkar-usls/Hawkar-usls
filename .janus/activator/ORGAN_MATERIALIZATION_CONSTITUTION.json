@@ -1,0 +1,65 @@
+{
+  "schema": "janus.activator.organ_materialization_constitution.v1",
+  "model_id": "JANUS",
+  "status": "FROZEN_INITIAL_SPECIALIZED_TURN_GATE",
+  "laws": [
+    "MODEL_MEMBERSHIP_MUST_BE_LOCKED_BEFORE_ORGAN_MATERIALIZATION",
+    "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
+    "ACTIVE_MEMBER_MUST_EXIST_IN_MODEL_LOCK",
+    "MATERIALIZED_REPOSITORY_HEAD_MUST_EQUAL_LOCKED_HEAD_SHA",
+    "ORGAN_DESCRIPTOR_IS_CONTEXT_NOT_COMMAND_AUTHORITY",
+    "ORGAN_CODE_EXECUTION_REQUIRES_EXPLICIT_ADAPTER_ALLOWLIST",
+    "UNKNOWN_ORGAN_ADAPTER_DEFAULTS_TO_CONTEXT_ONLY",
+    "TOPA_DETECTIVE_DEFAULT_INCLUDES_SPIDER",
+    "HRAIN_CONTEXT_IS_READ_ONLY",
+    "DEMIURGE_ORIENTATION_IS_CONTEXT_ONLY_AT_THIS_STAGE",
+    "ORGAN_OUTPUT != EVIDENCE",
+    "ORGAN_OUTPUT != WORLD_TRUTH",
+    "MATERIALIZATION != EXECUTION_AUTHORITY",
+    "MATERIALIZATION != EXTERNAL_EFFECT_AUTHORITY",
+    "PHYSICAL_RUNTIME_EFFECT_AUTHORIZED = FALSE"
+  ],
+  "initial_adapters": {
+    "anomaly_lab": {
+      "repository": "Hawkar-usls/TOPA",
+      "adapter": "TOPA_DETECTIVE_SELF_TEST",
+      "admitted_entrypoint": "tools/topa_detective_spider.py",
+      "argv": ["--mode", "DETECTIVE", "--self-test"],
+      "expected_identity": "TOPA_DETECTIVE_SPIDER",
+      "expected_topa_core": true,
+      "expected_spider": true,
+      "external_effect_authorized": false
+    },
+    "left_context": {
+      "repository": "Hawkar-usls/Hrain",
+      "adapter": "HRAIN_READ_ONLY_CONTEXT_CAPSULE",
+      "read_only_paths": [
+        ".janus/JANUS_ORGANISM_LINK.json",
+        ".janus/TOPA_SPIDER_LINK.json",
+        ".janus/SPIDER_HOME.json",
+        "spider-bridge.js",
+        "spider.html"
+      ],
+      "external_effect_authorized": false
+    },
+    "orchestrator": {
+      "repository": "Hawkar-usls/Janus-Demiurge",
+      "adapter": "DEMIURGE_READ_ONLY_CONTROL_CAPSULE",
+      "read_only_paths": [
+        ".janus/JANUS_ORGANISM_LINK.json",
+        "PROJECT_STATUS.json",
+        "scout_swarm/SCOUT_SWARM_MANIFEST-v1.json",
+        "protocol/DEMIURGE_SPIRAL_EVOLUTION-v1.json",
+        "scout_swarm/orchestrator/TOPA_SCOUT_EPISTEMIC_PROTOCOL-v1.json",
+        "tools/demiurge_scout_swarm.py",
+        "tools/activator_readonly_execution.py"
+      ],
+      "execution_grant_required_for_target_executor": true,
+      "target_executor_not_invoked_by_materializer": true,
+      "external_effect_authorized": false
+    }
+  },
+  "fallback_adapter": "LOCKED_REPOSITORY_CONTEXT_ONLY",
+  "terminal_success": "JANUS_ACTIVE_ORGANS_MATERIALIZED_EXACT_SHA",
+  "terminal_failure": "JANUS_ORGAN_MATERIALIZATION_FAIL_CLOSED"
+}
