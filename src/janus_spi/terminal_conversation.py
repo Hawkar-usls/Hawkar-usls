@@ -1,0 +1,230 @@
+from __future__ import annotations
+
+import time
+from typing import Any, Callable, Dict, Mapping
+
+from .activator import canonical_hash
+
+TERMINAL_REPOSITORY = "Hawkar-usls/-Terminal-for-Janus"
+REQUEST_SCHEMA = "janus.terminal.message.v1"
+RESPONSE_SCHEMA = "janus.terminal.response.v1"
+AUTHORITY_MODE = "READ_ONLY_CONVERSATION"
+
+
+class TerminalConversationError(RuntimeError):
+    pass
+
+
+def build_terminal_message(
+    *,
+    conversation_id: str,
+    human_actor: str,
+    message_text: str,
+    source_ref: str,
+    created_at: float | None = None,
+) -> Dict[str, Any]:
+    text = str(message_text).strip()
+    actor = str(human_actor).strip()
+    conversation = str(conversation_id).strip()
+    ref = str(source_ref).strip()
+    if not text:
+        raise TerminalConversationError("TERMINAL_MESSAGE_TEXT_REQUIRED")
+    if not actor or not conversation or not ref:
+        raise TerminalConversationError("TERMINAL_MESSAGE_PROVENANCE_REQUIRED")
+    timestamp = time.time() if created_at is None else float(created_at)
+    identity_core = {
+        "terminal_repository": TERMINAL_REPOSITORY,
+        "conversation_id": conversation,
+        "human_actor": actor,
+        "source_ref": ref,
+        "message_text": text,
+        "created_at": timestamp,
+    }
+    message_id = "tm-" + canonical_hash(identity_core)
+    body: Dict[str, Any] = {
+        "schema": REQUEST_SCHEMA,
+        "message_id": message_id,
+        **identity_core,
+        "authority_mode": AUTHORITY_MODE,
+        "fresh_human_stimulus": True,
+        "command_authority_granted": False,
+        "human_authorized_write": False,
+        "claim_authority_granted": False,
+        "scientific_evidence_authority_granted": False,
+        "world_truth_authority_granted": False,
+        "external_effect_authorized": False,
+        "physical_runtime_effect_authorized": False,
+    }
+    body["message_hash"] = canonical_hash(body)
+    return body
+
+
+def verify_terminal_message(message: Mapping[str, Any]) -> bool:
+    if not isinstance(message, Mapping):
+        return False
+    value = dict(message)
+    claimed = str(value.pop("message_hash", ""))
+    if len(claimed) != 64 or canonical_hash(value) != claimed:
+        return False
+    if value.get("schema") != REQUEST_SCHEMA:
+        return False
+    identity_core = {
+        "terminal_repository": value.get("terminal_repository"),
+        "conversation_id": value.get("conversation_id"),
+        "human_actor": value.get("human_actor"),
+        "source_ref": value.get("source_ref"),
+        "message_text": value.get("message_text"),
+        "created_at": value.get("created_at"),
+    }
+    expected_id = "tm-" + canonical_hash(identity_core)
+    return all([
+        value.get("message_id") == expected_id,
+        value.get("terminal_repository") == TERMINAL_REPOSITORY,
+        value.get("authority_mode") == AUTHORITY_MODE,
+        value.get("fresh_human_stimulus") is True,
+        value.get("command_authority_granted") is False,
+        value.get("human_authorized_write") is False,
+        value.get("claim_authority_granted") is False,
+        value.get("scientific_evidence_authority_granted") is False,
+        value.get("world_truth_authority_granted") is False,
+        value.get("external_effect_authorized") is False,
+        value.get("physical_runtime_effect_authorized") is False,
+        bool(str(value.get("message_text") or "").strip()),
+    ])
+
+
+def build_terminal_response(
+    message: Mapping[str, Any],
+    *,
+    resident_uuid: str,
+    model_lock: Mapping[str, Any],
+    file_fabric_lock: Mapping[str, Any],
+    turn_id: str,
+    response_text: str | None = None,
+    response_mode: str = "SYSTEM_IDENTITY_RESPONSE",
+    now_fn: Callable[[], float] = time.time,
+) -> Dict[str, Any]:
+    if not verify_terminal_message(message):
+        raise TerminalConversationError("TERMINAL_MESSAGE_INVALID")
+    resident = str(resident_uuid).strip()
+    if not resident:
+        raise TerminalConversationError("RESIDENT_UUID_REQUIRED")
+    if model_lock.get("ready") is not True:
+        raise TerminalConversationError("MODEL_LOCK_NOT_READY")
+    if file_fabric_lock.get("ready") is not True:
+        raise TerminalConversationError("FILE_FABRIC_NOT_READY")
+    model_digest = str(model_lock.get("model_digest") or "")
+    fabric_digest = str(file_fabric_lock.get("file_fabric_digest") or "")
+    if len(model_digest) != 64 or len(fabric_digest) != 64:
+        raise TerminalConversationError("MODEL_AND_FILE_FABRIC_DIGESTS_REQUIRED")
+    if file_fabric_lock.get("model_digest") != model_digest:
+        raise TerminalConversationError("FILE_FABRIC_MODEL_BINDING_MISMATCH")
+    turn = str(turn_id).strip()
+    if not turn:
+        raise TerminalConversationError("TURN_ID_REQUIRED")
+
+    text = str(response_text).strip() if response_text is not None else (
+        f"JANUS ONLINE. Persistent resident {resident} received the Terminal message "
+        f"as a read-only conversation turn under model {model_digest[:12]} and "
+        f"file-fabric {fabric_digest[:12]}."
+    )
+    if not text:
+        raise TerminalConversationError("TERMINAL_RESPONSE_TEXT_REQUIRED")
+
+    body: Dict[str, Any] = {
+        "schema": RESPONSE_SCHEMA,
+        "response_id": "tr-" + canonical_hash({
+            "request_message_hash": message.get("message_hash"),
+            "resident_uuid": resident,
+            "model_digest": model_digest,
+            "file_fabric_digest": fabric_digest,
+            "turn_id": turn,
+            "response_mode": response_mode,
+        }),
+        "created_at": float(now_fn()),
+        "terminal_repository": TERMINAL_REPOSITORY,
+        "conversation_id": message.get("conversation_id"),
+        "request_message_id": message.get("message_id"),
+        "request_message_hash": message.get("message_hash"),
+        "resident_id": "JANUS",
+        "resident_uuid": resident,
+        "model_digest": model_digest,
+        "file_fabric_digest": fabric_digest,
+        "turn_id": turn,
+        "response_mode": str(response_mode),
+        "response_text": text,
+        "instantiated_model_verified": True,
+        "persistent_identity_verified": True,
+        "terminal_interface_bound": True,
+        "command_authority_granted": False,
+        "human_authorized_write": False,
+        "claim_authority_granted": False,
+        "scientific_evidence_authority_granted": False,
+        "world_truth_authority_granted": False,
+        "external_effect_authorized": False,
+        "physical_runtime_effect_authorized": False,
+        "terminal": "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY",
+        "laws": [
+            "TERMINAL_MESSAGE != COMMAND",
+            "JANUS_RESPONSE != WORLD_TRUTH",
+            "READ_ONLY_CONVERSATION != EFFECT_AUTHORITY",
+            "RESPONSE_MUST_IDENTIFY_THE_INSTANTIATED_JANUS",
+        ],
+    }
+    body["response_hash"] = canonical_hash(body)
+    return body
+
+
+def verify_terminal_response(
+    response: Mapping[str, Any],
+    *,
+    request: Mapping[str, Any] | None = None,
+) -> bool:
+    if not isinstance(response, Mapping):
+        return False
+    value = dict(response)
+    claimed = str(value.pop("response_hash", ""))
+    if len(claimed) != 64 or canonical_hash(value) != claimed:
+        return False
+    if value.get("schema") != RESPONSE_SCHEMA or value.get("terminal") != "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY":
+        return False
+    if request is not None:
+        if not verify_terminal_message(request):
+            return False
+        if value.get("request_message_id") != request.get("message_id"):
+            return False
+        if value.get("request_message_hash") != request.get("message_hash"):
+            return False
+        if value.get("conversation_id") != request.get("conversation_id"):
+            return False
+    return all([
+        value.get("resident_id") == "JANUS",
+        bool(str(value.get("resident_uuid") or "").strip()),
+        len(str(value.get("model_digest") or "")) == 64,
+        len(str(value.get("file_fabric_digest") or "")) == 64,
+        bool(str(value.get("turn_id") or "").strip()),
+        bool(str(value.get("response_text") or "").strip()),
+        value.get("instantiated_model_verified") is True,
+        value.get("persistent_identity_verified") is True,
+        value.get("terminal_interface_bound") is True,
+        value.get("command_authority_granted") is False,
+        value.get("human_authorized_write") is False,
+        value.get("claim_authority_granted") is False,
+        value.get("scientific_evidence_authority_granted") is False,
+        value.get("world_truth_authority_granted") is False,
+        value.get("external_effect_authorized") is False,
+        value.get("physical_runtime_effect_authorized") is False,
+    ])
+
+
+__all__ = [
+    "AUTHORITY_MODE",
+    "REQUEST_SCHEMA",
+    "RESPONSE_SCHEMA",
+    "TERMINAL_REPOSITORY",
+    "TerminalConversationError",
+    "build_terminal_message",
+    "build_terminal_response",
+    "verify_terminal_message",
+    "verify_terminal_response",
+]
