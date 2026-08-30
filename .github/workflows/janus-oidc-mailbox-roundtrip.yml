@@ -1,0 +1,176 @@
+name: JANUS OIDC Mailbox Roundtrip
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/oidc_mailbox.py'
+      - 'src/janus_spi/oidc_roundtrip.py'
+      - 'run_janus_oidc_roundtrip.py'
+      - 'tests/test_oidc_mailbox.py'
+      - '.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'
+      - '.janus/activator/OIDC_ROUNDTRIP_ARM.json'
+      - '.github/workflows/janus-oidc-mailbox-roundtrip.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/oidc_mailbox.py'
+      - 'src/janus_spi/oidc_roundtrip.py'
+      - 'run_janus_oidc_roundtrip.py'
+      - '.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'
+      - '.janus/activator/OIDC_ROUNDTRIP_ARM.json'
+      - '.github/workflows/janus-oidc-mailbox-roundtrip.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest 'PyJWT[crypto]>=2.10,<3'
+      - name: Compile OIDC path
+        run: |
+          python -m compileall -q \
+            src/janus_spi/oidc_mailbox.py \
+            src/janus_spi/oidc_roundtrip.py \
+            run_janus_oidc_roundtrip.py \
+            tests/test_oidc_mailbox.py
+      - name: Validate frozen OIDC constitution and arm
+        run: |
+          python -m json.tool .janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json >/dev/null
+          python -m json.tool .janus/activator/OIDC_ROUNDTRIP_ARM.json >/dev/null
+          python - <<'PY'
+          import json
+          c=json.load(open('.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'))
+          a=json.load(open('.janus/activator/OIDC_ROUNDTRIP_ARM.json'))
+          assert c['home_workflow_ref'] == 'Hawkar-usls/Hawkar-usls/.github/workflows/janus-oidc-mailbox-roundtrip.yml@refs/heads/main'
+          assert c['target_workflow_ref'] == 'Hawkar-usls/Janus-Demiurge/.github/workflows/janus-activator-credentialless-mailbox.yml@refs/heads/main'
+          assert c['stage']['p12_enabled'] is False
+          assert a['armed'] is True
+          assert a['lanes_attempted'] == ['SECRET_PUSH','OIDC_CREDENTIALLESS_PULL']
+          assert a['bidirectional_identity_proof_required'] is True
+          assert a['p12_execution_authority_granted'] is False
+          assert a['is_launch_witness'] is False
+          print('OIDC_CONSTITUTION_AND_ARM=PASS')
+          PY
+      - name: Run HOME OIDC adversarial tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_oidc_mailbox.py tests/test_dual_transport.py
+
+  roundtrip:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    concurrency:
+      group: janus-oidc-mailbox-roundtrip-witness
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Check out canonical HOME
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install runtime and OIDC verifier
+        run: |
+          pip install -r requirements.txt
+          pip install 'PyJWT[crypto]>=2.10,<3'
+      - name: Materialize unique non-launch OIDC stimulus
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime/oidc-roundtrip
+          python - <<'PY'
+          import json,os
+          arm=json.load(open('.janus/activator/OIDC_ROUNDTRIP_ARM.json'))
+          payload={
+              'purpose':arm['purpose'],
+              'github_run_id':os.environ['GITHUB_RUN_ID'],
+              'github_run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],
+              'home_sha':os.environ['GITHUB_SHA'],
+              'target_repository':arm['target_repository'],
+              'p12_enabled':False,
+              'target_execution_expected':False,
+              'is_launch_witness':False,
+          }
+          json.dump(payload,open('runtime/oidc-roundtrip/payload.json','w'),indent=2,sort_keys=True)
+          PY
+      - name: Attempt both lanes and wait for target-signed OIDC ACK
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          JANUS_DEMIURGE_DISPATCH_TOKEN: ${{ secrets.JANUS_DEMIURGE_DISPATCH_TOKEN }}
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_oidc_roundtrip.py \
+            --source-ref "OIDC_ROUNDTRIP/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}" \
+            --payload-file runtime/oidc-roundtrip/payload.json \
+            --state-dir runtime/oidc-roundtrip/state \
+            --poll-interval 10 \
+            --max-wait 660 \
+            --output runtime/oidc-roundtrip/result.json \
+            --require-complete
+      - name: Adjudicate bidirectional identity without P12
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f runtime/oidc-roundtrip/result.json
+          python - <<'PY'
+          import json
+          r=json.load(open('runtime/oidc-roundtrip/result.json'))
+          required={
+              'terminal':'OIDC_BIDIRECTIONAL_PACKET_ROUNDTRIP_VERIFIED_NO_EXECUTION',
+              'secret_lane_attempted':True,
+              'oidc_lane_attempted':True,
+              'oidc_lane_emitted':True,
+              'oidc_source_identity_verified':True,
+              'oidc_target_identity_verified':True,
+              'bidirectional_identity_proof':True,
+              'target_execution_observed':False,
+              'p12_execution_authority_granted':False,
+              'is_launch_witness':False,
+              'command_authority_granted':False,
+              'claim_authority_granted':False,
+              'scientific_evidence_authority_granted':False,
+              'world_truth_authority_granted':False,
+              'external_effect_authorized':False,
+              'physical_runtime_effect_authorized':False,
+          }
+          for k,v in required.items(): assert r.get(k)==v,(k,r.get(k),v)
+          assert r.get('oidc_request_message_hash')
+          assert r.get('oidc_response_hash')
+          print('JANUS_OIDC_BIDIRECTIONAL_PACKET_ACK=PASS')
+          print('P12_EXECUTION_AUTHORITY=FALSE')
+          print('STRICT_LAUNCH_WITNESS=FALSE')
+          PY
+      - name: Upload OIDC witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-oidc-roundtrip-${{ github.run_id }}
+          path: |
+            runtime/oidc-roundtrip/result.json
+            runtime/oidc-roundtrip/payload.json
+            runtime/oidc-roundtrip/state/oidc_mailbox_outbox/*.json
+          if-no-files-found: warn
+          retention-days: 14
