@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
 import json
+import urllib.error
+from pathlib import Path
 
 from janus_spi.activator import canonical_hash
 from janus_spi.mailbox_transport import (
@@ -50,13 +53,18 @@ def packet() -> dict:
     return row
 
 
-def test_build_message_is_hash_bound_and_authority_bounded():
-    message = build_message(packet(), "DISPATCH_PACKET")
-    assert verify_message(message) is True
-    assert message["source_repository"] == HOME_REPOSITORY
-    assert message["target_repository"] == TARGET_REPOSITORY
-    assert message["external_effect_authorized"] is False
-    assert message["physical_runtime_effect_authorized"] is False
+def test_build_message_is_hash_bound_authority_bounded_and_deterministic():
+    obj = packet()
+    first = build_message(obj, "DISPATCH_PACKET")
+    second = build_message(obj, "DISPATCH_PACKET")
+    assert first == second
+    assert first["message_hash"] == second["message_hash"]
+    assert first["created_at"] == obj["created_at"]
+    assert verify_message(first) is True
+    assert first["source_repository"] == HOME_REPOSITORY
+    assert first["target_repository"] == TARGET_REPOSITORY
+    assert first["external_effect_authorized"] is False
+    assert first["physical_runtime_effect_authorized"] is False
 
 
 def test_publish_uses_only_local_repository_token_and_records_no_cross_repo_credential(tmp_path):
@@ -70,10 +78,37 @@ def test_publish_uses_only_local_repository_token_and_records_no_cross_repo_cred
     assert result["cross_repository_credential_used"] is False
     assert result["own_repository_credential_persisted"] is False
     assert result["external_effect_authorized"] is False
+    assert result["message_path"] is not None
+    local = json.loads(Path(result["message_path"]).read_text(encoding="utf-8"))
+    assert verify_message(local) is True
+    assert local["message_hash"] == result["message_hash"]
     assert broker.ledger.verify() is True
 
 
-def test_missing_home_local_token_fails_before_publish(tmp_path):
+def test_republish_same_object_is_idempotent_not_conflict(tmp_path):
+    stored = {}
+
+    def opener(request, timeout=20.0):
+        if request.get_method() == "PUT":
+            if "message" in stored:
+                raise urllib.error.HTTPError(request.full_url, 422, "already exists", {}, None)
+            payload = json.loads(request.data.decode("utf-8"))
+            stored["message"] = json.loads(base64.b64decode(payload["content"]).decode("utf-8"))
+            return Response(201)
+        return Response(200, (json.dumps(stored["message"]) + "\n").encode("utf-8"))
+
+    broker = JanusCredentiallessMailboxTransport(tmp_path, opener=opener)
+    obj = packet()
+    first = broker.publish(obj, object_kind="DISPATCH_PACKET", local_github_token="home-local-token")
+    second = broker.publish(obj, object_kind="DISPATCH_PACKET", local_github_token="home-local-token")
+    assert first["terminal"] == "MAILBOX_PUBLISHED_AWAITING_PULL"
+    assert second["terminal"] == "MAILBOX_ALREADY_PUBLISHED"
+    assert first["message_hash"] == second["message_hash"]
+    assert first["message_path"] == second["message_path"]
+    assert broker.ledger.verify() is True
+
+
+def test_missing_home_local_token_fails_before_publish_but_preserves_request(tmp_path):
     calls = []
     broker = JanusCredentiallessMailboxTransport(
         tmp_path,
@@ -82,6 +117,8 @@ def test_missing_home_local_token_fails_before_publish(tmp_path):
     result = broker.publish(packet(), object_kind="DISPATCH_PACKET", local_github_token="")
     assert result["terminal"] == "MAILBOX_PUBLISH_BLOCKED_NO_LOCAL_GITHUB_TOKEN"
     assert result["published"] is False
+    assert result["message_path"] is not None
+    assert Path(result["message_path"]).is_file()
     assert calls == []
 
 
@@ -109,6 +146,12 @@ def test_public_response_is_accepted_only_as_non_identity_provenance():
     }
     response["response_hash"] = canonical_hash(response)
     assert verify_response(response, request) is True
+
+    wrong_kind = dict(response)
+    wrong_kind["request_object_kind"] = "EXECUTION_GRANT"
+    wrong_kind["response_hash"] = canonical_hash({k: v for k, v in wrong_kind.items() if k != "response_hash"})
+    assert verify_response(wrong_kind, request) is False
+
     response["identity_proof"] = True
     response["response_hash"] = canonical_hash({k: v for k, v in response.items() if k != "response_hash"})
     assert verify_response(response, request) is False
