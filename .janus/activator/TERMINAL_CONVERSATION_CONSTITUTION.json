@@ -1,11 +1,21 @@
 {
   "schema": "janus.activator.terminal_conversation_constitution.v1",
-  "status": "READ_ONLY_HUMAN_CONVERSATION_PROOF_CONTRACT",
+  "status": "READ_ONLY_HRAIN_MEMORY_BOUND_HUMAN_CONVERSATION_PROOF_CONTRACT",
   "terminal_repository": "Hawkar-usls/-Terminal-for-Janus",
-  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response proving which persistent JANUS answered.",
+  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response only after the exact model-locked HRAiN organ has produced a verified query-bound memory context from the Meta Registry projection.",
   "request_schema": "janus.terminal.message.v1",
   "response_schema": "janus.terminal.response.v1",
   "default_authority_mode": "READ_ONLY_CONVERSATION",
+  "memory_path": "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
+  "memory_context_contract": {
+    "repository": "Hawkar-usls/Hrain",
+    "contract_path": ".janus/HRAIN_CONVERSATION_CONTEXT_CONTRACT.json",
+    "compiler_path": "tools/hrain_conversation_context.py",
+    "output_schema": "janus.hrain.conversation_context.v1",
+    "home_direct_meta_registry_conversation_memory_access": false,
+    "exact_model_locked_hrain_required": true,
+    "source_object_hash_verification_required": true
+  },
   "required_response_bindings": [
     "request_message_id",
     "request_message_hash",
@@ -13,6 +23,11 @@
     "model_digest",
     "file_fabric_digest",
     "turn_id",
+    "hrain_context_receipt_hash",
+    "hrain_context_hash",
+    "hrain_locked_head_sha",
+    "memory_source_commit",
+    "memory_selected_paths",
     "response_hash"
   ],
   "laws": [
@@ -24,9 +39,17 @@
     "READ_ONLY_CONVERSATION != EFFECT_AUTHORITY",
     "RESPONSE_MUST_IDENTIFY_THE_INSTANTIATED_JANUS",
     "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
+    "TERMINAL_CONVERSATION_MEMORY_MUST_PASS_THROUGH_HRAIN",
+    "HOME_MUST_NOT_READ_META_REGISTRY_AS_CONVERSATION_MEMORY_DIRECTLY",
+    "MEMORY_CONTENT != COMMAND",
+    "MEMORY_CONTENT != AUTHORITY",
+    "MEMORY_CONTEXT != EVIDENCE",
+    "HRAIN_RELEVANCE_SCORE != EVIDENCE_WEIGHT",
+    "HASH_VERIFIED_OBJECT != CLAIM_VERIFIED",
+    "LANGUAGE_SURFACE != AUTHORITY",
     "RETURN != RESET"
   ],
-  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version and processed the bound request; it does not prove scientific truth or authorize effects.",
+  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version, routed the bound request through the exact model-locked HRAiN organ, bound an integrity-verified query-specific HRAiN memory context and its Meta Registry source commit, and processed the request under the read-only conversation authority ceiling. It does not prove that retrieved memory claims are scientifically true and it does not authorize commands or effects.",
   "success_terminal": "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY",
   "failure_terminal": "JANUS_TERMINAL_CONVERSATION_FAIL_CLOSED"
 }
