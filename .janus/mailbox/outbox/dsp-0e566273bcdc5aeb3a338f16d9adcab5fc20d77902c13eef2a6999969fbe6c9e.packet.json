@@ -1,0 +1,39 @@
+{
+  "claim_authority_granted": false,
+  "command_authority_granted": false,
+  "created_at": 1788051258.3349535,
+  "external_effect_authorized": false,
+  "message_hash": "485399027b04a467f4edfaee4b3d2d3fca4a6c4d35e7bfae90c6d4ef5def4f0e",
+  "object": {
+    "activation_id": "act-37b9956fc43b458fb7bd47913a51191f",
+    "activation_receipt_hash": "775e78c91cfd9237b62d4f631038a63cbcc153bd6ed33dc4122167dc165ec150",
+    "claim_authority_granted": false,
+    "command_authority_granted": false,
+    "created_at": 1788051258.3349535,
+    "delivery_terminal": "AUTHORIZED_INTERNAL_HANDOFF",
+    "dispatch_authorized": true,
+    "effect_scope": "GITHUB_INTERNAL_READ_ONLY_ANALYSIS",
+    "external_effect_authorized": false,
+    "operation": "WAKE_ORGAN_READ_ONLY",
+    "packet_hash": "ee193ac6a7cb343f8d3f3aa1be654b0c6009de76f78877dfd1b1d6d23004178a",
+    "packet_id": "dsp-0e566273bcdc5aeb3a338f16d9adcab5fc20d77902c13eef2a6999969fbe6c9e",
+    "required_gates": [
+      "raw_provenance",
+      "competing_hypotheses",
+      "falsifier",
+      "identity_preserving_handoff"
+    ],
+    "risk_class": "R0_INTERNAL_READ_ONLY_ORGAN_WAKE",
+    "route_match": "research_or_anomaly_investigation",
+    "schema": "janus.activator.dispatch_packet.v0.3",
+    "target_organ": "Hawkar-usls/Janus-Demiurge"
+  },
+  "object_hash": "ee193ac6a7cb343f8d3f3aa1be654b0c6009de76f78877dfd1b1d6d23004178a",
+  "object_id": "dsp-0e566273bcdc5aeb3a338f16d9adcab5fc20d77902c13eef2a6999969fbe6c9e",
+  "object_kind": "DISPATCH_PACKET",
+  "physical_runtime_effect_authorized": false,
+  "schema": "janus.activator.mailbox_message.v1.0",
+  "scientific_evidence_authority_granted": false,
+  "source_repository": "Hawkar-usls/Hawkar-usls",
+  "target_repository": "Hawkar-usls/Janus-Demiurge"
+}
