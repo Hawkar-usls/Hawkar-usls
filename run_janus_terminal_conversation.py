@@ -17,6 +17,12 @@ from janus_spi.terminal_conversation import (
 )
 
 
+def _write_json(path: str | Path, value) -> None:
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Process one sealed Terminal message as a persistent model-bound JANUS conversation turn")
     parser.add_argument("--request", required=True)
@@ -41,15 +47,36 @@ def main() -> int:
         raise SystemExit("PERSISTENT_JANUS_IDENTITY_INVALID")
     resident_uuid = str(identity["resident_uuid"])
 
+    state_dir = Path(args.state_dir)
+    persistent_response = state_dir / "terminal_conversation_responses" / f"{request['message_id']}.json"
+    if persistent_response.exists():
+        previous = json.loads(persistent_response.read_text(encoding="utf-8"))
+        if not verify_terminal_response(previous, request=request):
+            raise SystemExit("PERSISTENT_TERMINAL_RESPONSE_INVALID")
+        if previous.get("resident_uuid") != resident_uuid:
+            raise SystemExit("PERSISTENT_TERMINAL_RESPONSE_RESIDENT_MISMATCH")
+        _write_json(args.response_out, previous)
+        print(json.dumps({
+            "terminal": "JANUS_TERMINAL_CONVERSATION_RESPONSE_REPLAYED_NO_NEW_COGNITION",
+            "message_id": request["message_id"],
+            "response_id": previous["response_id"],
+            "resident_uuid": resident_uuid,
+            "model_digest": previous["model_digest"],
+            "file_fabric_digest": previous["file_fabric_digest"],
+            "turn_id": previous["turn_id"],
+            "retry_delivery_is_new_cognition": False,
+            "command_authority_granted": False,
+            "external_effect_authorized": False,
+        }, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
     model_lock = ModelFabricCompilerV11.from_file(
         args.manifest,
         reader=GitHubRepositoryReaderV11(),
     ).compile()
     if model_lock.get("ready") is not True:
         raise SystemExit("JANUS_MODEL_LOCK_NOT_READY")
-    model_path = Path(args.model_lock_out)
-    model_path.parent.mkdir(parents=True, exist_ok=True)
-    model_path.write_text(json.dumps(model_lock, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(args.model_lock_out, model_lock)
 
     file_fabric = FileFabricCompiler.from_file(
         args.registry,
@@ -57,9 +84,7 @@ def main() -> int:
     ).compile(model_lock)
     if file_fabric.get("ready") is not True:
         raise SystemExit("JANUS_FILE_FABRIC_NOT_READY")
-    fabric_path = Path(args.file_fabric_out)
-    fabric_path.parent.mkdir(parents=True, exist_ok=True)
-    fabric_path.write_text(json.dumps(file_fabric, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(args.file_fabric_out, file_fabric)
 
     event = ActivationEvent.build(
         source_kind="TERMINAL_HUMAN_CONVERSATION",
@@ -73,7 +98,7 @@ def main() -> int:
     )
     runtime = ModelBoundJanusRuntime(
         model_lock,
-        state_dir=args.state_dir,
+        state_dir=state_dir,
         routing_path=args.routing,
         policy_path=args.policy,
     )
@@ -83,10 +108,7 @@ def main() -> int:
     active_organs = list(runtime_receipt.get("active_organs") or [])
     if not active_organs:
         raise SystemExit("TERMINAL_CONVERSATION_ACTIVE_ORGANS_REQUIRED")
-
-    runtime_path = Path(args.runtime_receipt_out)
-    runtime_path.parent.mkdir(parents=True, exist_ok=True)
-    runtime_path.write_text(json.dumps(runtime_receipt, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json(args.runtime_receipt_out, runtime_receipt)
 
     turn_id = "turn-" + str(runtime_receipt["runtime_receipt_hash"])
     excerpt = " ".join(str(request["message_text"]).split())[:240]
@@ -107,9 +129,12 @@ def main() -> int:
     )
     if not verify_terminal_response(response, request=request):
         raise SystemExit("TERMINAL_RESPONSE_SELF_VERIFY_FAILED")
-    response_path = Path(args.response_out)
-    response_path.parent.mkdir(parents=True, exist_ok=True)
-    response_path.write_text(json.dumps(response, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    persistent_response.parent.mkdir(parents=True, exist_ok=True)
+    if persistent_response.exists():
+        raise SystemExit("TERMINAL_RESPONSE_CREATE_ONLY_CONFLICT")
+    _write_json(persistent_response, response)
+    _write_json(args.response_out, response)
 
     print(json.dumps({
         "terminal": response["terminal"],
@@ -120,6 +145,7 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "retry_delivery_is_new_cognition": False,
         "command_authority_granted": False,
         "external_effect_authorized": False,
     }, ensure_ascii=False, indent=2, sort_keys=True))
