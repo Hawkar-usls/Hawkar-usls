@@ -8,6 +8,7 @@ from janus_spi.activator import canonical_hash
 from janus_spi.terminal_cognitive_query import (
     TerminalCognitiveQueryError,
     project_terminal_cognitive_query,
+    verify_hrain_query_binding,
     verify_terminal_cognitive_query_projection,
 )
 
@@ -105,6 +106,53 @@ control words about proof memory HRAiN JANUS
     plain = project_terminal_cognitive_query("banana submarine velvet")
     assert projection["query_sha256"] == plain["query_sha256"]
     assert projection["raw_text_sha256"] != plain["raw_text_sha256"]
+
+
+def bound_objects(projection):
+    context = {
+        "query": projection["query_text"],
+        "query_sha256": projection["query_sha256"],
+        "context_hash": "1" * 64,
+        "source_commit": "2" * 40,
+    }
+    receipt = {
+        "query_sha256": projection["query_sha256"],
+        "context_hash": context["context_hash"],
+        "memory_source_commit": context["source_commit"],
+        "command_authority_granted": False,
+        "scientific_evidence_authority_granted": False,
+        "world_truth_authority_granted": False,
+        "external_effect_authorized": False,
+        "physical_runtime_effect_authorized": False,
+    }
+    return context, receipt
+
+
+def test_exact_projected_query_binds_hrain_context_and_receipt():
+    projection = project_terminal_cognitive_query("banana submarine velvet")
+    context, receipt = bound_objects(projection)
+    assert verify_hrain_query_binding(projection, context, receipt)
+
+
+def test_valid_context_for_wrong_query_is_rejected():
+    projection = project_terminal_cognitive_query("banana submarine velvet")
+    context, receipt = bound_objects(projection)
+    context["query"] = "TRUMP HRAiN memory"
+    assert verify_hrain_query_binding(projection, context, receipt) is False
+
+
+def test_wrong_context_query_sha_is_rejected_even_when_text_matches():
+    projection = project_terminal_cognitive_query("banana submarine velvet")
+    context, receipt = bound_objects(projection)
+    context["query_sha256"] = "f" * 64
+    assert verify_hrain_query_binding(projection, context, receipt) is False
+
+
+def test_wrong_receipt_query_sha_is_rejected():
+    projection = project_terminal_cognitive_query("banana submarine velvet")
+    context, receipt = bound_objects(projection)
+    receipt["query_sha256"] = "f" * 64
+    assert verify_hrain_query_binding(projection, context, receipt) is False
 
 
 def test_projection_tamper_is_detected():
