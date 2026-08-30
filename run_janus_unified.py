@@ -9,7 +9,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from janus_spi.activator import ActivationEvent
-from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11, ModelFabricCompilerV11
+from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11
+from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 
 
@@ -28,7 +29,7 @@ def main() -> int:
     if not isinstance(raw, dict):
         raise SystemExit("ACTIVATION_EVENT_JSON_OBJECT_REQUIRED")
 
-    compiler = ModelFabricCompilerV11.from_file(
+    compiler = ModelFabricCompilerV12.from_file(
         args.manifest,
         reader=GitHubRepositoryReaderV11(),
     )
@@ -66,6 +67,7 @@ def main() -> int:
         "model_digest": receipt["model_digest"],
         "model_member_count": receipt["model_member_count"],
         "model_organ_count": receipt["model_organ_count"],
+        "candidate_runtime_tissues": sorted(model_lock.get("candidate_runtime_tissues", {})),
         "active_members": receipt["active_members"],
         "active_organs": receipt["active_organs"],
         "dispatch_authorized": receipt["dispatch_authorized"],
