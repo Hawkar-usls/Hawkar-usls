@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from janus_spi.live_cycle import JanusLiveCycle
+from janus_spi.live_cycle_hardening import HardenedJanusLiveCycleV091
 
 
 def main() -> None:
@@ -27,7 +27,7 @@ def main() -> None:
     args = parser.parse_args()
 
     payload = json.loads(Path(args.payload_file).read_text(encoding="utf-8"))
-    cycle = JanusLiveCycle(
+    cycle = HardenedJanusLiveCycleV091(
         state_dir=args.state_dir,
         routing_path=args.routing,
         policy_path=args.policy,
@@ -51,6 +51,7 @@ def main() -> None:
         result.get("terminal") != "LIVE_CYCLE_COMPLETED_RETURNED_HOME"
         or result.get("target_execution_observed") is not True
         or result.get("returned_at_home") is not True
+        or result.get("physical_runtime_effect_authorized") is not False
     ):
         raise SystemExit(2)
 
