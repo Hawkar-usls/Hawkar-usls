@@ -5,8 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
-from janus_spi.activator import ActivationEvent
+from janus_spi.activator import ActivationEvent, canonical_hash
 from janus_spi.file_fabric import FileFabricCompiler, GitHubTreeReader
+from janus_spi.live_cycle import HardenedJanusPersistentStateV09
 from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11, ModelFabricCompilerV11
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 from janus_spi.persistent_state import JanusPersistentState
@@ -21,6 +22,27 @@ def _write_json(path: str | Path, value) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _hearth_append(state, *, event: str, cycle_id: str, payload: dict) -> dict:
+    return state.hearth.append({
+        "schema": "janus.activator.terminal_conversation_hearth_receipt.v1",
+        "event": event,
+        "parent_hearth_hash": state.hearth.tip_hash(),
+        "cycle_id": cycle_id,
+        "resident_id": "JANUS",
+        "fresh_stimulus": True,
+        "cognition_authorized": True,
+        "dispatch_authorized": False,
+        "target_execution_authorized": False,
+        "command_authority_granted": False,
+        "claim_authority_granted": False,
+        "scientific_evidence_authority_granted": False,
+        "world_truth_authority_granted": False,
+        "external_effect_authorized": False,
+        "physical_runtime_effect_authorized": False,
+        "payload": payload,
+    })
 
 
 def main() -> int:
@@ -48,6 +70,13 @@ def main() -> int:
     resident_uuid = str(identity["resident_uuid"])
 
     state_dir = Path(args.state_dir)
+    state = HardenedJanusPersistentStateV09(state_dir)
+    health_before = state.verify()
+    if health_before.get("ok") is not True or health_before.get("mode") != "AT_HOME":
+        raise SystemExit("TERMINAL_CONVERSATION_HOME_NOT_HEALTHY_AT_HOME")
+    if health_before.get("resident_uuid") != resident_uuid:
+        raise SystemExit("TERMINAL_CONVERSATION_RESIDENT_IDENTITY_MISMATCH")
+
     persistent_response = state_dir / "terminal_conversation_responses" / f"{request['message_id']}.json"
     if persistent_response.exists():
         previous = json.loads(persistent_response.read_text(encoding="utf-8"))
@@ -64,11 +93,24 @@ def main() -> int:
             "model_digest": previous["model_digest"],
             "file_fabric_digest": previous["file_fabric_digest"],
             "turn_id": previous["turn_id"],
+            "mode": "AT_HOME",
             "retry_delivery_is_new_cognition": False,
             "command_authority_granted": False,
             "external_effect_authorized": False,
         }, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
+
+    cycle_id = "terminal-cycle-" + canonical_hash({
+        "resident_uuid": resident_uuid,
+        "request_message_hash": request["message_hash"],
+        "parent_hearth_hash": state.hearth.tip_hash(),
+    })
+    wake = _hearth_append(state, event="WAKE_TERMINAL_CONVERSATION", cycle_id=cycle_id, payload={
+        "message_id": request["message_id"],
+        "message_hash": request["message_hash"],
+        "source_ref": request["source_ref"],
+    })
+    state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=wake["receipt_hash"])
 
     model_lock = ModelFabricCompilerV11.from_file(
         args.manifest,
@@ -136,8 +178,31 @@ def main() -> int:
     _write_json(persistent_response, response)
     _write_json(args.response_out, response)
 
+    checkpoint = _hearth_append(state, event="CHECKPOINT_TERMINAL_CONVERSATION", cycle_id=cycle_id, payload={
+        "message_id": request["message_id"],
+        "response_hash": response["response_hash"],
+        "model_digest": model_lock["model_digest"],
+        "file_fabric_digest": file_fabric["file_fabric_digest"],
+        "turn_id": turn_id,
+        "active_organs": active_organs,
+    })
+    state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=checkpoint["receipt_hash"])
+    sleep = _hearth_append(state, event="SLEEP_TERMINAL_CONVERSATION_RETURN_HOME", cycle_id=cycle_id, payload={
+        "message_id": request["message_id"],
+        "response_hash": response["response_hash"],
+        "return_not_reset": True,
+    })
+    state._write_head(mode="AT_HOME", active_cycle_id=None, last_hearth_hash=sleep["receipt_hash"])
+
+    health_after = state.verify()
+    if health_after.get("ok") is not True or health_after.get("mode") != "AT_HOME":
+        raise SystemExit("TERMINAL_CONVERSATION_HOME_INVALID_AFTER_RETURN")
+    if health_after.get("resident_uuid") != resident_uuid:
+        raise SystemExit("TERMINAL_CONVERSATION_RESIDENT_CHANGED")
+
     print(json.dumps({
         "terminal": response["terminal"],
+        "cycle_id": cycle_id,
         "message_id": request["message_id"],
         "response_id": response["response_id"],
         "resident_uuid": resident_uuid,
@@ -145,6 +210,11 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "wake_hash": wake["receipt_hash"],
+        "checkpoint_hash": checkpoint["receipt_hash"],
+        "sleep_hash": sleep["receipt_hash"],
+        "mode": "AT_HOME",
+        "return_not_reset": True,
         "retry_delivery_is_new_cognition": False,
         "command_authority_granted": False,
         "external_effect_authorized": False,
