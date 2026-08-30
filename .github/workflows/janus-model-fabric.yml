@@ -7,8 +7,10 @@ on:
       - '.janus/activator/JANUS_MODEL_MANIFEST.json'
       - '.janus/activator/JANUS_BOOT_GRAPH.json'
       - 'src/janus_spi/model_fabric.py'
+      - 'src/janus_spi/model_fabric_v11.py'
       - 'run_janus_model_boot.py'
       - 'tests/test_model_fabric.py'
+      - 'tests/test_model_fabric_v11.py'
       - '.github/workflows/janus-model-fabric.yml'
   push:
     branches: [main]
@@ -16,8 +18,10 @@ on:
       - '.janus/activator/JANUS_MODEL_MANIFEST.json'
       - '.janus/activator/JANUS_BOOT_GRAPH.json'
       - 'src/janus_spi/model_fabric.py'
+      - 'src/janus_spi/model_fabric_v11.py'
       - 'run_janus_model_boot.py'
       - 'tests/test_model_fabric.py'
+      - 'tests/test_model_fabric_v11.py'
       - '.github/workflows/janus-model-fabric.yml'
 
 permissions:
@@ -33,7 +37,12 @@ jobs:
           python-version: '3.11'
       - name: Compile model fabric
         run: |
-          python -m compileall -q src/janus_spi/model_fabric.py run_janus_model_boot.py tests/test_model_fabric.py
+          python -m compileall -q \
+            src/janus_spi/model_fabric.py \
+            src/janus_spi/model_fabric_v11.py \
+            run_janus_model_boot.py \
+            tests/test_model_fabric.py \
+            tests/test_model_fabric_v11.py
       - name: Validate model contracts
         run: |
           python - <<'PY'
@@ -54,7 +63,8 @@ jobs:
       - name: Run adversarial model-fabric tests
         env:
           PYTHONPATH: src
-        run: python -m unittest -v tests.test_model_fabric
+        run: |
+          python -m unittest -v tests.test_model_fabric tests.test_model_fabric_v11
 
   live-model-lock:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -90,9 +100,11 @@ jobs:
           assert not lock['failures']['required_members_missing']
           assert not lock['failures']['required_descriptor_conflicts']
           assert not lock['failures']['required_state_mounts_missing']
+          assert not lock['optional_unavailable'], lock['optional_unavailable']
           print('JANUS_MODEL_FABRIC_LOCKED', lock['model_digest'])
           print('members', len(lock['members']))
           print('organs', sum(1 for row in lock['members'].values() if row.get('kind') == 'ORGAN'))
+          print('optional_unavailable', lock['optional_unavailable'])
           PY
       - uses: actions/upload-artifact@v4
         with:
