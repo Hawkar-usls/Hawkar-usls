@@ -1,0 +1,10 @@
+{
+  "schema":"janus.research_law.math_convergence.v1.0",
+  "status":"ACTIVE_RESEARCH_LAW",
+  "literal_rule":"Математика не сходится. Пока не сойдется.",
+  "meaning":["Do not stop merely because a hypothesis fails.","Find the exact mathematical obstruction and preserve it as data.","Do not change thresholds, axioms, evidence or definitions to manufacture convergence.","UNKNOWN is valid and is not FALSE.","A repeated pattern is not a proof.","A theorem claim requires its exact proof gate."],
+  "process_requirements":["append-only journal","negative receipts survive","dead paths survive","post-result lemmas are labeled post-result","OPEN retains exact frontier witness","TOPA+Spider associations remain advisory until exact replay/proof"],
+  "current_P_VS_NP_state":"OPEN",
+  "current_candidate":"BOUNDARY_CERTIFICATE_ELIMINATION_GRAMMAR",
+  "candidate_link":".janus/activator/JANUS_PNP_BOUNDARY_CERTIFICATE_ELIMINATION_CANDIDATE_LINK.json"
+}
