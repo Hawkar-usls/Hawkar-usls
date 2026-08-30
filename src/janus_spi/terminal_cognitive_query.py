@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from .activator import canonical_hash
 
@@ -71,14 +71,15 @@ def project_terminal_cognitive_query(message_text: str) -> Dict[str, Any]:
             "SEALED_REQUEST_PROVENANCE != COGNITIVE_QUERY_SURFACE",
             "EMPTY_MESSAGE_SECTION != FALLBACK_TO_CONTROL_TEXT",
             "COGNITIVE_PROJECTION != AUTHORITY",
+            "VALID_CONTEXT_FOR_WRONG_QUERY != VALID_TURN",
         ],
     }
     body["projection_hash"] = canonical_hash(body)
     return body
 
 
-def verify_terminal_cognitive_query_projection(projection: Dict[str, Any]) -> bool:
-    if not isinstance(projection, dict):
+def verify_terminal_cognitive_query_projection(projection: Mapping[str, Any]) -> bool:
+    if not isinstance(projection, Mapping):
         return False
     body = dict(projection)
     claimed = str(body.pop("projection_hash", ""))
@@ -109,6 +110,33 @@ def verify_terminal_cognitive_query_projection(projection: Dict[str, Any]) -> bo
         body.get("physical_runtime_effect_authorized") is False,
         "CONTROL_METADATA != COGNITIVE_QUERY" in laws,
         "EMPTY_MESSAGE_SECTION != FALLBACK_TO_CONTROL_TEXT" in laws,
+        "VALID_CONTEXT_FOR_WRONG_QUERY != VALID_TURN" in laws,
+    ])
+
+
+def verify_hrain_query_binding(
+    projection: Mapping[str, Any],
+    context: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+) -> bool:
+    """Require the HRAiN materialization to be for exactly the projected query."""
+    if not verify_terminal_cognitive_query_projection(projection):
+        return False
+    if not isinstance(context, Mapping) or not isinstance(receipt, Mapping):
+        return False
+    query = str(projection.get("query_text") or "")
+    query_sha = str(projection.get("query_sha256") or "")
+    return all([
+        context.get("query") == query,
+        context.get("query_sha256") == query_sha,
+        receipt.get("query_sha256") == query_sha,
+        receipt.get("context_hash") == context.get("context_hash"),
+        receipt.get("memory_source_commit") == context.get("source_commit"),
+        receipt.get("command_authority_granted") is False,
+        receipt.get("scientific_evidence_authority_granted") is False,
+        receipt.get("world_truth_authority_granted") is False,
+        receipt.get("external_effect_authorized") is False,
+        receipt.get("physical_runtime_effect_authorized") is False,
     ])
 
 
@@ -117,5 +145,6 @@ __all__ = [
     "PROJECTION_SCHEMA",
     "TerminalCognitiveQueryError",
     "project_terminal_cognitive_query",
+    "verify_hrain_query_binding",
     "verify_terminal_cognitive_query_projection",
 ]
