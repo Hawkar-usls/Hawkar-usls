@@ -65,9 +65,24 @@ jobs:
               'TARGET_SOURCE_VERIFICATION_EQUALS_HOME_INDEPENDENT_RESULT',
               'EMBEDDED_ACK_V0_1_SCHEMA_PROPERTIES_AUTHORITY_EXACT',
               'PACKET_DELIVERY_TERMINAL_AUTHORIZED_INTERNAL_HANDOFF_EXACT',
+              'OIDC_IDENTITY_ASSERTION_WRAPPER_PROPERTIES_EXACT',
+              'REQUEST_ENVELOPE_SCHEMA_PROPERTIES_AUTHORITY_EXACT',
+              'DISPATCH_ROUTE_AND_REQUIRED_GATES_EXACT',
+              'RESPONSE_ENVELOPE_SCHEMA_PROPERTIES_AUTHORITY_EXACT',
+              'RESPONSE_CORE_SCHEMA_PROPERTIES_NO_EXECUTION_EXACT',
+              'RESPONSE_PAYLOAD_ACK_ONLY_EXACT',
           } <= set(c['requirements'])
           assert 'OUTER_AUTHORITY_FALSE != EMBEDDED_OBJECT_AUTHORITY_SAFE' in c['laws']
           assert 'TARGET_SIGNATURE != BIDIRECTIONAL_IDENTITY_WITHOUT_SOURCE_VERIFICATION_ATTESTATION' in c['laws']
+          assert 'HASH_BOUND_ENVELOPE != ADMITTED_EXACT_ENVELOPE_CONTRACT' in c['laws']
+          assert 'VALID_ACK + PAYLOAD_SIBLING != ACK_ONLY_RESPONSE' in c['laws']
+          assert c['dispatch_route_contract'] == {
+              'route_match':'research_or_anomaly_investigation',
+              'required_gates':[
+                  'raw_provenance','competing_hypotheses',
+                  'falsifier','identity_preserving_handoff',
+              ],
+          }
           assert c['stage']['p12_enabled'] is False
           assert c['stage']['target_execution_authorized'] is False
           assert a['armed'] is True

@@ -48,7 +48,12 @@ def packet() -> dict:
         "target_organ": TARGET_REPOSITORY,
         "operation": "WAKE_ORGAN_READ_ONLY",
         "risk_class": "R0_INTERNAL_READ_ONLY_ORGAN_WAKE",
-        "required_gates": ["DEMIHEAD"],
+        "required_gates": [
+            "raw_provenance",
+            "competing_hypotheses",
+            "falsifier",
+            "identity_preserving_handoff",
+        ],
         "dispatch_authorized": True,
         "external_effect_authorized": False,
         "claim_authority_granted": False,
@@ -227,6 +232,24 @@ def test_request_explicit_world_truth_escalation_is_rejected():
     assert verified["terminal"] == "OIDC_REQUEST_AUTHORITY_OR_KIND_REJECTED"
 
 
+def test_hash_valid_request_cannot_add_authority_bearing_sibling():
+    request = oidc_request()
+    request["target_execution_authorized"] = True
+    request["message_hash"] = canonical_hash({k: v for k, v in request.items() if k != "message_hash"})
+    verified = verify_request_envelope(request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_REQUEST_CONTRACT_REJECTED"
+
+
+def test_source_identity_wrapper_properties_are_exact():
+    request = oidc_request()
+    request["source_identity"]["command_authority_granted"] = True
+    request["message_hash"] = canonical_hash({k: v for k, v in request.items() if k != "message_hash"})
+    verified = verify_request_envelope(request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_ASSERTION_CONTRACT_REJECTED"
+
+
 def test_well_hashed_embedded_authority_escalation_is_rejected_before_publish():
     for field in ("external_effect_authorized", "command_authority_granted"):
         request = oidc_request()
@@ -244,6 +267,27 @@ def test_well_hashed_embedded_authority_escalation_is_rejected_before_publish():
             assert "INVALID_DISPATCH_PACKET" in str(exc)
         else:
             raise AssertionError("authority-bearing embedded packet reached OIDC publication")
+
+
+def test_packet_route_and_required_gates_are_exact():
+    mutations = (
+        ("route_match", "some_other_nonempty_route"),
+        ("required_gates", []),
+        ("required_gates", [
+            "identity_preserving_handoff",
+            "falsifier",
+            "competing_hypotheses",
+            "raw_provenance",
+        ]),
+    )
+    for field, value in mutations:
+        request = oidc_request()
+        mutated = dict(request["object"])
+        mutated[field] = value
+        request = rebind_packet(request, mutated)
+        verified = verify_request_envelope(request, decoder=decoder)
+        assert verified["ok"] is False
+        assert verified["terminal"] == "OIDC_REQUEST_PACKET_SCOPE_REJECTED"
 
 
 def test_impossible_already_emitted_packet_terminal_is_rejected():
@@ -317,6 +361,68 @@ def test_reader_accepts_only_target_signed_exact_response(tmp_path):
     assert verification["identity_proof"] is True
 
 
+def test_hash_valid_response_cannot_add_unsigned_authority_sibling():
+    request = oidc_request()
+    response = signed_response(request)
+    response["command_authority_granted"] = True
+    response["response_hash"] = canonical_hash({k: v for k, v in response.items() if k != "response_hash"})
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_RESPONSE_CONTRACT_REJECTED"
+    source = verify_request_envelope(request, decoder=decoder)
+    assert verify_no_execution_ack(
+        response,
+        request,
+        expected_request_verification=source,
+    ) is False
+
+
+def test_response_core_and_payload_properties_are_exact():
+    request = oidc_request()
+    response = signed_response(request)
+    response["response_core"]["execution_result"] = {"performed": True}
+    response = resign_response(request, response)
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_RESPONSE_CORE_CONTRACT_REJECTED"
+
+    response = signed_response(request)
+    response["response_core"]["payload"]["command_authority_granted"] = True
+    response = resign_response(request, response)
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_RESPONSE_CORE_CONTRACT_REJECTED"
+    source = verify_request_envelope(request, decoder=decoder)
+    assert verify_no_execution_ack(
+        response,
+        request,
+        expected_request_verification=source,
+    ) is False
+
+
+def test_target_identity_wrapper_properties_are_exact():
+    request = oidc_request()
+    response = signed_response(request)
+    response["target_identity"]["command_authority_granted"] = True
+    response["response_hash"] = canonical_hash({k: v for k, v in response.items() if k != "response_hash"})
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_ASSERTION_CONTRACT_REJECTED"
+
+
+def test_no_execution_ack_requires_independent_home_verification():
+    request = oidc_request()
+    response = signed_response(request)
+    assert verify_no_execution_ack(response, request) is False
+    source = verify_request_envelope(request, decoder=decoder)
+    assert source["ok"] is True
+    assert verify_no_execution_ack(
+        response,
+        request,
+        expected_request_verification=source,
+    ) is True
+
+
 def test_target_must_attest_exact_source_identity_verification():
     request = oidc_request()
     response = signed_response(request)
@@ -326,7 +432,12 @@ def test_target_must_attest_exact_source_identity_verification():
     verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
     assert verified["ok"] is False
     assert verified["terminal"] == "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED"
-    assert verify_no_execution_ack(response, request) is False
+    source = verify_request_envelope(request, decoder=decoder)
+    assert verify_no_execution_ack(
+        response,
+        request,
+        expected_request_verification=source,
+    ) is False
 
 
 def test_target_source_verification_hash_must_bind_embedded_result():
@@ -368,7 +479,12 @@ def test_embedded_ack_must_match_complete_v01_contract():
     response = resign_response(request, response)
 
     assert verify_signed_response(response, request_envelope=request, decoder=decoder)["ok"] is True
-    assert verify_no_execution_ack(response, request) is False
+    source = verify_request_envelope(request, decoder=decoder)
+    assert verify_no_execution_ack(
+        response,
+        request,
+        expected_request_verification=source,
+    ) is False
 
 
 def test_embedded_ack_schema_is_exact():
@@ -379,7 +495,12 @@ def test_embedded_ack_schema_is_exact():
     ack.pop("ack_hash", None)
     ack["ack_hash"] = canonical_hash(ack)
     response = resign_response(request, response)
-    assert verify_no_execution_ack(response, request) is False
+    source = verify_request_envelope(request, decoder=decoder)
+    assert verify_no_execution_ack(
+        response,
+        request,
+        expected_request_verification=source,
+    ) is False
 
 
 def test_wrong_target_repository_id_rejects_signed_response():

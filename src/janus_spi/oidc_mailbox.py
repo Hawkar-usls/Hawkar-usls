@@ -51,6 +51,13 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 DISPATCH_PACKET_SCHEMA = "janus.activator.dispatch_packet.v0.3"
 DISPATCH_DELIVERY_TERMINAL = "AUTHORIZED_INTERNAL_HANDOFF"
+DISPATCH_ROUTE_MATCH = "research_or_anomaly_investigation"
+DISPATCH_REQUIRED_GATES = (
+    "raw_provenance",
+    "competing_hypotheses",
+    "falsifier",
+    "identity_preserving_handoff",
+)
 DISPATCH_PACKET_KEYS = {
     "schema", "packet_id", "created_at", "activation_id", "activation_receipt_hash",
     "route_match", "target_organ", "operation", "risk_class", "required_gates",
@@ -63,6 +70,34 @@ ACK_KEYS = {
     "reasons", "execution_authorized", "execution_performed", "claim_authority_granted",
     "external_effect_authorized", "ack_hash",
 }
+IDENTITY_ASSERTION_KEYS = {"schema", "provider", "role", "audience", "bound_at", "jwt"}
+REQUEST_ENVELOPE_KEYS = {
+    "schema", "created_at", "source_repository", "target_repository", "object_kind",
+    "object_id", "object_hash", "object", "source_identity",
+    "command_authority_granted", "claim_authority_granted",
+    "scientific_evidence_authority_granted", "world_truth_authority_granted",
+    "external_effect_authorized", "physical_runtime_effect_authorized", "message_hash",
+}
+RESPONSE_CORE_SCHEMA = "janus.demiurge.mailbox_response_core.v1.1"
+RESPONSE_CORE_KEYS = {
+    "schema", "created_at", "source_repository", "target_repository", "target_head_sha",
+    "request_message_hash", "request_object_kind", "request_object_id", "request_object_hash",
+    "response_kind", "payload", "source_identity_verified",
+    "source_identity_verification_hash", "source_identity_verification",
+    "target_execution_authorized", "target_execution_performed",
+    "command_authority_granted", "claim_authority_granted",
+    "scientific_evidence_authority_granted", "world_truth_authority_granted",
+    "external_effect_authorized", "physical_runtime_effect_authorized", "terminal",
+}
+RESPONSE_CORE_TERMINALS = {
+    "OIDC_MAILBOX_DELIVERY_ACK_CORE_READY",
+    "OIDC_MAILBOX_DELIVERY_REJECT_CORE_READY",
+}
+RESPONSE_ENVELOPE_KEYS = {
+    "schema", "response_core", "response_core_hash", "target_identity",
+    "provenance_class", "identity_proof", "response_hash",
+}
+RESPONSE_PAYLOAD_KEYS = {"ack"}
 
 Decoder = Callable[[str, str], Dict[str, Any]]
 IdentityIssuer = Callable[[str], Dict[str, Any]]
@@ -212,8 +247,7 @@ def _admitted_dispatch_packet(packet: Mapping[str, Any]) -> bool:
         or created_at < 0
         or not isinstance(packet.get("activation_id"), str)
         or not str(packet.get("activation_id"))
-        or not isinstance(packet.get("route_match"), str)
-        or not str(packet.get("route_match"))
+        or packet.get("route_match") != DISPATCH_ROUTE_MATCH
         or packet.get("target_organ") != TARGET_REPOSITORY
         or packet.get("operation") != READ_ONLY_OPERATION
         or packet.get("risk_class") != READ_ONLY_RISK_CLASS
@@ -223,9 +257,7 @@ def _admitted_dispatch_packet(packet: Mapping[str, Any]) -> bool:
         or packet.get("external_effect_authorized") is not False
         or packet.get("claim_authority_granted") is not False
         or packet.get("command_authority_granted") is not False
-        or not isinstance(required_gates, list)
-        or any(not isinstance(gate, str) or not gate for gate in required_gates)
-        or len(set(required_gates)) != len(required_gates)
+        or required_gates != list(DISPATCH_REQUIRED_GATES)
     ):
         return False
     return verify_dispatch_packet(dict(packet))
@@ -242,7 +274,7 @@ def _source_identity_attestation_matches(
     core: Mapping[str, Any],
     request: Mapping[str, Any],
     *,
-    expected_verification: Mapping[str, Any] | None = None,
+    expected_verification: Mapping[str, Any],
 ) -> bool:
     verification = core.get("source_identity_verification")
     if not isinstance(verification, dict):
@@ -262,7 +294,7 @@ def _source_identity_attestation_matches(
         isinstance(identity, dict) and identity.get("ok") is True,
         isinstance(identity, dict) and identity.get("identity_proof") is True,
         isinstance(identity, dict) and _verification_hash_matches(identity),
-        expected_verification is None or verification == expected_verification,
+        verification == expected_verification,
     ))
 
 
@@ -293,6 +325,29 @@ def _admitted_no_execution_ack(ack: Mapping[str, Any], request: Mapping[str, Any
     ))
 
 
+def _response_core_shape_matches(core: Mapping[str, Any]) -> bool:
+    if set(core) != RESPONSE_CORE_KEYS:
+        return False
+    created_at = core.get("created_at")
+    payload = core.get("payload")
+    return all((
+        core.get("schema") == RESPONSE_CORE_SCHEMA,
+        isinstance(created_at, (int, float)) and not isinstance(created_at, bool) and created_at >= 0,
+        core.get("source_repository") == TARGET_REPOSITORY,
+        core.get("target_repository") == HOME_REPOSITORY,
+        SHA_RE.fullmatch(str(core.get("target_head_sha") or "")) is not None,
+        HASH_RE.fullmatch(str(core.get("request_message_hash") or "")) is not None,
+        core.get("request_object_kind") == "DISPATCH_PACKET",
+        PACKET_ID_RE.fullmatch(str(core.get("request_object_id") or "")) is not None,
+        HASH_RE.fullmatch(str(core.get("request_object_hash") or "")) is not None,
+        core.get("response_kind") == "DELIVERY_ACK",
+        isinstance(payload, dict),
+        isinstance(payload, dict) and set(payload) == RESPONSE_PAYLOAD_KEYS,
+        isinstance(payload, dict) and isinstance(payload.get("ack"), dict),
+        core.get("terminal") in RESPONSE_CORE_TERMINALS,
+    ))
+
+
 def verify_identity_assertion(
     assertion: Dict[str, Any],
     *,
@@ -306,6 +361,8 @@ def verify_identity_assertion(
 ) -> Dict[str, Any]:
     if not isinstance(assertion, dict):
         return _failure("OIDC_ASSERTION_MISSING", "Identity assertion is not an object.")
+    if set(assertion) != IDENTITY_ASSERTION_KEYS:
+        return _failure("OIDC_ASSERTION_CONTRACT_REJECTED", "Identity assertion wrapper properties are not exact.")
     if assertion.get("schema") != IDENTITY_SCHEMA or assertion.get("provider") != "GITHUB_ACTIONS_OIDC":
         return _failure("OIDC_ASSERTION_SCHEMA_REJECTED", "Identity assertion schema/provider mismatch.")
     if assertion.get("role") != expected_role:
@@ -403,7 +460,14 @@ def build_request_envelope(packet: Dict[str, Any], source_identity: Dict[str, An
     if not _admitted_dispatch_packet(packet):
         raise ValueError("OIDC_MAILBOX_INVALID_DISPATCH_PACKET")
     audience = request_audience("DISPATCH_PACKET", str(packet["packet_id"]), str(packet["packet_hash"]))
-    if source_identity.get("audience") != audience or source_identity.get("role") != "HOME_REQUEST_SOURCE":
+    if (
+        not isinstance(source_identity, dict)
+        or set(source_identity) != IDENTITY_ASSERTION_KEYS
+        or source_identity.get("schema") != IDENTITY_SCHEMA
+        or source_identity.get("provider") != "GITHUB_ACTIONS_OIDC"
+        or source_identity.get("audience") != audience
+        or source_identity.get("role") != "HOME_REQUEST_SOURCE"
+    ):
         raise ValueError("OIDC_SOURCE_IDENTITY_NOT_BOUND_TO_PACKET")
     row = {
         "schema": REQUEST_SCHEMA,
@@ -429,6 +493,8 @@ def build_request_envelope(packet: Dict[str, Any], source_identity: Dict[str, An
 def verify_request_envelope(envelope: Dict[str, Any], *, decoder: Decoder | None = None) -> Dict[str, Any]:
     if not isinstance(envelope, dict) or envelope.get("schema") != REQUEST_SCHEMA:
         return _failure("OIDC_REQUEST_SCHEMA_REJECTED", "Request schema mismatch.")
+    if set(envelope) != REQUEST_ENVELOPE_KEYS:
+        return _failure("OIDC_REQUEST_CONTRACT_REJECTED", "Request envelope properties are not the exact packet-stage contract.")
     claimed = str(envelope.get("message_hash") or "")
     body = dict(envelope)
     body.pop("message_hash", None)
@@ -444,8 +510,12 @@ def verify_request_envelope(envelope: Dict[str, Any], *, decoder: Decoder | None
             "OIDC_REQUEST_PACKET_SCOPE_REJECTED",
             "Packet integrity, schema, target, operation, scope, or embedded authority ceiling failed.",
         )
-    if envelope.get("object_id") != packet.get("packet_id") or envelope.get("object_hash") != packet.get("packet_hash"):
-        return _failure("OIDC_REQUEST_OBJECT_BINDING_REJECTED", "Envelope object binding mismatch.")
+    if (
+        envelope.get("created_at") != packet.get("created_at")
+        or envelope.get("object_id") != packet.get("packet_id")
+        or envelope.get("object_hash") != packet.get("packet_hash")
+    ):
+        return _failure("OIDC_REQUEST_OBJECT_BINDING_REJECTED", "Envelope time or object binding mismatch.")
     audience = request_audience("DISPATCH_PACKET", str(packet["packet_id"]), str(packet["packet_hash"]))
     identity = verify_home_identity(envelope.get("source_identity"), audience, decoder=decoder)
     if identity.get("ok") is not True:
@@ -474,6 +544,8 @@ def verify_signed_response(
         return _failure("OIDC_RESPONSE_REQUEST_NOT_VERIFIED", "Exact source request did not verify.")
     if not isinstance(response, dict) or response.get("schema") != RESPONSE_SCHEMA:
         return _failure("OIDC_RESPONSE_SCHEMA_REJECTED", "Response schema mismatch.")
+    if set(response) != RESPONSE_ENVELOPE_KEYS:
+        return _failure("OIDC_RESPONSE_CONTRACT_REJECTED", "Response envelope properties are not the exact v1.1 contract.")
     claimed = str(response.get("response_hash") or "")
     body = dict(response)
     body.pop("response_hash", None)
@@ -483,6 +555,8 @@ def verify_signed_response(
     core_hash = str(response.get("response_core_hash") or "")
     if not isinstance(core, dict) or HASH_RE.fullmatch(core_hash) is None or canonical_hash(core) != core_hash:
         return _failure("OIDC_RESPONSE_CORE_HASH_REJECTED", "Response core hash mismatch.")
+    if not _response_core_shape_matches(core):
+        return _failure("OIDC_RESPONSE_CORE_CONTRACT_REJECTED", "Response core properties, payload wrapper, or stage values are not exact.")
     if response.get("provenance_class") != PROVENANCE_CLASS or response.get("identity_proof") is not True:
         return _failure("OIDC_RESPONSE_PROVENANCE_REJECTED", "Response did not declare bidirectional OIDC provenance.")
     if core.get("request_message_hash") != request_envelope.get("message_hash"):
@@ -518,16 +592,42 @@ def verify_no_execution_ack(
     *,
     expected_request_verification: Mapping[str, Any] | None = None,
 ) -> bool:
-    core = response.get("response_core") if isinstance(response, dict) else None
-    if not isinstance(core, dict) or not _source_identity_attestation_matches(
-        core,
-        request,
-        expected_verification=expected_request_verification,
+    if expected_request_verification is None:
+        return False
+    if (
+        not isinstance(response, dict)
+        or set(response) != RESPONSE_ENVELOPE_KEYS
+        or response.get("schema") != RESPONSE_SCHEMA
+        or response.get("provenance_class") != PROVENANCE_CLASS
+        or response.get("identity_proof") is not True
     ):
         return False
-    payload = core.get("payload")
-    ack = payload.get("ack") if isinstance(payload, dict) else None
-    return isinstance(ack, dict) and _admitted_no_execution_ack(ack, request)
+    claimed = str(response.get("response_hash") or "")
+    body = dict(response)
+    body.pop("response_hash", None)
+    core = response.get("response_core")
+    core_hash = str(response.get("response_core_hash") or "")
+    if (
+        HASH_RE.fullmatch(claimed) is None
+        or canonical_hash(body) != claimed
+        or not isinstance(core, dict)
+        or HASH_RE.fullmatch(core_hash) is None
+        or canonical_hash(core) != core_hash
+        or not _response_core_shape_matches(core)
+        or core.get("terminal") != "OIDC_MAILBOX_DELIVERY_ACK_CORE_READY"
+        or not _strict_authority_false(core)
+        or core.get("target_execution_authorized") is not False
+        or core.get("target_execution_performed") is not False
+        or not _source_identity_attestation_matches(
+            core,
+            request,
+            expected_verification=expected_request_verification,
+        )
+    ):
+        return False
+    payload = core["payload"]
+    ack = payload["ack"]
+    return _admitted_no_execution_ack(ack, request)
 
 
 class JanusOIDCMailboxTransport:
