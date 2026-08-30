@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from janus_spi.model_fabric import GitHubRepositoryReader, ModelFabricCompiler
+from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11, ModelFabricCompilerV11
 
 
 def main() -> int:
@@ -14,7 +14,7 @@ def main() -> int:
     parser.add_argument("--out", default="runtime/janus-model-lock.json")
     args = parser.parse_args()
 
-    compiler = ModelFabricCompiler.from_file(args.manifest, reader=GitHubRepositoryReader())
+    compiler = ModelFabricCompilerV11.from_file(args.manifest, reader=GitHubRepositoryReaderV11())
     result = compiler.compile()
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
