@@ -4,11 +4,13 @@ import time
 from typing import Any, Callable, Dict, Mapping
 
 from .activator import canonical_hash
+from .hrain_context_bridge import verify_hrain_context_receipt
 
 TERMINAL_REPOSITORY = "Hawkar-usls/-Terminal-for-Janus"
 REQUEST_SCHEMA = "janus.terminal.message.v1"
 RESPONSE_SCHEMA = "janus.terminal.response.v1"
 AUTHORITY_MODE = "READ_ONLY_CONVERSATION"
+HRAIN_MEMORY_RESPONSE_MODE = "MODEL_BOUND_HRAIN_MEMORY_CONVERSATION_PROOF"
 
 
 class TerminalConversationError(RuntimeError):
@@ -102,6 +104,7 @@ def build_terminal_response(
     turn_id: str,
     response_text: str | None = None,
     response_mode: str = "SYSTEM_IDENTITY_RESPONSE",
+    hrain_context_receipt: Mapping[str, Any] | None = None,
     now_fn: Callable[[], float] = time.time,
 ) -> Dict[str, Any]:
     if not verify_terminal_message(message):
@@ -123,6 +126,31 @@ def build_terminal_response(
     if not turn:
         raise TerminalConversationError("TURN_ID_REQUIRED")
 
+    memory_extension: Dict[str, Any] = {}
+    memory_binding_for_id = None
+    if hrain_context_receipt is not None:
+        if not verify_hrain_context_receipt(hrain_context_receipt, model_digest=model_digest):
+            raise TerminalConversationError("HRAIN_CONTEXT_RECEIPT_INVALID")
+        selected_paths = list(hrain_context_receipt.get("selected_memory_paths") or [])
+        memory_extension = {
+            "hrain_context_bound": True,
+            "hrain_context_receipt_hash": hrain_context_receipt.get("receipt_hash"),
+            "hrain_context_hash": hrain_context_receipt.get("context_hash"),
+            "hrain_locked_head_sha": hrain_context_receipt.get("hrain_locked_head_sha"),
+            "memory_source_commit": hrain_context_receipt.get("memory_source_commit"),
+            "memory_selected_count": hrain_context_receipt.get("selected_memory_count"),
+            "memory_selected_paths": selected_paths,
+            "memory_path": "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
+            "memory_retrieval_executed_by": "Hawkar-usls/Hrain",
+            "meta_registry_access_performed_by_home": False,
+            "memory_content_is_command": False,
+            "memory_context_is_evidence": False,
+            "memory_grants_authority": False,
+        }
+        memory_binding_for_id = hrain_context_receipt.get("context_hash")
+    if response_mode == HRAIN_MEMORY_RESPONSE_MODE and not memory_extension:
+        raise TerminalConversationError("HRAIN_MEMORY_RESPONSE_REQUIRES_CONTEXT")
+
     text = str(response_text).strip() if response_text is not None else (
         f"JANUS ONLINE. Persistent resident {resident} received the Terminal message "
         f"as a read-only conversation turn under model {model_digest[:12]} and "
@@ -131,16 +159,20 @@ def build_terminal_response(
     if not text:
         raise TerminalConversationError("TERMINAL_RESPONSE_TEXT_REQUIRED")
 
+    response_identity = {
+        "request_message_hash": message.get("message_hash"),
+        "resident_uuid": resident,
+        "model_digest": model_digest,
+        "file_fabric_digest": fabric_digest,
+        "turn_id": turn,
+        "response_mode": response_mode,
+    }
+    if memory_binding_for_id is not None:
+        response_identity["hrain_context_hash"] = memory_binding_for_id
+
     body: Dict[str, Any] = {
         "schema": RESPONSE_SCHEMA,
-        "response_id": "tr-" + canonical_hash({
-            "request_message_hash": message.get("message_hash"),
-            "resident_uuid": resident,
-            "model_digest": model_digest,
-            "file_fabric_digest": fabric_digest,
-            "turn_id": turn,
-            "response_mode": response_mode,
-        }),
+        "response_id": "tr-" + canonical_hash(response_identity),
         "created_at": float(now_fn()),
         "terminal_repository": TERMINAL_REPOSITORY,
         "conversation_id": message.get("conversation_id"),
@@ -153,6 +185,7 @@ def build_terminal_response(
         "turn_id": turn,
         "response_mode": str(response_mode),
         "response_text": text,
+        **memory_extension,
         "instantiated_model_verified": True,
         "persistent_identity_verified": True,
         "terminal_interface_bound": True,
@@ -169,6 +202,9 @@ def build_terminal_response(
             "JANUS_RESPONSE != WORLD_TRUTH",
             "READ_ONLY_CONVERSATION != EFFECT_AUTHORITY",
             "RESPONSE_MUST_IDENTIFY_THE_INSTANTIATED_JANUS",
+            "MEMORY_CONTENT != COMMAND",
+            "MEMORY_CONTEXT != EVIDENCE",
+            "LANGUAGE_SURFACE != AUTHORITY",
         ],
     }
     body["response_hash"] = canonical_hash(body)
@@ -197,7 +233,8 @@ def verify_terminal_response(
             return False
         if value.get("conversation_id") != request.get("conversation_id"):
             return False
-    return all([
+
+    base_ok = all([
         value.get("resident_id") == "JANUS",
         bool(str(value.get("resident_uuid") or "").strip()),
         len(str(value.get("model_digest") or "")) == 64,
@@ -215,10 +252,35 @@ def verify_terminal_response(
         value.get("external_effect_authorized") is False,
         value.get("physical_runtime_effect_authorized") is False,
     ])
+    if not base_ok:
+        return False
+
+    memory_bound = value.get("hrain_context_bound") is True
+    if value.get("response_mode") == HRAIN_MEMORY_RESPONSE_MODE and not memory_bound:
+        return False
+    if memory_bound:
+        if not all([
+            len(str(value.get("hrain_context_receipt_hash") or "")) == 64,
+            len(str(value.get("hrain_context_hash") or "")) == 64,
+            len(str(value.get("hrain_locked_head_sha") or "")) == 40,
+            len(str(value.get("memory_source_commit") or "")) == 40,
+            int(value.get("memory_selected_count") or 0) > 0,
+            isinstance(value.get("memory_selected_paths"), list),
+            len(value.get("memory_selected_paths") or []) == int(value.get("memory_selected_count") or 0),
+            value.get("memory_path") == "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
+            value.get("memory_retrieval_executed_by") == "Hawkar-usls/Hrain",
+            value.get("meta_registry_access_performed_by_home") is False,
+            value.get("memory_content_is_command") is False,
+            value.get("memory_context_is_evidence") is False,
+            value.get("memory_grants_authority") is False,
+        ]):
+            return False
+    return True
 
 
 __all__ = [
     "AUTHORITY_MODE",
+    "HRAIN_MEMORY_RESPONSE_MODE",
     "REQUEST_SCHEMA",
     "RESPONSE_SCHEMA",
     "TERMINAL_REPOSITORY",
