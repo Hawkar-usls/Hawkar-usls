@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from janus_spi.activator import canonical_hash
+from janus_spi.hrain_context_bridge import EMPTY_MEMORY_STATUS, NONEMPTY_MEMORY_STATUS
 from janus_spi.terminal_conversation import (
     HRAIN_MEMORY_RESPONSE_MODE,
     TerminalConversationError,
@@ -37,7 +38,8 @@ def locks():
     return model, fabric
 
 
-def hrain_receipt():
+def hrain_receipt(*, empty: bool = False, explicit_v15: bool = False):
+    paths = [] if empty else ["data/A.json", "data/B.json"]
     value = {
         "schema": "janus.activator.hrain_conversation_context_receipt.v1",
         "model_id": "JANUS",
@@ -54,8 +56,8 @@ def hrain_receipt():
         "context_hash": "5" * 64,
         "context_file_sha256": "6" * 64,
         "memory_source_commit": "7" * 40,
-        "selected_memory_count": 2,
-        "selected_memory_paths": ["data/A.json", "data/B.json"],
+        "selected_memory_count": len(paths),
+        "selected_memory_paths": paths,
         "hydration_performed": True,
         "memory_retrieval_executed_by": "Hawkar-usls/Hrain",
         "meta_registry_access_performed_by_home": False,
@@ -71,6 +73,12 @@ def hrain_receipt():
         "physical_runtime_effect_authorized": False,
         "terminal": "HRAIN_QUERY_BOUND_CONVERSATION_CONTEXT_MATERIALIZED",
     }
+    if empty or explicit_v15:
+        value.update({
+            "memory_match_status": EMPTY_MEMORY_STATUS if empty else NONEMPTY_MEMORY_STATUS,
+            "empty_memory_is_hrain_failure": False,
+            "empty_memory_is_negative_evidence": False,
+        })
     value["receipt_hash"] = canonical_hash(value)
     return value
 
@@ -112,7 +120,7 @@ def test_response_binds_request_persistent_identity_and_both_model_digests():
 def test_hrain_memory_response_binds_exact_context_receipt():
     request = message()
     model, fabric = locks()
-    receipt = hrain_receipt()
+    receipt = hrain_receipt(explicit_v15=True)
     response = build_terminal_response(
         request,
         resident_uuid="resident-uuid-1",
@@ -130,11 +138,77 @@ def test_hrain_memory_response_binds_exact_context_receipt():
     assert response["hrain_context_receipt_hash"] == receipt["receipt_hash"]
     assert response["memory_source_commit"] == receipt["memory_source_commit"]
     assert response["memory_selected_paths"] == receipt["selected_memory_paths"]
+    assert response["memory_match_status"] == NONEMPTY_MEMORY_STATUS
     assert response["memory_path"] == "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL"
     assert response["meta_registry_access_performed_by_home"] is False
     assert response["memory_content_is_command"] is False
     assert response["memory_context_is_evidence"] is False
     assert response["memory_grants_authority"] is False
+
+
+def test_empty_hrain_memory_response_is_valid_and_explicitly_not_negative_evidence():
+    request = message()
+    model, fabric = locks()
+    receipt = hrain_receipt(empty=True)
+    response = build_terminal_response(
+        request,
+        resident_uuid="resident-uuid-1",
+        model_lock=model,
+        file_fabric_lock=fabric,
+        turn_id="turn-empty-memory",
+        response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+        hrain_context_receipt=receipt,
+        response_text="No strong relevant HRAiN memory selected; this is not negative evidence.",
+        now_fn=lambda: 2002.0,
+    )
+    assert verify_terminal_response(response, request=request)
+    assert response["memory_selected_count"] == 0
+    assert response["memory_selected_paths"] == []
+    assert response["memory_match_status"] == EMPTY_MEMORY_STATUS
+    assert response["empty_memory_is_hrain_failure"] is False
+    assert response["empty_memory_is_negative_evidence"] is False
+    assert "EMPTY RELEVANT MEMORY != HRAiN FAILURE" in response["laws"]
+    assert "EMPTY MEMORY != NEGATIVE EVIDENCE" in response["laws"]
+
+
+def test_legacy_nonempty_hrain_receipt_remains_valid_after_v15():
+    request = message()
+    model, fabric = locks()
+    receipt = hrain_receipt()
+    response = build_terminal_response(
+        request,
+        resident_uuid="resident-uuid-1",
+        model_lock=model,
+        file_fabric_lock=fabric,
+        turn_id="turn-legacy-memory",
+        response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+        hrain_context_receipt=receipt,
+        response_text="Legacy sealed non-empty receipt",
+        now_fn=lambda: 2003.0,
+    )
+    assert verify_terminal_response(response, request=request)
+    assert response["memory_match_status"] == NONEMPTY_MEMORY_STATUS
+    assert response["memory_selected_count"] == 2
+
+
+def test_empty_hrain_receipt_without_explicit_empty_semantics_is_rejected():
+    request = message()
+    model, fabric = locks()
+    receipt = hrain_receipt(empty=True)
+    receipt.pop("memory_match_status")
+    body = dict(receipt)
+    body.pop("receipt_hash")
+    receipt["receipt_hash"] = canonical_hash(body)
+    with pytest.raises(TerminalConversationError, match="HRAIN_CONTEXT_RECEIPT_INVALID"):
+        build_terminal_response(
+            request,
+            resident_uuid="resident-uuid-1",
+            model_lock=model,
+            file_fabric_lock=fabric,
+            turn_id="turn-empty-invalid",
+            response_mode=HRAIN_MEMORY_RESPONSE_MODE,
+            hrain_context_receipt=receipt,
+        )
 
 
 def test_hrain_memory_mode_requires_verified_context():
