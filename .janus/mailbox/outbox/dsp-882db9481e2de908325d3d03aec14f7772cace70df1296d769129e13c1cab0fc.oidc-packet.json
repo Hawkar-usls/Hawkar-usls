@@ -1,0 +1,48 @@
+{
+  "claim_authority_granted": false,
+  "command_authority_granted": false,
+  "created_at": 1788110746.279973,
+  "external_effect_authorized": false,
+  "message_hash": "220865c9c096bc18e8c0a10dd2055f3add43582e16258570fc0b8faf2eb4530c",
+  "object": {
+    "activation_id": "act-fb6d57c2d6a6460c82417c8cdff14419",
+    "activation_receipt_hash": "6ae7b20c049a547dba71031c8f2eda44cbd12a6224f0ba4f687175d97cd7fd4b",
+    "claim_authority_granted": false,
+    "command_authority_granted": false,
+    "created_at": 1788110746.279973,
+    "delivery_terminal": "AUTHORIZED_INTERNAL_HANDOFF",
+    "dispatch_authorized": true,
+    "effect_scope": "GITHUB_INTERNAL_READ_ONLY_ANALYSIS",
+    "external_effect_authorized": false,
+    "operation": "WAKE_ORGAN_READ_ONLY",
+    "packet_hash": "b1a890035f46ae76b748c9bad87fead8b4e055ba90f7c10a5b01505632bf3880",
+    "packet_id": "dsp-882db9481e2de908325d3d03aec14f7772cace70df1296d769129e13c1cab0fc",
+    "required_gates": [
+      "raw_provenance",
+      "competing_hypotheses",
+      "falsifier",
+      "identity_preserving_handoff"
+    ],
+    "risk_class": "R0_INTERNAL_READ_ONLY_ORGAN_WAKE",
+    "route_match": "research_or_anomaly_investigation",
+    "schema": "janus.activator.dispatch_packet.v0.3",
+    "target_organ": "Hawkar-usls/Janus-Demiurge"
+  },
+  "object_hash": "b1a890035f46ae76b748c9bad87fead8b4e055ba90f7c10a5b01505632bf3880",
+  "object_id": "dsp-882db9481e2de908325d3d03aec14f7772cace70df1296d769129e13c1cab0fc",
+  "object_kind": "DISPATCH_PACKET",
+  "physical_runtime_effect_authorized": false,
+  "schema": "janus.activator.mailbox_message.v1.1",
+  "scientific_evidence_authority_granted": false,
+  "source_identity": {
+    "audience": "urn:janus:mailbox-request:v1.1:DISPATCH_PACKET:dsp-882db9481e2de908325d3d03aec14f7772cace70df1296d769129e13c1cab0fc:b1a890035f46ae76b748c9bad87fead8b4e055ba90f7c10a5b01505632bf3880",
+    "bound_at": 1788110746.4223073,
+    "jwt": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjM4ODI2YjE3LTZhMzAtNWY5Yi1iMTY5LThiZWI4MjAyZjcyMyIsInR5cCI6IkpXVCIsIng1dCI6InlrTmFZNHFNX3RhNGsyVGdaT0NFWUxrY1lsQSJ9.eyJhY3RvciI6Ikhhd2thci11c2xzIiwiYWN0b3JfaWQiOiIyNDIwMjAzOTkiLCJhdWQiOiJ1cm46amFudXM6bWFpbGJveC1yZXF1ZXN0OnYxLjE6RElTUEFUQ0hfUEFDS0VUOmRzcC04ODJkYjk0ODFlMmRlOTA4MzI1ZDNkMDNhZWMxNGY3NzcyY2FjZTcwZGYxMjk2ZDc2OTEyOWUxM2MxY2FiMGZjOmIxYTg5MDAzNWY0NmFlNzZiNzQ4YzliYWQ4N2ZlYWQ4YjRlMDU1YmE5MGY3YzEwYTViMDE1MDU2MzJiZjM4ODAiLCJiYXNlX3JlZiI6IiIsImNoZWNrX3J1bl9pZCI6Ijk5Mjk0MDM4MzM4IiwiZXZlbnRfbmFtZSI6InB1c2giLCJleHAiOjE3ODgxMTEwNDYsImhlYWRfcmVmIjoiIiwiaWF0IjoxNzg4MTEwNzQ2LCJpc3MiOiJodHRwczovL3Rva2VuLmFjdGlvbnMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwiam9iX3dvcmtmbG93X3JlZiI6Ikhhd2thci11c2xzL0hhd2thci11c2xzLy5naXRodWIvd29ya2Zsb3dzL2phbnVzLW9pZGMtbWFpbGJveC1yb3VuZHRyaXAueW1sQHJlZnMvaGVhZHMvbWFpbiIsImpvYl93b3JrZmxvd19zaGEiOiIwMGMwMTg1MzE3NmUzMTM3YTJjOTRkMTVlNzRhZWY0NDMxNzZhZjQ0IiwianRpIjoiMWI3ZTllZTItNmFlOC00ODRiLWE5Y2MtYzAzMTRlMTQ1ZDRiIiwibmJmIjoxNzg4MTEwNDQ2LCJyZWYiOiJyZWZzL2hlYWRzL21haW4iLCJyZWZfcHJvdGVjdGVkIjoiZmFsc2UiLCJyZWZfdHlwZSI6ImJyYW5jaCIsInJlcG9zaXRvcnkiOiJIYXdrYXItdXNscy9IYXdrYXItdXNscyIsInJlcG9zaXRvcnlfaWQiOiIxMzI4MzE0NTY3IiwicmVwb3NpdG9yeV9vd25lciI6Ikhhd2thci11c2xzIiwicmVwb3NpdG9yeV9vd25lcl9pZCI6IjI0MjAyMDM5OSIsInJlcG9zaXRvcnlfdmlzaWJpbGl0eSI6InB1YmxpYyIsInJ1bl9hdHRlbXB0IjoiMSIsInJ1bl9pZCI6IjMzMzI1MjAzNzY0IiwicnVuX251bWJlciI6IjciLCJydW5uZXJfZW52aXJvbm1lbnQiOiJnaXRodWItaG9zdGVkIiwic2hhIjoiMDBjMDE4NTMxNzZlMzEzN2EyYzk0ZDE1ZTc0YWVmNDQzMTc2YWY0NCIsInN1YiI6InJlcG86SGF3a2FyLXVzbHNAMjQyMDIwMzk5L0hhd2thci11c2xzQDEzMjgzMTQ1Njc6cmVmOnJlZnMvaGVhZHMvbWFpbiIsIndvcmtmbG93IjoiSkFOVVMgT0lEQyBNYWlsYm94IFJvdW5kdHJpcCIsIndvcmtmbG93X3JlZiI6Ikhhd2thci11c2xzL0hhd2thci11c2xzLy5naXRodWIvd29ya2Zsb3dzL2phbnVzLW9pZGMtbWFpbGJveC1yb3VuZHRyaXAueW1sQHJlZnMvaGVhZHMvbWFpbiIsIndvcmtmbG93X3NoYSI6IjAwYzAxODUzMTc2ZTMxMzdhMmM5NGQxNWU3NGFlZjQ0MzE3NmFmNDQifQ.QaYv7K8uYYtSxRe32nYTydevrJr9050aZ0CGWqHPuDEmMjwMIC7zltQYjcXP2zBA9Ubl6GOv3-cLJDAmsew6TB_etax0uglbaJNJ2vSHNhnkW9FZhc_EJUgiwcOo775I9dBZqCXyP8Hks_cEPl2qkwpFuoDxCY47q6LF_06d1Fc3SmJx5Q-ER8JoW2zZQy7FYp9MqNp6QWsC9aBQmH0B0__qzi1CrqmDT1-d9qIeHqINPpiKLZ1Hf4Qvzg3_z5oQvo26B8jK3Y_gUU3dv4VzlvvN-5gG9bkzCpH5do6Plh3kGkbLLgtJ3AFXtLVTfefmaWyBDGV_BxNKBvDJFElFqQ",
+    "provider": "GITHUB_ACTIONS_OIDC",
+    "role": "HOME_REQUEST_SOURCE",
+    "schema": "janus.activator.github_actions_oidc_identity.v1.1"
+  },
+  "source_repository": "Hawkar-usls/Hawkar-usls",
+  "target_repository": "Hawkar-usls/Janus-Demiurge",
+  "world_truth_authority_granted": false
+}
