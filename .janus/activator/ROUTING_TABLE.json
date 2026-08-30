@@ -1,5 +1,5 @@
 {
-  "schema": "janus.activator.routing_table.v0.3",
+  "schema": "janus.activator.routing_table.v0.4",
   "status": "PROVISIONAL_RUNTIME_CONTRACT",
   "default": {
     "route_state": "ROUTE_PROPOSED",
@@ -9,8 +9,9 @@
   "routes": [
     {
       "match": "formal_or_theorem_claim",
-      "organs": ["Hawkar-usls/Janus-Fundamentum", "Hawkar-usls/Demi_Head"],
-      "required_gates": ["formal_or_replayable_proof", "adversarial_counterexample_pass", "claim_scope_binding"]
+      "organs": ["Hawkar-usls/Janus-Fundamentum", "Hawkar-usls/Demi_Head", "Hawkar-usls/Janus-Demiurge"],
+      "candidate_tissues": ["trump"],
+      "required_gates": ["formal_or_replayable_proof", "adversarial_counterexample_pass", "claim_scope_binding", "candidate_result_not_theorem_authority"]
     },
     {
       "match": "causal_or_statistical_claim",
@@ -25,8 +26,9 @@
     {
       "match": "research_or_anomaly_investigation",
       "organs": ["Hawkar-usls/TOPA", "Hawkar-usls/Hrain", "Hawkar-usls/Janus-Demiurge"],
-      "required_gates": ["raw_provenance", "competing_hypotheses", "falsifier", "identity_preserving_handoff"],
-      "note": "TOPA may invoke Spider semantics through Hrain when available; this table does not claim an automated Spider runtime is already bound."
+      "candidate_tissues": ["trump"],
+      "required_gates": ["raw_provenance", "competing_hypotheses", "falsifier", "identity_preserving_handoff", "candidate_result_not_theorem_authority"],
+      "note": "TOPA invokes Spider through its canonical DETECTIVE runtime; TRUMP may wake as candidate computational tissue under the exact locked Demiurge parent, with zero theorem/scientific-promotion authority."
     },
     {
       "match": "cross_domain_candidate_generation",
@@ -74,6 +76,9 @@
     "CONVERSATION != HUMAN_AUTHORIZED_WRITE",
     "ROUTE_PROPOSAL != DISPATCH_AUTHORITY",
     "DISPATCH_SUCCESS != WORLD_TRUTH",
+    "CANDIDATE_TRUMP != PROOF_AUTHORIZED_TRUMP",
+    "TRUMP_WAKE != THEOREM_AUTHORITY",
+    "CANDIDATE_RESULT != SCIENTIFIC_PROMOTION",
     "EVIDENCE != EFFECT_AUTHORIZATION"
   ]
 }
