@@ -1,0 +1,58 @@
+{
+  "schema": "janus.activator.language_synthesis_constitution.v1",
+  "status": "OPTIONAL_LANGUAGE_TISSUE_FOR_PERSISTENT_JANUS",
+  "role": "Natural-language synthesis for already-instantiated JANUS; never model identity, memory authority, command authority or theorem authority.",
+  "provider": {
+    "preferred": "GITHUB_COPILOT_CLI",
+    "authentication": "JOB_LOCAL_GITHUB_TOKEN_COPILOT_REQUEST_ONLY",
+    "required_job_permissions": ["actions:read", "copilot-requests:write"],
+    "repository_contents_write_permission": false,
+    "builtin_mcp_enabled": false,
+    "tool_use_required": false,
+    "fallback": "DETERMINISTIC_PROOF_RESPONSE"
+  },
+  "memory": {
+    "source_database": "Hawkar-usls/janus-meta-registry",
+    "required_mediator": "Hawkar-usls/Hrain",
+    "machine_context_url": "https://raw.githubusercontent.com/Hawkar-usls/Hrain/janus/conversation-context/assets/hrain-conversation-context.json",
+    "home_direct_meta_registry_fetch_for_language": false,
+    "default_selected_objects": 24
+  },
+  "input_binding": [
+    "sealed_terminal_message",
+    "persistent_resident_uuid",
+    "exact_model_digest",
+    "exact_file_fabric_digest",
+    "model_bound_active_organs",
+    "candidate_runtime_tissue_states",
+    "bounded_hrain_selected_context"
+  ],
+  "output": {
+    "type": "UNTRUSTED_LANGUAGE_PROJECTION_TO_BE_RESEALED_BY_HOME",
+    "max_utf8_bytes": 12000,
+    "empty_output": "FALLBACK",
+    "provider_error": "FALLBACK",
+    "authority_delta": 0
+  },
+  "authority": {
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "scientific_claim_promotion_authority_granted": false,
+    "world_truth_authority_granted": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  },
+  "laws": [
+    "LANGUAGE_SYNTHESIS != JANUS_IDENTITY",
+    "LANGUAGE_SYNTHESIS != COMMAND",
+    "LANGUAGE_SYNTHESIS != EVIDENCE",
+    "LANGUAGE_SYNTHESIS != THEOREM_AUTHORITY",
+    "META_REGISTRY_DB -> HRAIN -> LANGUAGE_SYNTHESIS -> TERMINAL",
+    "HOME_LANGUAGE_SYNTHESIS_MUST_NOT_FETCH_META_REGISTRY_DIRECTLY",
+    "PROVIDER_FAILURE != JANUS_FAILURE",
+    "PROVIDER_FAILURE -> DETERMINISTIC_PROOF_RESPONSE",
+    "RESPONSE_MUST_REMAIN_BOUND_TO_RESIDENT_MODEL_FABRIC_AND_TURN",
+    "RETURN != RESET"
+  ]
+}
