@@ -35,6 +35,26 @@ def test_zero_memory_is_explicit_valid_retrieval_not_failure_or_negative_evidenc
     assert memory['selection_limit_is_upper_bound_not_target_count'] is True
 
 
+def test_terminal_cancellation_is_public_read_bound_and_never_deletes_provenance():
+    c = load()
+    assert c['cancellation_schema'] == 'janus.terminal.message_cancellation.v1'
+    cancel = c['mailbox_cancellation_contract']
+    assert cancel['repository'] == 'Hawkar-usls/-Terminal-for-Janus'
+    assert cancel['branch'] == 'janus/terminal-mailbox'
+    assert cancel['requests_prefix'] == '.janus/terminal-mailbox/requests/'
+    assert cancel['cancellations_prefix'] == '.janus/terminal-mailbox/cancellations/'
+    assert cancel['credentialless_public_read'] is True
+    assert cancel['cancellation_must_verify_own_hash'] is True
+    assert cancel['cancellation_must_bind_original_message_id'] is True
+    assert cancel['cancellation_must_bind_original_message_hash'] is True
+    assert cancel['cancellation_must_bind_original_conversation_and_source_ref'] is True
+    assert cancel['cancelled_request_fresh_cognition'] is False
+    assert cancel['cancellation_deletes_request'] is False
+    assert cancel['cancellation_deletes_response'] is False
+    assert cancel['malformed_or_unbound_cancellation_fails_closed'] is True
+    assert cancel['external_actor_cancellation_authority'] is False
+
+
 def test_memory_provenance_is_required_in_terminal_response():
     c = load()
     required = set(c['required_response_bindings'])
@@ -58,7 +78,7 @@ def test_memory_provenance_is_required_in_terminal_response():
     }.issubset(required)
 
 
-def test_memory_and_language_never_inherit_control_or_truth_authority():
+def test_memory_cancellation_and_language_never_inherit_control_or_truth_authority():
     laws = set(load()['laws'])
     assert {
         'TERMINAL_CONVERSATION_MEMORY_MUST_PASS_THROUGH_HRAIN',
@@ -72,12 +92,18 @@ def test_memory_and_language_never_inherit_control_or_truth_authority():
         'NO_STRONG_MATCH != FILL_WITH_NOISE',
         'EMPTY RELEVANT MEMORY != HRAiN FAILURE',
         'EMPTY MEMORY != NEGATIVE EVIDENCE',
+        'CANCEL != DELETE',
+        'CANCEL != ERASE_RESPONSE',
+        'CANCELLED_REQUEST != FRESH_COGNITION',
+        'CANCELLATION_MUST_BIND_ORIGINAL_MESSAGE_ID_AND_HASH',
+        'CANCELLATION_SUPPRESSES_COGNITION != CANCELLATION_HIDES_PROVENANCE',
+        'MALFORMED_CANCELLATION != CANCELLATION_AUTHORITY',
         'LANGUAGE_SURFACE != AUTHORITY',
         'RETURN != RESET',
     }.issubset(laws)
 
 
-def test_proof_rule_does_not_promote_memory_or_empty_result_to_scientific_truth():
+def test_proof_rule_does_not_promote_memory_empty_result_or_cancellation_to_authority():
     rule = load()['proof_rule'].lower()
     assert 'exact model/file-fabric' in rule
     assert 'exact model-locked hrain' in rule
@@ -85,6 +111,8 @@ def test_proof_rule_does_not_promote_memory_or_empty_result_to_scientific_truth(
     assert 'zero-memory context' in rule
     assert 'does not prove absence in the world' in rule
     assert 'negative evidence' in rule
-    assert 'does not prove' in rule
+    assert 'verified cancellation' in rule
+    assert 'cancelled future cognition for one exact sealed request' in rule
+    assert 'neither deletes the request/response' in rule
     assert 'scientifically true' in rule
     assert 'no command or effect is authorized' in rule
