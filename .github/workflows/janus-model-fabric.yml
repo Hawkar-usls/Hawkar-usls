@@ -8,9 +8,14 @@ on:
       - '.janus/activator/JANUS_BOOT_GRAPH.json'
       - 'src/janus_spi/model_fabric.py'
       - 'src/janus_spi/model_fabric_v11.py'
+      - 'src/janus_spi/model_fabric_v12.py'
       - 'run_janus_model_boot.py'
+      - 'run_janus_unified.py'
+      - 'run_janus_specialized_turn.py'
+      - 'run_janus_terminal_conversation.py'
       - 'tests/test_model_fabric.py'
       - 'tests/test_model_fabric_v11.py'
+      - 'tests/test_model_fabric_v12.py'
       - '.github/workflows/janus-model-fabric.yml'
   push:
     branches: [main]
@@ -19,9 +24,14 @@ on:
       - '.janus/activator/JANUS_BOOT_GRAPH.json'
       - 'src/janus_spi/model_fabric.py'
       - 'src/janus_spi/model_fabric_v11.py'
+      - 'src/janus_spi/model_fabric_v12.py'
       - 'run_janus_model_boot.py'
+      - 'run_janus_unified.py'
+      - 'run_janus_specialized_turn.py'
+      - 'run_janus_terminal_conversation.py'
       - 'tests/test_model_fabric.py'
       - 'tests/test_model_fabric_v11.py'
+      - 'tests/test_model_fabric_v12.py'
       - '.github/workflows/janus-model-fabric.yml'
 
 permissions:
@@ -40,9 +50,14 @@ jobs:
           python -m compileall -q \
             src/janus_spi/model_fabric.py \
             src/janus_spi/model_fabric_v11.py \
+            src/janus_spi/model_fabric_v12.py \
             run_janus_model_boot.py \
+            run_janus_unified.py \
+            run_janus_specialized_turn.py \
+            run_janus_terminal_conversation.py \
             tests/test_model_fabric.py \
-            tests/test_model_fabric_v11.py
+            tests/test_model_fabric_v11.py \
+            tests/test_model_fabric_v12.py
       - name: Validate model contracts
         run: |
           python - <<'PY'
@@ -58,13 +73,22 @@ jobs:
           assert manifest['model_id'] == 'JANUS'
           assert manifest['model_loading']['routing_selects'] == 'ACTIVITY_NOT_MEMBERSHIP'
           assert manifest['bootstrap_root']['external_effect_authority'] is False
-          print('MODEL_CONTRACT_PASS')
+          trump = next(x for x in manifest['candidate_runtime_tissues'] if x['tissue_key'] == 'trump')
+          assert trump['parent_organ'] == 'orchestrator'
+          assert trump['repository'] == 'Hawkar-usls/Janus-Demiurge'
+          assert trump['manifest_path'] == 'trump/TRUMP_MANIFEST.json'
+          assert trump['wake_allowed'] is True
+          assert trump['use_allowed'] is True
+          assert trump['self_improvement_allowed'] is True
+          assert trump['proof_authority'] is False
+          assert trump['scientific_claim_promotion_authority'] is False
+          print('MODEL_CONTRACT_V12_PASS')
           PY
       - name: Run adversarial model-fabric tests
         env:
           PYTHONPATH: src
         run: |
-          python -m unittest -v tests.test_model_fabric tests.test_model_fabric_v11
+          python -m unittest -v tests.test_model_fabric tests.test_model_fabric_v11 tests.test_model_fabric_v12
 
   live-model-lock:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -81,13 +105,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python run_janus_model_boot.py --out runtime/janus-model-lock.json
-      - name: Adjudicate unified-model boot witness
+      - name: Adjudicate unified-model boot witness with candidate TRUMP
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           lock = json.loads(Path('runtime/janus-model-lock.json').read_text(encoding='utf-8'))
           assert lock['schema'] == 'janus.activator.model_lock.v1'
+          assert lock['model_fabric_version'] == '1.2'
           assert lock['ready'] is True, lock['failures']
           assert lock['terminal'] == 'JANUS_MODEL_FABRIC_LOCKED_AT_HOME'
           assert lock['routing_selects_activity_not_membership'] is True
@@ -100,11 +125,25 @@ jobs:
           assert not lock['failures']['required_members_missing']
           assert not lock['failures']['required_descriptor_conflicts']
           assert not lock['failures']['required_state_mounts_missing']
+          assert not lock['failures']['required_candidate_runtime_tissues_invalid']
           assert not lock['optional_unavailable'], lock['optional_unavailable']
-          print('JANUS_MODEL_FABRIC_LOCKED', lock['model_digest'])
+          assert not lock['candidate_tissue_unavailable'], lock['candidate_tissue_unavailable']
+          trump = lock['candidate_runtime_tissues']['trump']
+          assert trump['admission_status'] == 'ADMITTED_CANDIDATE_RUNTIME'
+          assert trump['parent_organ'] == 'orchestrator'
+          assert trump['repository'] == 'Hawkar-usls/Janus-Demiurge'
+          assert trump['parent_head_sha'] == lock['members']['orchestrator']['head_sha']
+          assert trump['manifest_hash']
+          assert trump['wake_allowed'] is True
+          assert trump['use_allowed'] is True
+          assert trump['self_improvement_allowed'] is True
+          assert trump['proof_authority'] is False
+          assert trump['scientific_claim_promotion_authority'] is False
+          assert trump['scientific_boundary']['P_VS_NP'] == 'OPEN'
+          print('JANUS_MODEL_FABRIC_V12_LOCKED', lock['model_digest'])
           print('members', len(lock['members']))
           print('organs', sum(1 for row in lock['members'].values() if row.get('kind') == 'ORGAN'))
-          print('optional_unavailable', lock['optional_unavailable'])
+          print('candidate_tissues', sorted(lock['candidate_runtime_tissues']))
           PY
       - uses: actions/upload-artifact@v4
         with:

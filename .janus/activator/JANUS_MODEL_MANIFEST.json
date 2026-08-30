@@ -61,6 +61,39 @@
       "load_mode": "LAZY_AVAILABLE"
     }
   ],
+  "candidate_runtime_tissues": [
+    {
+      "tissue_key": "trump",
+      "component": "TRUMP",
+      "parent_organ": "orchestrator",
+      "repository": "Hawkar-usls/Janus-Demiurge",
+      "manifest_path": "trump/TRUMP_MANIFEST.json",
+      "runtime_entrypoint": "trump/trump_candidate.py",
+      "expected_schema": "janus.trump.manifest.v0.1",
+      "expected_status": "CANDIDATE_RUNTIME_TISSUE",
+      "load_mode": "LAZY_PARENT_BOUND",
+      "required_for_model_ready": false,
+      "wake_allowed": true,
+      "use_allowed": true,
+      "self_improvement_allowed": true,
+      "proof_authority": false,
+      "scientific_claim_promotion_authority": false,
+      "command_authority": false,
+      "external_effect_authority": false,
+      "physical_runtime_effect_authority": false,
+      "consumes": [
+        "FORMAL_PROBLEM",
+        "CANDIDATE_RESEARCH_STATE",
+        "RESOURCE_BUDGET"
+      ],
+      "emits": [
+        "CANDIDATE_COMPUTATION_RECEIPT",
+        "CANDIDATE_SELFTEST_RECEIPT",
+        "OPEN_FRONTIER"
+      ],
+      "law": "CANDIDATE_TRUMP != PROOF_AUTHORIZED_TRUMP"
+    }
+  ],
   "load_policy": {
     "CORE": "REQUIRED_BOOT_PRESENCE",
     "DOMAIN_LAB": "LAZY_AVAILABLE",
@@ -84,6 +117,7 @@
     "membership": "GLOBAL_AT_BOOT",
     "exact_repo_heads": "LOCK_ALL_RESOLVABLE_MEMBERS",
     "code_materialization": "LAZY_BY_ACTIVE_ORGAN",
+    "candidate_runtime_tissues": "BIND_TO_LOCKED_PARENT_REPOSITORY_AND_LAZY_MATERIALIZE",
     "routing_selects": "ACTIVITY_NOT_MEMBERSHIP",
     "full_clone_all_repositories_at_boot": false,
     "model_lock_required_before_cognition": true
@@ -98,6 +132,9 @@
     "PERMISSION != COMMAND",
     "ACK != EXECUTION",
     "WORKFLOW_PASS != WORLD_TRUTH",
+    "CANDIDATE_TRUMP != PROOF_AUTHORIZED_TRUMP",
+    "TRUMP_WAKE != THEOREM_AUTHORITY",
+    "CANDIDATE_RESULT != SCIENTIFIC_PROMOTION",
     "EXTERNAL_EFFECTS_DEFAULT = FALSE",
     "PHYSICAL_RUNTIME_IS_OUTSIDE_GITHUB_INTERIOR",
     "RETURN != RESET"

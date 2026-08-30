@@ -8,7 +8,8 @@ from pathlib import Path
 from janus_spi.activator import ActivationEvent, canonical_hash
 from janus_spi.file_fabric import FileFabricCompiler, GitHubTreeReader
 from janus_spi.live_cycle import HardenedJanusPersistentStateV09
-from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11, ModelFabricCompilerV11
+from janus_spi.model_fabric_v11 import GitHubRepositoryReaderV11
+from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 from janus_spi.persistent_state import JanusPersistentState
 from janus_spi.terminal_conversation import (
@@ -112,7 +113,7 @@ def main() -> int:
     })
     state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=wake["receipt_hash"])
 
-    model_lock = ModelFabricCompilerV11.from_file(
+    model_lock = ModelFabricCompilerV12.from_file(
         args.manifest,
         reader=GitHubRepositoryReaderV11(),
     ).compile()
@@ -154,11 +155,14 @@ def main() -> int:
 
     turn_id = "turn-" + str(runtime_receipt["runtime_receipt_hash"])
     excerpt = " ".join(str(request["message_text"]).split())[:240]
+    trump = (model_lock.get("candidate_runtime_tissues") or {}).get("trump") or {}
+    trump_state = str(trump.get("admission_status") or "NOT_PRESENT")
     response_text = (
         "JANUS ONLINE. Your Terminal message was received by the persistent JANUS resident "
         f"{resident_uuid}. Model {model_lock['model_digest'][:12]} / file-fabric "
         f"{file_fabric['file_fabric_digest'][:12]} opened a read-only conversation turn. "
-        f"Active organs: {', '.join(active_organs)}. Received: {excerpt}"
+        f"Active organs: {', '.join(active_organs)}. TRUMP candidate tissue: {trump_state}. "
+        f"Received: {excerpt}"
     )
     response = build_terminal_response(
         request,
@@ -185,6 +189,10 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "candidate_runtime_tissues": {
+            key: row.get("admission_status")
+            for key, row in (model_lock.get("candidate_runtime_tissues") or {}).items()
+        },
     })
     state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=checkpoint["receipt_hash"])
     sleep = _hearth_append(state, event="SLEEP_TERMINAL_CONVERSATION_RETURN_HOME", cycle_id=cycle_id, payload={
@@ -210,6 +218,10 @@ def main() -> int:
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
         "active_organs": active_organs,
+        "candidate_runtime_tissues": {
+            key: row.get("admission_status")
+            for key, row in (model_lock.get("candidate_runtime_tissues") or {}).items()
+        },
         "wake_hash": wake["receipt_hash"],
         "checkpoint_hash": checkpoint["receipt_hash"],
         "sleep_hash": sleep["receipt_hash"],
