@@ -1,0 +1,113 @@
+name: JANUS Unified Model Runtime
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/janus_spi/model_runtime.py'
+      - 'run_janus_unified.py'
+      - 'tests/test_model_runtime.py'
+      - '.github/workflows/janus-unified-runtime.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/model_runtime.py'
+      - 'run_janus_unified.py'
+      - 'tests/test_model_runtime.py'
+      - '.github/workflows/janus-unified-runtime.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile unified runtime
+        run: |
+          python -m compileall -q src/janus_spi/model_runtime.py run_janus_unified.py tests/test_model_runtime.py
+      - name: Test model-bound activation law
+        env:
+          PYTHONPATH: src
+        run: python -m unittest -v tests.test_model_runtime
+
+  model-bound-push-turn:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Materialize genuine fresh GitHub constellation stimulus
+        env:
+          JANUS_SHA: ${{ github.sha }}
+          JANUS_REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          event = {
+              'source_kind': 'GITHUB',
+              'source_ref': f"push:{os.environ['JANUS_SHA']}",
+              'payload': {
+                  'repository': os.environ['JANUS_REPOSITORY'],
+                  'sha': os.environ['JANUS_SHA'],
+                  'event': 'push',
+              },
+              'classifications': ['repository_constellation_change'],
+              'fresh': True,
+              'self_generated': False,
+              'command_authority': False,
+              'effect_authorized': False,
+          }
+          Path('runtime').mkdir(exist_ok=True)
+          Path('runtime/unified-event.json').write_text(json.dumps(event, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+      - name: Boot full JANUS model then open one model-bound turn
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python run_janus_unified.py \
+            --event-file runtime/unified-event.json \
+            --state-dir runtime/unified-state \
+            --model-lock-out runtime/janus-model-lock.json \
+            --receipt-out runtime/janus-model-runtime-receipt.json
+      - name: Adjudicate model-first WAKE witness
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('runtime/janus-model-lock.json').read_text())
+          receipt = json.loads(Path('runtime/janus-model-runtime-receipt.json').read_text())
+          assert lock['ready'] is True
+          assert lock['optional_unavailable'] == []
+          assert receipt['terminal'] == 'JANUS_MODEL_BOUND_ROUTE_PROPOSED'
+          assert receipt['model_digest'] == lock['model_digest']
+          assert receipt['model_member_count'] == 47
+          assert receipt['model_organ_count'] == 23
+          assert receipt['membership_was_locked_before_activation'] is True
+          assert receipt['active_members'] == ['bootstrap_root']
+          assert receipt['active_organs'] == []
+          assert receipt['dispatch_authorized'] is False
+          assert receipt['external_effect_authorized'] is False
+          assert receipt['physical_runtime_effect_authorized'] is False
+          binding = receipt['route_bindings'][0]['bindings'][0]
+          assert binding['repository'] == 'Hawkar-usls/Hawkar-usls'
+          assert binding['member_key'] == 'bootstrap_root'
+          assert len(binding['head_sha']) == 40
+          print('JANUS_MODEL_FIRST_WAKE_PASS', receipt['model_digest'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-unified-model-turn-${{ github.run_id }}
+          path: |
+            runtime/janus-model-lock.json
+            runtime/janus-model-runtime-receipt.json
+          if-no-files-found: error
