@@ -15,6 +15,7 @@ on:
       - 'tests/test_terminal_conversation_route.py'
       - 'tests/test_terminal_mailbox.py'
       - 'tests/test_hrain_context_bridge.py'
+      - 'tests/test_terminal_hrain_memory_constitution.py'
       - '.github/workflows/janus-terminal-conversation-bridge.yml'
   push:
     branches: [main]
@@ -30,6 +31,7 @@ on:
       - 'tests/test_terminal_conversation_route.py'
       - 'tests/test_terminal_mailbox.py'
       - 'tests/test_hrain_context_bridge.py'
+      - 'tests/test_terminal_hrain_memory_constitution.py'
       - '.github/workflows/janus-terminal-conversation-bridge.yml'
   workflow_dispatch:
   schedule:
@@ -60,7 +62,8 @@ jobs:
             tests/test_terminal_conversation.py \
             tests/test_terminal_conversation_route.py \
             tests/test_terminal_mailbox.py \
-            tests/test_hrain_context_bridge.py
+            tests/test_hrain_context_bridge.py \
+            tests/test_terminal_hrain_memory_constitution.py
       - name: Validate Terminal conversation constitution and routing
         run: |
           python -m json.tool .janus/activator/TERMINAL_CONVERSATION_CONSTITUTION.json >/dev/null
@@ -73,7 +76,8 @@ jobs:
             tests/test_terminal_conversation.py \
             tests/test_terminal_conversation_route.py \
             tests/test_terminal_mailbox.py \
-            tests/test_hrain_context_bridge.py
+            tests/test_hrain_context_bridge.py \
+            tests/test_terminal_hrain_memory_constitution.py
 
   bridge:
     if: github.event_name != 'pull_request'
@@ -160,7 +164,7 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-          from janus_spi.hrain_context_bridge import verify_hrain_context_receipt
+          from janus_spi.hrain_context_bridge import EMPTY_MEMORY_STATUS, NONEMPTY_MEMORY_STATUS, verify_hrain_context_receipt
           from janus_spi.live_cycle import HardenedJanusPersistentStateV09
           from janus_spi.model_runtime import ModelRuntimeLedger
           from janus_spi.terminal_conversation import HRAIN_MEMORY_RESPONSE_MODE, verify_terminal_message, verify_terminal_response
@@ -182,8 +186,19 @@ jobs:
           assert response['hrain_context_hash'] == summary['hrain_context_hash'] == hreceipt['context_hash'] == context['context_hash']
           assert response['hrain_context_receipt_hash'] == summary['hrain_context_receipt_hash'] == hreceipt['receipt_hash']
           assert response['memory_source_commit'] == summary['memory_source_commit'] == hreceipt['memory_source_commit'] == context['source_commit']
-          assert response['memory_selected_count'] == summary['memory_selected_count'] == hreceipt['selected_memory_count'] > 0
+          count=response['memory_selected_count']
+          assert isinstance(count, int) and not isinstance(count, bool) and count >= 0
+          assert count == summary['memory_selected_count'] == hreceipt['selected_memory_count'] == context['selected_memory_count']
           assert response['memory_selected_paths'] == hreceipt['selected_memory_paths']
+          assert len(response['memory_selected_paths']) == count
+          expected_status=EMPTY_MEMORY_STATUS if count == 0 else NONEMPTY_MEMORY_STATUS
+          assert response['memory_match_status'] == summary['memory_match_status'] == hreceipt['memory_match_status'] == expected_status
+          assert response['empty_memory_is_hrain_failure'] is False
+          assert response['empty_memory_is_negative_evidence'] is False
+          assert summary['empty_memory_is_hrain_failure'] is False
+          assert summary['empty_memory_is_negative_evidence'] is False
+          assert hreceipt['empty_memory_is_hrain_failure'] is False
+          assert hreceipt['empty_memory_is_negative_evidence'] is False
           assert response['memory_path'] == 'META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL'
           assert response['memory_retrieval_executed_by'] == 'Hawkar-usls/Hrain'
           assert response['meta_registry_access_performed_by_home'] is False
@@ -205,7 +220,10 @@ jobs:
           print('HRAIN_HEAD', hreceipt['hrain_locked_head_sha'])
           print('MEMORY_SOURCE_COMMIT', hreceipt['memory_source_commit'])
           print('HRAIN_CONTEXT_HASH', hreceipt['context_hash'])
+          print('MEMORY_MATCH_STATUS', expected_status)
+          print('MEMORY_COUNT', count)
           print('MEMORY_PATHS', hreceipt['selected_memory_paths'])
+          print('EMPTY_MEMORY_IS_NEGATIVE_EVIDENCE=FALSE')
           print('RETURN_NOT_RESET=PASS')
           PY
 
@@ -254,9 +272,12 @@ jobs:
           assert stored == response
           assert verify_terminal_response(stored, request=request)
           assert stored.get('hrain_context_bound') is True
+          assert stored.get('empty_memory_is_hrain_failure') is False
+          assert stored.get('empty_memory_is_negative_evidence') is False
           print('JANUS_TERMINAL_FRESH_WORKTREE_REPLAY=PASS')
           print('SAME_RESIDENT_UUID=PASS')
           print('HRAIN_MEMORY_BINDING_PERSISTED=PASS')
+          print('EMPTY_MEMORY_IS_NEGATIVE_EVIDENCE=FALSE')
           print('RETURN_NOT_RESET=PASS')
           PY
 
