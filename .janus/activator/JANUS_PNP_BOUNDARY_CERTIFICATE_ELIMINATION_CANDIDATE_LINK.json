@@ -1,0 +1,15 @@
+{
+  "schema":"janus.activator.theorem_candidate_link.v1.0",
+  "status":"CANDIDATE_OPEN_NOT_AUTHORITY",
+  "candidate":"BOUNDARY_CERTIFICATE_ELIMINATION_GRAMMAR",
+  "claim_target":"P_VS_NP",
+  "claim_state":"OPEN",
+  "source":{"repository":"Hawkar-usls/Janus-Fundamentum","branch":"research/janus-einstein-light-topa-spider-100x-2026-08-30","candidate_commit":"efe10e82582e548697b009689828bf69f5fa511e","result_receipt_commit":"c3a9620137213d6460525f1323e55f83218f3620","process_journal_commit":"c9d2e2c450edeb8d25386092993bcaf2c1486de4","workflow_run_id":33321289798,"artifact_id":9734950795,"artifact_sha256":"2f9636e6cf412ba2bc5f688117547831577b087128e94bd35c6ae1b1304307d5"},
+  "required_unproved_lemma":"UNIVERSAL_POLYNOMIAL_BOUNDARY_ELIMINATION_LEMMA",
+  "routing":{"match":"formal_or_theorem_claim","organs":["Hawkar-usls/Janus-Fundamentum","Hawkar-usls/Demi_Head"],"required_gates":["formal_or_replayable_proof","adversarial_counterexample_pass","claim_scope_binding"]},
+  "authority":{"activation_promotable":false,"dispatch_authorized":false,"effect_authorized":false,"theorem_authority":false,"model_output_is_proof":false},
+  "promotion_gate":["arbitrary CNF soundness and completeness proof","worst-case polynomial runtime proof","worst-case polynomial representation/interface proof","worst-case polynomial certificate-discovery proof","no leakage/oracle proof","known counterexample replay","universal MAD-LAB pass","claim-scope binding to arbitrary SAT"],
+  "on_gate_failure":"REMAIN_OPEN_AND_JOURNAL_EXACT_FRONTIER",
+  "research_law":"Математика не сходится. Пока не сойдется.",
+  "scientific_boundary":"This link makes the candidate visible to JANUS. It does not assert P=NP and cannot authorize theorem promotion or external effects."
+}
