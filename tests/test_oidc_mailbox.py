@@ -23,6 +23,7 @@ from janus_spi.oidc_mailbox import (
     request_audience,
     request_github_oidc_token,
     response_audience,
+    verify_no_execution_ack,
     verify_request_envelope,
     verify_signed_response,
 )
@@ -134,6 +135,7 @@ def signed_response(request: dict, *, target_repository_id: str | None = None) -
         "external_effect_authorized": False,
     }
     ack["ack_hash"] = canonical_hash(ack)
+    source_verification = verify_request_envelope(request, decoder=decoder)
     core = {
         "schema": "janus.demiurge.mailbox_response_core.v1.1",
         "created_at": 155.0,
@@ -147,8 +149,8 @@ def signed_response(request: dict, *, target_repository_id: str | None = None) -
         "response_kind": "DELIVERY_ACK",
         "payload": {"ack": ack},
         "source_identity_verified": True,
-        "source_identity_verification_hash": "f" * 64,
-        "source_identity_verification": {"ok": True, "identity_proof": True},
+        "source_identity_verification_hash": source_verification["verification_hash"],
+        "source_identity_verification": source_verification,
         "target_execution_authorized": False,
         "target_execution_performed": False,
         "command_authority_granted": False,
@@ -171,6 +173,32 @@ def signed_response(request: dict, *, target_repository_id: str | None = None) -
         "identity_proof": True,
     }
     response["response_hash"] = canonical_hash(response)
+    return response
+
+
+def rebind_packet(request: dict, mutated: dict) -> dict:
+    body = dict(mutated)
+    body.pop("packet_hash", None)
+    mutated["packet_hash"] = canonical_hash(body)
+    request["object"] = mutated
+    request["object_id"] = mutated["packet_id"]
+    request["object_hash"] = mutated["packet_hash"]
+    request["source_identity"]["audience"] = request_audience(
+        "DISPATCH_PACKET", mutated["packet_id"], mutated["packet_hash"]
+    )
+    body = dict(request)
+    body.pop("message_hash", None)
+    request["message_hash"] = canonical_hash(body)
+    return request
+
+
+def resign_response(request: dict, response: dict) -> dict:
+    core_hash = canonical_hash(response["response_core"])
+    response["response_core_hash"] = core_hash
+    response["target_identity"]["audience"] = response_audience(request["message_hash"], core_hash)
+    body = dict(response)
+    body.pop("response_hash", None)
+    response["response_hash"] = canonical_hash(body)
     return response
 
 
@@ -197,6 +225,25 @@ def test_request_explicit_world_truth_escalation_is_rejected():
     verified = verify_request_envelope(request, decoder=decoder)
     assert verified["ok"] is False
     assert verified["terminal"] == "OIDC_REQUEST_AUTHORITY_OR_KIND_REJECTED"
+
+
+def test_well_hashed_embedded_authority_escalation_is_rejected_before_publish():
+    for field in ("external_effect_authorized", "command_authority_granted"):
+        request = oidc_request()
+        mutated = dict(request["object"])
+        mutated[field] = True
+        request = rebind_packet(request, mutated)
+
+        verified = verify_request_envelope(request, decoder=decoder)
+        assert verified["ok"] is False
+        assert verified["terminal"] == "OIDC_REQUEST_PACKET_SCOPE_REJECTED"
+
+        try:
+            build_request_envelope(mutated, home_issuer(request["source_identity"]["audience"]))
+        except ValueError as exc:
+            assert "INVALID_DISPATCH_PACKET" in str(exc)
+        else:
+            raise AssertionError("authority-bearing embedded packet reached OIDC publication")
 
 
 def test_publisher_uses_local_repo_token_and_preserves_exact_verified_request(tmp_path):
@@ -258,6 +305,29 @@ def test_reader_accepts_only_target_signed_exact_response(tmp_path):
     assert row["identity_proof"] is True
     assert verification["ok"] is True
     assert verification["identity_proof"] is True
+
+
+def test_target_must_attest_exact_source_identity_verification():
+    request = oidc_request()
+    response = signed_response(request)
+    response["response_core"]["source_identity_verified"] = False
+    response = resign_response(request, response)
+
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED"
+    assert verify_no_execution_ack(response, request) is False
+
+
+def test_target_source_verification_hash_must_bind_embedded_result():
+    request = oidc_request()
+    response = signed_response(request)
+    response["response_core"]["source_identity_verification_hash"] = "f" * 64
+    response = resign_response(request, response)
+
+    verified = verify_signed_response(response, request_envelope=request, decoder=decoder)
+    assert verified["ok"] is False
+    assert verified["terminal"] == "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED"
 
 
 def test_wrong_target_repository_id_rejects_signed_response():

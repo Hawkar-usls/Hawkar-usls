@@ -58,6 +58,13 @@ jobs:
           c=json.load(open('.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'))
           a=json.load(open('.janus/activator/OIDC_ROUNDTRIP_ARM.json'))
           assert c['status'] == 'BIDIRECTIONAL_PACKET_ACK_WITNESS_CANDIDATE'
+          assert {
+              'EMBEDDED_PACKET_SCHEMA_TARGET_OPERATION_SCOPE_EXACT',
+              'EMBEDDED_PACKET_AUTHORITY_CEILING_EXPLICIT_FALSE',
+              'TARGET_SOURCE_VERIFICATION_ATTESTATION_HASH_BOUND_EXACT',
+          } <= set(c['requirements'])
+          assert 'OUTER_AUTHORITY_FALSE != EMBEDDED_OBJECT_AUTHORITY_SAFE' in c['laws']
+          assert 'TARGET_SIGNATURE != BIDIRECTIONAL_IDENTITY_WITHOUT_SOURCE_VERIFICATION_ATTESTATION' in c['laws']
           assert c['stage']['p12_enabled'] is False
           assert c['stage']['target_execution_authorized'] is False
           assert a['armed'] is True

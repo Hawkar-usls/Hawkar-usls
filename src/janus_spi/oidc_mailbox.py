@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 
 from .activator import canonical_hash
-from .dispatch import verify_dispatch_packet
+from .dispatch import (
+    READ_ONLY_EFFECT_SCOPE,
+    READ_ONLY_OPERATION,
+    READ_ONLY_RISK_CLASS,
+    verify_dispatch_packet,
+)
 
 ISSUER = "https://token.actions.githubusercontent.com"
 JWKS_URL = "https://token.actions.githubusercontent.com/.well-known/jwks"
@@ -43,6 +48,15 @@ TARGET_EVENTS = {"push", "schedule", "workflow_dispatch"}
 PACKET_ID_RE = re.compile(r"^dsp-[0-9a-f]{64}$")
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
+DISPATCH_PACKET_SCHEMA = "janus.activator.dispatch_packet.v0.3"
+DISPATCH_DELIVERY_TERMINALS = {"AUTHORIZED_INTERNAL_HANDOFF", "ALREADY_EMITTED"}
+DISPATCH_PACKET_KEYS = {
+    "schema", "packet_id", "created_at", "activation_id", "activation_receipt_hash",
+    "route_match", "target_organ", "operation", "risk_class", "required_gates",
+    "dispatch_authorized", "external_effect_authorized", "claim_authority_granted",
+    "command_authority_granted", "effect_scope", "delivery_terminal", "packet_hash",
+}
 
 Decoder = Callable[[str, str], Dict[str, Any]]
 IdentityIssuer = Callable[[str], Dict[str, Any]]
@@ -170,6 +184,76 @@ def _strict_authority_false(row: Mapping[str, Any]) -> bool:
     )
 
 
+def _admitted_dispatch_packet(packet: Mapping[str, Any]) -> bool:
+    """Freeze the full v0.3 contract at the OIDC authority boundary.
+
+    ``verify_dispatch_packet`` establishes deterministic integrity, not whether
+    the hash-bound object requests an admitted operation or authority. Identity
+    must never promote a well-hashed, authority-bearing packet.
+    """
+
+    if set(packet) != DISPATCH_PACKET_KEYS:
+        return False
+    created_at = packet.get("created_at")
+    required_gates = packet.get("required_gates")
+    if (
+        packet.get("schema") != DISPATCH_PACKET_SCHEMA
+        or PACKET_ID_RE.fullmatch(str(packet.get("packet_id") or "")) is None
+        or HASH_RE.fullmatch(str(packet.get("packet_hash") or "")) is None
+        or HASH_RE.fullmatch(str(packet.get("activation_receipt_hash") or "")) is None
+        or not isinstance(created_at, (int, float))
+        or isinstance(created_at, bool)
+        or created_at < 0
+        or not isinstance(packet.get("activation_id"), str)
+        or not str(packet.get("activation_id"))
+        or not isinstance(packet.get("route_match"), str)
+        or not str(packet.get("route_match"))
+        or packet.get("target_organ") != TARGET_REPOSITORY
+        or packet.get("operation") != READ_ONLY_OPERATION
+        or packet.get("risk_class") != READ_ONLY_RISK_CLASS
+        or packet.get("effect_scope") != READ_ONLY_EFFECT_SCOPE
+        or packet.get("delivery_terminal") not in DISPATCH_DELIVERY_TERMINALS
+        or packet.get("dispatch_authorized") is not True
+        or packet.get("external_effect_authorized") is not False
+        or packet.get("claim_authority_granted") is not False
+        or packet.get("command_authority_granted") is not False
+        or not isinstance(required_gates, list)
+        or any(not isinstance(gate, str) or not gate for gate in required_gates)
+        or len(set(required_gates)) != len(required_gates)
+    ):
+        return False
+    return verify_dispatch_packet(dict(packet))
+
+
+def _verification_hash_matches(row: Mapping[str, Any]) -> bool:
+    claimed = str(row.get("verification_hash") or "")
+    body = dict(row)
+    body.pop("verification_hash", None)
+    return HASH_RE.fullmatch(claimed) is not None and canonical_hash(body) == claimed
+
+
+def _source_identity_attestation_matches(core: Mapping[str, Any], request: Mapping[str, Any]) -> bool:
+    verification = core.get("source_identity_verification")
+    if not isinstance(verification, dict):
+        return False
+    identity = verification.get("identity_verification")
+    return all((
+        core.get("source_identity_verified") is True,
+        core.get("source_identity_verification_hash") == verification.get("verification_hash"),
+        _verification_hash_matches(verification),
+        verification.get("ok") is True,
+        verification.get("identity_proof") is True,
+        verification.get("terminal") == "OIDC_REQUEST_VERIFIED_HOME_OBJECT_BOUND_IDENTITY",
+        verification.get("message_hash") == request.get("message_hash"),
+        verification.get("object_id") == request.get("object_id"),
+        verification.get("object_hash") == request.get("object_hash"),
+        isinstance(identity, dict),
+        isinstance(identity, dict) and identity.get("ok") is True,
+        isinstance(identity, dict) and identity.get("identity_proof") is True,
+        isinstance(identity, dict) and _verification_hash_matches(identity),
+    ))
+
+
 def verify_identity_assertion(
     assertion: Dict[str, Any],
     *,
@@ -277,7 +361,7 @@ def verify_target_identity(assertion: Dict[str, Any], audience: str, *, decoder:
 
 
 def build_request_envelope(packet: Dict[str, Any], source_identity: Dict[str, Any]) -> Dict[str, Any]:
-    if not verify_dispatch_packet(packet):
+    if not _admitted_dispatch_packet(packet):
         raise ValueError("OIDC_MAILBOX_INVALID_DISPATCH_PACKET")
     audience = request_audience("DISPATCH_PACKET", str(packet["packet_id"]), str(packet["packet_hash"]))
     if source_identity.get("audience") != audience or source_identity.get("role") != "HOME_REQUEST_SOURCE":
@@ -316,8 +400,11 @@ def verify_request_envelope(envelope: Dict[str, Any], *, decoder: Decoder | None
     if envelope.get("object_kind") != "DISPATCH_PACKET" or not _strict_authority_false(envelope):
         return _failure("OIDC_REQUEST_AUTHORITY_OR_KIND_REJECTED", "Only authority-bounded packets are admitted.")
     packet = envelope.get("object")
-    if not isinstance(packet, dict) or not verify_dispatch_packet(packet):
-        return _failure("OIDC_REQUEST_PACKET_REJECTED", "Packet integrity failed.")
+    if not isinstance(packet, dict) or not _admitted_dispatch_packet(packet):
+        return _failure(
+            "OIDC_REQUEST_PACKET_SCOPE_REJECTED",
+            "Packet integrity, schema, target, operation, scope, or embedded authority ceiling failed.",
+        )
     if envelope.get("object_id") != packet.get("packet_id") or envelope.get("object_hash") != packet.get("packet_hash"):
         return _failure("OIDC_REQUEST_OBJECT_BINDING_REJECTED", "Envelope object binding mismatch.")
     audience = request_audience("DISPATCH_PACKET", str(packet["packet_id"]), str(packet["packet_hash"]))
@@ -363,6 +450,11 @@ def verify_signed_response(
         return _failure("OIDC_RESPONSE_REQUEST_BINDING_REJECTED", "Response does not bind exact request hash.")
     if core.get("request_object_kind") != "DISPATCH_PACKET" or core.get("request_object_id") != request_envelope.get("object_id") or core.get("request_object_hash") != request_envelope.get("object_hash"):
         return _failure("OIDC_RESPONSE_OBJECT_BINDING_REJECTED", "Response object binding mismatch.")
+    if not _source_identity_attestation_matches(core, request_envelope):
+        return _failure(
+            "OIDC_RESPONSE_SOURCE_IDENTITY_ATTESTATION_REJECTED",
+            "Target did not attest a hash-valid source verification bound to the exact request and object.",
+        )
     if not _strict_authority_false(core) or core.get("target_execution_authorized") is not False or core.get("target_execution_performed") is not False:
         return _failure("OIDC_RESPONSE_AUTHORITY_REJECTED", "Response exceeds packet/ACK authority ceiling.")
     audience = response_audience(str(request_envelope["message_hash"]), core_hash)
@@ -383,7 +475,7 @@ def verify_signed_response(
 
 def verify_no_execution_ack(response: Dict[str, Any], request: Dict[str, Any]) -> bool:
     core = response.get("response_core") if isinstance(response, dict) else None
-    if not isinstance(core, dict):
+    if not isinstance(core, dict) or not _source_identity_attestation_matches(core, request):
         return False
     payload = core.get("payload")
     ack = payload.get("ack") if isinstance(payload, dict) else None
@@ -457,7 +549,7 @@ class JanusOIDCMailboxTransport:
         return path
 
     def publish(self, packet: Dict[str, Any], *, local_github_token: str) -> Dict[str, Any]:
-        if not verify_dispatch_packet(packet):
+        if not _admitted_dispatch_packet(packet):
             raise ValueError("OIDC_MAILBOX_INVALID_DISPATCH_PACKET")
         filename = self.filename(packet)
         existing = self._read_existing(filename)
