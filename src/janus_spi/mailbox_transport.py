@@ -51,6 +51,7 @@ class MailboxTransportLedger:
         body["receipt_hash"] = canonical_hash(body)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(body, ensure_ascii=False, sort_keys=True) + "\n")
+            handle.flush()
         return body
 
     def verify(self) -> bool:
@@ -80,9 +81,14 @@ def build_message(obj: Dict[str, Any], object_kind: str) -> Dict[str, Any]:
         object_hash = str(obj["grant_hash"])
     else:
         raise ValueError("MAILBOX_OBJECT_KIND_UNSUPPORTED")
+
+    # Envelope identity must be deterministic for the already-sealed object.
+    # A retry of the same packet/grant therefore produces exactly the same
+    # message bytes/hash instead of turning append-only publication into a
+    # conflict simply because wall-clock time advanced.
     row = {
         "schema": MESSAGE_SCHEMA,
-        "created_at": time.time(),
+        "created_at": obj.get("created_at"),
         "source_repository": HOME_REPOSITORY,
         "target_repository": TARGET_REPOSITORY,
         "object_kind": object_kind,
@@ -119,7 +125,7 @@ def verify_message(row: Dict[str, Any]) -> bool:
     )):
         return False
     obj = row.get("object")
-    if not isinstance(obj, dict):
+    if not isinstance(obj, dict) or row.get("created_at") != obj.get("created_at"):
         return False
     if row.get("object_kind") == "DISPATCH_PACKET":
         return verify_dispatch_packet(obj) and row.get("object_id") == obj.get("packet_id") and row.get("object_hash") == obj.get("packet_hash")
@@ -143,6 +149,8 @@ def verify_response(row: Dict[str, Any], request: Dict[str, Any]) -> bool:
     if row.get("source_repository") != TARGET_REPOSITORY or row.get("target_repository") != HOME_REPOSITORY:
         return False
     if row.get("request_message_hash") != request.get("message_hash"):
+        return False
+    if row.get("request_object_kind") != request.get("object_kind"):
         return False
     if row.get("request_object_id") != request.get("object_id") or row.get("request_object_hash") != request.get("object_hash"):
         return False
@@ -171,6 +179,8 @@ class JanusCredentiallessMailboxTransport:
     def __init__(self, state_dir: str | Path = "state/activator", *, opener: Callable[..., Any] = urllib.request.urlopen) -> None:
         self.state_dir = Path(state_dir)
         self.ledger = MailboxTransportLedger(self.state_dir / "mailbox_transport_ledger.jsonl")
+        self.local_outbox = self.state_dir / "mailbox_outbox"
+        self.local_outbox.mkdir(parents=True, exist_ok=True)
         self.opener = opener
 
     @staticmethod
@@ -196,14 +206,31 @@ class JanusCredentiallessMailboxTransport:
                 return None
             raise
 
+    def _persist_local_message(self, message: Dict[str, Any]) -> Path | None:
+        filename = self._filename(message)
+        path = self.local_outbox / filename
+        text = json.dumps(message, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        if path.exists():
+            try:
+                existing = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return None
+            if existing != message or not verify_message(existing):
+                return None
+            return path
+        path.write_text(text, encoding="utf-8")
+        return path
+
     def publish(self, obj: Dict[str, Any], *, object_kind: str, local_github_token: str) -> Dict[str, Any]:
         message = build_message(obj, object_kind)
         filename = self._filename(message)
+        message_path = self._persist_local_message(message)
         base = {
             "schema": "janus.activator.mailbox_transport_receipt.v1.0",
             "created_at": time.time(),
             "parent_mailbox_transport_hash": self.ledger.tip_hash(),
             "message_hash": message["message_hash"],
+            "message_path": str(message_path) if message_path else None,
             "object_kind": object_kind,
             "object_id": message["object_id"],
             "object_hash": message["object_hash"],
@@ -213,6 +240,9 @@ class JanusCredentiallessMailboxTransport:
             "external_effect_authorized": False,
             "physical_runtime_effect_authorized": False,
         }
+        if message_path is None:
+            base.update({"terminal": "MAILBOX_LOCAL_MESSAGE_CONFLICT", "published": False})
+            return self.ledger.append(base)
         if not str(local_github_token).strip():
             base.update({"terminal": "MAILBOX_PUBLISH_BLOCKED_NO_LOCAL_GITHUB_TOKEN", "published": False})
             return self.ledger.append(base)
@@ -234,7 +264,7 @@ class JanusCredentiallessMailboxTransport:
         except urllib.error.HTTPError as exc:
             if exc.code in {409, 422}:
                 existing = self._existing(filename)
-                if verify_message(existing or {}) and existing.get("message_hash") == message["message_hash"]:
+                if verify_message(existing or {}) and existing == message:
                     base.update({"terminal": "MAILBOX_ALREADY_PUBLISHED", "published": True, "http_status": exc.code})
                 else:
                     base.update({"terminal": "MAILBOX_PUBLISH_CONFLICT", "published": False, "http_status": exc.code})
@@ -254,6 +284,8 @@ class JanusCredentiallessMailboxReader:
 
     @staticmethod
     def response_url(request: Dict[str, Any]) -> str:
+        if not verify_message(request):
+            raise ValueError("MAILBOX_REQUEST_INVALID")
         suffix = "ack" if request["object_kind"] == "DISPATCH_PACKET" else "execution"
         return (
             f"https://raw.githubusercontent.com/{TARGET_REPOSITORY}/{TARGET_BRANCH}/"
