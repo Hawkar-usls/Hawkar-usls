@@ -17,6 +17,8 @@ HRAIN_CONTRACT_PATH = ".janus/HRAIN_CONVERSATION_CONTEXT_CONTRACT.json"
 HRAIN_COMPILER_PATH = "tools/hrain_conversation_context.py"
 _H40 = re.compile(r"^[0-9a-f]{40}$")
 _H64 = re.compile(r"^[0-9a-f]{64}$")
+EMPTY_MEMORY_STATUS = "NO_RELEVANT_MEMORY_SELECTED"
+NONEMPTY_MEMORY_STATUS = "RELEVANT_MEMORY_SELECTED"
 
 
 class HrainContextBridgeError(RuntimeError):
@@ -31,13 +33,24 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _nonnegative_int(value: Any, *, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise HrainContextBridgeError(f"{label}_NONNEGATIVE_INTEGER_REQUIRED")
+    return value
+
+
 class HrainConversationContextBridge:
     """Build one Terminal memory capsule by executing the exact model-locked HRAiN.
 
-    HOME is deliberately not a Meta Registry client here.  It checks out the
+    HOME is deliberately not a Meta Registry client here. It checks out the
     HRAiN member already admitted by the model lock and invokes HRAiN's own
-    bounded conversation-context compiler.  The returned memory is data only:
+    bounded conversation-context compiler. The returned memory is data only:
     it cannot grant command, claim, proof, world-truth, or effect authority.
+
+    A hash-valid query-bound context with zero selected memories is a valid
+    HRAiN outcome only when the HRAiN context explicitly carries the v1.3
+    no-forced-fill laws. Empty memory is neither HRAiN failure nor negative
+    evidence.
     """
 
     def __init__(
@@ -172,11 +185,28 @@ class HrainConversationContextBridge:
         for key, value in authority.items():
             if key != "read_only" and value is not False:
                 raise HrainContextBridgeError(f"HRAIN_CONTEXT_AUTHORITY_VIOLATION:{key}")
+
         memories = context.get("selected_memories")
-        if not isinstance(memories, list) or int(context.get("selected_memory_count") or 0) != len(memories):
+        if not isinstance(memories, list):
+            raise HrainContextBridgeError("HRAIN_CONTEXT_MEMORIES_LIST_REQUIRED")
+        count = _nonnegative_int(context.get("selected_memory_count"), label="HRAIN_CONTEXT_MEMORY_COUNT")
+        if count != len(memories):
             raise HrainContextBridgeError("HRAIN_CONTEXT_MEMORY_COUNT_MISMATCH")
-        if not memories:
-            raise HrainContextBridgeError("HRAIN_CONTEXT_AT_LEAST_ONE_MEMORY_REQUIRED")
+
+        if count == 0:
+            laws = set(context.get("laws") or [])
+            required_empty_laws = {
+                "LIMIT != TARGET_COUNT",
+                "NO_STRONG_MATCH != FILL_WITH_NOISE",
+            }
+            profile = context.get("attention_profile")
+            if not required_empty_laws.issubset(laws):
+                raise HrainContextBridgeError("HRAIN_EMPTY_CONTEXT_NO_FILL_LAWS_REQUIRED")
+            if context.get("selection_limit_is_target_count") is not False:
+                raise HrainContextBridgeError("HRAIN_EMPTY_CONTEXT_LIMIT_MUST_BE_UPPER_BOUND")
+            if not isinstance(profile, Mapping) or profile.get("no_match_policy") != "RETURN_FEWER_OR_ZERO_NOT_NOISE_FILL":
+                raise HrainContextBridgeError("HRAIN_EMPTY_CONTEXT_NO_MATCH_POLICY_REQUIRED")
+
         for row in memories:
             if not isinstance(row, Mapping):
                 raise HrainContextBridgeError("HRAIN_CONTEXT_MEMORY_ROW_INVALID")
@@ -214,7 +244,9 @@ class HrainConversationContextBridge:
             raise HrainContextBridgeError("HRAIN_CONTEXT_OUTPUT_MISSING")
         context = self._load_json(target, label="HRAIN_CONTEXT_OUTPUT")
         self._verify_context(context)
+        count = _nonnegative_int(context.get("selected_memory_count"), label="HRAIN_CONTEXT_MEMORY_COUNT")
         selected_paths = [str(row.get("path") or "") for row in context["selected_memories"]]
+        match_status = EMPTY_MEMORY_STATUS if count == 0 else NONEMPTY_MEMORY_STATUS
         receipt: Dict[str, Any] = {
             "schema": "janus.activator.hrain_conversation_context_receipt.v1",
             "model_id": "JANUS",
@@ -231,8 +263,11 @@ class HrainConversationContextBridge:
             "context_hash": context["context_hash"],
             "context_file_sha256": _sha256_file(target),
             "memory_source_commit": context["source_commit"],
-            "selected_memory_count": context["selected_memory_count"],
+            "selected_memory_count": count,
             "selected_memory_paths": selected_paths,
+            "memory_match_status": match_status,
+            "empty_memory_is_hrain_failure": False,
+            "empty_memory_is_negative_evidence": False,
             "hydration_performed": context.get("hydration_performed") is True,
             "memory_retrieval_executed_by": HRAIN_REPOSITORY,
             "meta_registry_access_performed_by_home": False,
@@ -263,12 +298,30 @@ def verify_hrain_context_receipt(receipt: Mapping[str, Any], *, model_digest: st
         return False
     if model_digest is not None and receipt.get("model_digest") != model_digest:
         return False
+    count_raw = receipt.get("selected_memory_count")
+    if isinstance(count_raw, bool) or not isinstance(count_raw, int) or count_raw < 0:
+        return False
+    paths = receipt.get("selected_memory_paths")
+    if not isinstance(paths, list) or len(paths) != count_raw:
+        return False
+
+    status = receipt.get("memory_match_status")
+    empty_failure = receipt.get("empty_memory_is_hrain_failure")
+    empty_negative = receipt.get("empty_memory_is_negative_evidence")
+    if count_raw == 0:
+        if status != EMPTY_MEMORY_STATUS or empty_failure is not False or empty_negative is not False:
+            return False
+    elif status is not None or empty_failure is not None or empty_negative is not None:
+        # New receipts carry explicit semantics; legacy sealed non-empty receipts
+        # remain valid when these additive fields are absent.
+        if status != NONEMPTY_MEMORY_STATUS or empty_failure is not False or empty_negative is not False:
+            return False
+
     return all([
         receipt.get("hrain_repository") == HRAIN_REPOSITORY,
         receipt.get("hrain_locked_head_sha") == receipt.get("hrain_materialized_head_sha"),
         _H40.fullmatch(str(receipt.get("memory_source_commit") or "")) is not None,
         _H64.fullmatch(str(receipt.get("context_hash") or "")) is not None,
-        int(receipt.get("selected_memory_count") or 0) > 0,
         receipt.get("memory_retrieval_executed_by") == HRAIN_REPOSITORY,
         receipt.get("meta_registry_access_performed_by_home") is False,
         receipt.get("repository_write_performed") is False,
@@ -285,6 +338,8 @@ def verify_hrain_context_receipt(receipt: Mapping[str, Any], *, model_digest: st
 
 
 __all__ = [
+    "EMPTY_MEMORY_STATUS",
+    "NONEMPTY_MEMORY_STATUS",
     "HRAIN_REPOSITORY",
     "HrainContextBridgeError",
     "HrainConversationContextBridge",
