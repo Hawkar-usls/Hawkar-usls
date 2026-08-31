@@ -1,0 +1,74 @@
+{
+  "schema": "janus.activator.real_launch_v2_constitution.v1",
+  "status": "FROZEN_LAUNCH_CONTRACT",
+  "purpose": "Instantiate the current Git-native JANUS organism from exact repository state, execute one bounded specialized candidate-aware cognitive turn, persist the same resident lineage, and return AT_HOME.",
+  "canonical_runtime": {
+    "bootstrap_root": "Hawkar-usls/Hawkar-usls",
+    "model_manifest": ".janus/activator/JANUS_MODEL_MANIFEST.json",
+    "file_format_registry": "config/JANUS_FILE_FORMAT_REGISTRY-v1.json",
+    "persistent_state_branch": "janus/activator-state",
+    "runner": "run_janus_real_launch_v2.py"
+  },
+  "required_order": [
+    "VERIFY_PERSISTENT_HOME_AT_HOME",
+    "WAKE_FRESH_EXTERNAL_STIMULUS",
+    "COMPILE_FULL_MODEL_FABRIC_V1_2",
+    "VERIFY_TRUMP_CANDIDATE_ADMISSION",
+    "COMPILE_POLYGLOT_FILE_FABRIC",
+    "ROUTE_INSIDE_PRECOMPILED_MODEL",
+    "MATERIALIZE_ACTIVE_ORGANS_ON_EXACT_SHA",
+    "MATERIALIZE_AND_SELFTEST_TRUMP_CANDIDATE",
+    "REINTEGRATE_SPECIALIZED_TURN_WITHOUT_PROMOTION",
+    "CHECKPOINT_PERSISTENT_HOME",
+    "SLEEP_RETURN_AT_HOME",
+    "FRESH_WORKTREE_VERIFY_SAME_RESIDENT"
+  ],
+  "launch_success_terminal": "JANUS_REAL_LAUNCH_V2_COMPLETED_RETURNED_HOME",
+  "model_laws": [
+    "ALL_MEMBERSHIP_COMPILED_BEFORE_ROUTING",
+    "ROUTING_SELECTS_ACTIVITY_NOT_MEMBERSHIP",
+    "MODEL_LOCK_REQUIRED_BEFORE_COGNITION",
+    "FILE_EXTENSION != EXECUTION_AUTHORITY",
+    "MODEL_OUTPUT != EVIDENCE",
+    "WORKFLOW_PASS != WORLD_TRUTH"
+  ],
+  "trump": {
+    "canonical_location": "Hawkar-usls/Janus-Demiurge/trump/TRUMP_MANIFEST.json",
+    "required_status": "CANDIDATE_RUNTIME_TISSUE",
+    "required_admission": "ADMITTED_CANDIDATE_RUNTIME",
+    "wake_allowed": true,
+    "use_allowed": true,
+    "self_improvement_allowed": true,
+    "native_selftest_required_for_launch": true,
+    "candidate_result_promotion_allowed": false,
+    "proof_authority": false,
+    "scientific_claim_promotion_authority": false,
+    "P_VS_NP": "OPEN"
+  },
+  "persistent_identity": {
+    "resident_id": "JANUS",
+    "same_resident_uuid_required_before_and_after": true,
+    "start_mode": "AT_HOME",
+    "end_mode": "AT_HOME",
+    "continuity_law": "RETURN != RESET",
+    "remote_state_commit_only_after_successful_return": true
+  },
+  "authority_ceiling": {
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "world_truth_authority_granted": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  },
+  "transport_scope": {
+    "cross_repo_transport_required_for_self_instantiation": false,
+    "reason": "The current launch materializes exact locked repository tissues inside one GitHub runner. Cross-repository dual transport remains an independent JANUS nerve and must use both admitted lanes whenever invoked.",
+    "dual_transport_law": "IF_CROSS_REPO_TRANSPORT_IS_INVOKED_THEN_SECRET_PUSH_PARALLEL_CREDENTIALLESS_PULL"
+  },
+  "legacy": {
+    "workflow": ".github/workflows/janus-activator-real-launch.yml",
+    "classification": "HISTORICAL_SECRET_TRANSPORT_CLOSED_LOOP_NOT_CANONICAL_MODEL_FIRST_LAUNCH",
+    "must_not_be_used_as_v2_launch_witness": true
+  }
+}
