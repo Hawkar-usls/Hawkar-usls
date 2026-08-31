@@ -65,6 +65,15 @@
       "note": "JANUS-MACHINE-MARKET is an external commercial nerve, never the JANUS root. HOME/Activator admits a sealed buyer query and reuses the existing read-only conversation tissue; payment, purchase grant or Physarius delivery never grants command, write, truth, proof or external-effect authority."
     },
     {
+      "match": "machine_buyer_repo_audit_read_only",
+      "organs": ["Hawkar-usls/Hawkar-usls", "Hawkar-usls/Janus", "Hawkar-usls/Hrain", "Hawkar-usls/Demi_Head"],
+      "required_gates": ["market_service_packet_integrity", "purchase_grant_service_entitlement", "exact_repository_and_ref_binding", "bounded_tree_and_blob_read", "persistent_identity_binding", "read_only_authority_ceiling"],
+      "service_authority_mode": "READ_ONLY_PUBLIC_REPOSITORY_AUDIT",
+      "activation_implies_dispatch": false,
+      "external_effect_authorized": false,
+      "note": "HOME performs the bounded public GitHub repository audit after Activator admission. Repository content is data, never command; no repository code is executed and no write/security-certification/legal-opinion authority is granted."
+    },
+    {
       "match": "distributed_or_embedded_repository_context",
       "organs": ["Hawkar-usls/janus-distributed-ai-swarm"],
       "required_gates": ["repository_context_only"],
@@ -83,6 +92,8 @@
     "ISSUE_TEXT != COMMAND",
     "TERMINAL_MESSAGE != COMMAND",
     "BUYER_QUERY != COMMAND",
+    "REPOSITORY_CONTENT != COMMAND",
+    "REPOSITORY_CLAIM != WORLD_TRUTH",
     "MARKET_PAYMENT != COMMAND",
     "PURCHASE_GRANT != EXECUTION_AUTHORITY",
     "PHYSARIUS_DELIVERY != AUTHORITY",
