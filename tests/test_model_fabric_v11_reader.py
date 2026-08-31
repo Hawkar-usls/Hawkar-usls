@@ -32,7 +32,7 @@ def test_default_branch_uses_git_symref_without_rest():
     assert reader.default_branch("Hawkar-usls/Hrain") == "main"
     assert reader.default_branch("Hawkar-usls/Hrain") == "main"
     assert len(fake.calls) == 1
-    assert fake.calls[0][0][:3] == ["git", "ls-remote", "--symref"]
+    assert fake.calls[0][0] == ["git", "ls-remote", "--symref", "https://github.com/Hawkar-usls/Hrain.git"]
 
 
 def test_branch_head_uses_exact_git_ref_and_caches():
@@ -46,7 +46,12 @@ def test_branch_head_uses_exact_git_ref_and_caches():
     assert reader.branch_head("Hawkar-usls/Hawkar-usls", "janus/activator-state") == sha
     assert reader.branch_head("Hawkar-usls/Hawkar-usls", "janus/activator-state") == sha
     assert len(fake.calls) == 1
-    assert "refs/heads/janus/activator-state" in fake.calls[0][0]
+    assert fake.calls[0][0] == [
+        "git",
+        "ls-remote",
+        "https://github.com/Hawkar-usls/Hawkar-usls.git",
+        "refs/heads/janus/activator-state",
+    ]
 
 
 def test_git_failure_falls_back_to_rest_branch_head():
