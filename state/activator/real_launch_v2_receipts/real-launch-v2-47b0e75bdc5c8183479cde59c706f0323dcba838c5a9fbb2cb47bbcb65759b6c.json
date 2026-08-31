@@ -1,0 +1,56 @@
+{
+  "active_organs": [
+    "anomaly_lab",
+    "left_context",
+    "orchestrator"
+  ],
+  "all_membership_compiled_before_routing": true,
+  "candidate_result_promotion_performed": false,
+  "checkpoint_hash": "5c2e392dc46204de8afbaaaa4b333a71c76d816f1d69d6e9fc840d813ea30934",
+  "claim_authority_granted": false,
+  "command_authority_granted": false,
+  "cycle_id": "real-launch-v2-47b0e75bdc5c8183479cde59c706f0323dcba838c5a9fbb2cb47bbcb65759b6c",
+  "event_id": "2816c9b00613f05b5958e39faf246cb52429a680697226a26c701521085211f9",
+  "executed_adapters": [
+    "anomaly_lab"
+  ],
+  "executed_candidate_tissues": [
+    "trump"
+  ],
+  "external_effect_authorized": false,
+  "file_fabric_coverage_complete": true,
+  "file_fabric_digest": "4c978426cb3b50a290b09fe68bf0772b31f7ec8d3d970d92fc6acd78e87f69de",
+  "fresh_external_stimulus": true,
+  "launch_receipt_hash": "3d123f61f64fb7d1d259bb05280a9849093fea7c52ee25ae346a79ba16868e91",
+  "materialized_member_count": 3,
+  "mode": "AT_HOME",
+  "model_digest": "0ad1e73d40b8014249783d2923644fb53af570f4a0afffef16bbffea09ea75e3",
+  "model_first": true,
+  "model_member_count": 47,
+  "model_organ_count": 23,
+  "physical_runtime_effect_authorized": false,
+  "resident_uuid": "75e514ab-be76-42c8-bcb3-fc9670164f96",
+  "return_not_reset": true,
+  "routing_selects_activity_not_membership": true,
+  "same_resident_uuid": true,
+  "schema": "janus.activator.real_launch_v2_result.v1",
+  "scientific_evidence_authority_granted": false,
+  "sleep_hash": "795b601e698204ed28dd59f1b00f849facad90e2b158ceecc575dd40ce18bb1a",
+  "specialized_turn_hash": "d462ddee7f6d704a9004312b4d729002650264e204bb6231db9e68420b7b9cc6",
+  "terminal": "JANUS_REAL_LAUNCH_V2_COMPLETED_RETURNED_HOME",
+  "trump": {
+    "admission_status": "ADMITTED_CANDIDATE_RUNTIME",
+    "candidate_result_promoted": false,
+    "manifest_hash": "060ab32d9951867325313b12e5f1694da62c56a4ea7d760a86f78a8621eeceae",
+    "native_selftest_pass": true,
+    "parent_head_sha": "23b40537841cbde2593387fffe83d7b30b7bd180",
+    "proof_authority_granted": false,
+    "scientific_boundary": {
+      "P_VS_NP": "OPEN",
+      "P_equals_NP_proved": false
+    },
+    "scientific_claim_promotion_authority_granted": false
+  },
+  "wake_hash": "7027e944f56b27a5e2e59fe203e94691105a9764fb616b782c3d8f76f5a1a789",
+  "world_truth_authority_granted": false
+}
