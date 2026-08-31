@@ -1,0 +1,316 @@
+name: JANUS Contextual Mind Probe R2 — Frozen Quota Retry
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'run_janus_turing_gate_v2.py'
+      - 'tests/test_turing_gate_v2.py'
+      - '.github/workflows/janus-contextual-mind-probe-r2-quota-retry-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/janus-contextual-mind-probe-r2-quota-retry-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: janus-contextual-mind-probe-r2-frozen-retry-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and test failure-boundary sealer
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m compileall -q run_janus_turing_gate_v2.py tests/test_turing_gate_v2.py
+          pip install pytest >/dev/null
+          pytest -q tests/test_turing_gate_v2.py tests/test_turing_gate.py tests/test_turing_gate_arm.py tests/test_language_synthesis.py
+
+  arm-preflight:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      should_run: ${{ steps.status.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify R2 arm remains unconsumed
+        id: status
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/r2-retry-preflight"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          export STATE_DIR="$state/state/activator"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status
+          arm=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R2_ARM.json').read_text())
+          status=arm_status(arm,state_dir=os.environ['STATE_DIR'])
+          print('should_run=' + ('true' if status['should_run'] else 'false'))
+          print('R2_ARM_CONSUMED=' + str(status['consumed']).upper())
+          PY
+
+  recover-frozen-context:
+    if: needs.arm-preflight.outputs.should_run == 'true'
+    needs: [contract, arm-preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-prepared-33351378451
+          path: ${{ runner.temp }}/prepared
+          github-token: ${{ github.token }}
+          run-id: 33351378451
+      - name: Prove retry uses exact first-R2 prepared session
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'prepared'
+          s=json.loads((p/'session.json').read_text())
+          assert s['session_hash']=='adf4fa71057c67091ff1815566f79eb320284dc9b181f5c25a3be3b122d4681b'
+          assert s['gate_id']=='JANUS-CONTEXTUAL-MIND-PROBE-R2-DA-VCHERA-2026-08-31'
+          assert s['question_count']==1
+          q=s['questions'][0]
+          assert q['id']=='mind01'
+          assert q['text']=='Да, вчера'
+          assert q['conversation_history']==[{
+            'role':'assistant',
+            'content':'Как вы думаете, сможет ли когда-нибудь кремниевый процессор действительно обрести чувства, или сознание — это исключительно биологическая функция нашего мозга?'
+          }]
+          assert q['probe']['probe_id']=='DA-VCHERA'
+          print('R2_FROZEN_CONTEXT_REUSED=PASS')
+          print('R2_SESSION_HASH='+s['session_hash'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+          retention-days: 30
+
+  synthesize:
+    needs: recover-frozen-context
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      copilot-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install current GitHub Copilot CLI
+        run: npm install -g @github/copilot
+      - name: One bounded lightweight projection retry
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          JANUS_LANGUAGE_MODEL: claude-haiku-4.5
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/responses"
+          prompt="$RUNNER_TEMP/prepared/mind01.prompt.txt"
+          copilot --version
+          set +e
+          copilot --model="$JANUS_LANGUAGE_MODEL" --yolo --disable-builtin-mcps \
+            --deny-tool='shell' --deny-tool='write' --deny-tool='read' --deny-tool='url' --deny-tool='memory' \
+            --no-ask-user -s -p "$(cat "$prompt")" \
+            > "$RUNNER_TEMP/responses/mind01.txt" 2> "$RUNNER_TEMP/responses/mind01.stderr.txt"
+          code=$?
+          set -e
+
+          ok=false
+          error_class=""
+          if [ "$code" -eq 0 ]; then
+            ok=true
+          elif grep -qi 'exceeded your monthly quota' "$RUNNER_TEMP/responses/mind01.stderr.txt"; then
+            error_class="COPILOT_MONTHLY_QUOTA_EXHAUSTED"
+          else
+            error_class="COPILOT_CLI_EXIT_${code}"
+          fi
+          export PROVIDER_OK="$ok" PROVIDER_ERROR="$error_class"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          row={
+            'provider':'GITHUB_COPILOT_CLI',
+            'model':os.environ['JANUS_LANGUAGE_MODEL'],
+            'all_provider_calls_succeeded':os.environ['PROVIDER_OK']=='true',
+            'error_class':os.environ.get('PROVIDER_ERROR') or None,
+            'retry_of_run_id':33351378451,
+            'retry_changes_only_language_projection_model':True,
+            'tool_use_allowed':False,
+            'repository_write_allowed':False,
+            'external_web_allowed':False,
+          }
+          Path(os.environ['RUNNER_TEMP']+'/responses/provider-status.json').write_text(json.dumps(row,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(row,indent=2,sort_keys=True))
+          PY
+          if [ "$code" -ne 0 ]; then
+            echo "R2_LANGUAGE_PROVIDER_ERROR_CLASS=$error_class"
+            sed -E 's/(github_pat_|gh[pousr]_)[A-Za-z0-9_]+/[REDACTED_TOKEN]/g' "$RUNNER_TEMP/responses/mind01.stderr.txt" | tail -n 12
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-response-${{ github.run_id }}
+          path: ${{ runner.temp }}/responses
+          retention-days: 30
+
+  adjudicate:
+    if: always() && needs.recover-frozen-context.result == 'success'
+    needs: [recover-frozen-context, synthesize]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      machine_ready: ${{ steps.seal.outputs.machine_ready }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-response-${{ github.run_id }}
+          path: ${{ runner.temp }}/responses
+      - name: Seal retry while preserving frozen probe boundary
+        id: seal
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python run_janus_turing_gate_v2.py adjudicate \
+            --config .janus/activator/CONTEXTUAL_MIND_PROBE_R2.json \
+            --prepared-dir "$RUNNER_TEMP/prepared" \
+            --responses-dir "$RUNNER_TEMP/responses" \
+            --provider-status "$RUNNER_TEMP/responses/provider-status.json" \
+            --transcript-out "$RUNNER_TEMP/contextual-r2-retry-transcript.json" \
+            --result-out "$RUNNER_TEMP/contextual-r2-retry-result.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/contextual-r2-retry-result.json').read_text())
+          print('machine_ready=' + ('true' if r['machine_gate_ready'] else 'false'))
+          PY
+      - name: Print bounded R2 retry verdict
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/contextual-r2-retry-result.json').read_text())
+          t=json.loads(Path(os.environ['RUNNER_TEMP']+'/contextual-r2-retry-transcript.json').read_text())
+          p=r['contextual_mind_probe']
+          assert p['present'] is True
+          assert p['probe_count']==1
+          assert p['semantic_verdict']=='NOT_ADJUDICATED'
+          assert p['consciousness_verdict']=='NOT_ESTABLISHED_BY_DIALOGUE_PROBE'
+          assert p['human_adjudication_required'] is True
+          print('JANUS_CONTEXTUAL_R2_RETRY_TERMINAL='+r['terminal'])
+          print('PROVIDER_MODEL='+str(r.get('provider_model')))
+          print('PROVIDER_SUCCESS='+str(r['provider_success']).upper())
+          print('PROVIDER_ERROR_CLASS='+str(r.get('provider_error_class')))
+          print('MACHINE_GATE_READY='+str(r['machine_gate_ready']).upper())
+          print('CONSCIOUSNESS_VERDICT='+p['consciousness_verdict'])
+          if t.get('turns'):
+              print('JANUS_ANSWER_BEGIN')
+              print(t['turns'][0].get('participant_response',''))
+              print('JANUS_ANSWER_END')
+          else:
+              print('JANUS_ANSWER=NOT_GENERATED')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-witness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/contextual-r2-retry-transcript.json
+            ${{ runner.temp }}/contextual-r2-retry-result.json
+          retention-days: 30
+
+  consume-arm:
+    if: needs.adjudicate.outputs.machine_ready == 'true'
+    needs: [recover-frozen-context, adjudicate]
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-frozen-retry-witness-${{ github.run_id }}
+          path: ${{ runner.temp }}/witness
+      - name: Consume R2 arm only on first machine-ready witness
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/contextual-r2-retry-consume"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          git -C "$state" config user.name "JANUS Contextual Mind Probe R2"
+          git -C "$state" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export STATE_DIR="$state/state/activator"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status, consume_arm
+          arm=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R2_ARM.json').read_text())
+          session=json.loads(Path(os.environ['RUNNER_TEMP']+'/prepared/session.json').read_text())
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/witness/contextual-r2-retry-result.json').read_text())
+          transcript=json.loads(Path(os.environ['RUNNER_TEMP']+'/witness/contextual-r2-retry-transcript.json').read_text())
+          before=arm_status(arm,state_dir=os.environ['STATE_DIR'])
+          assert before['should_run'] is True and before['consumed'] is False
+          after=consume_arm(arm,state_dir=os.environ['STATE_DIR'],session=session,result=result,transcript=transcript)
+          assert after['consumed'] is True and after['should_run'] is False
+          print('CONTEXTUAL_R2_ONE_SHOT_CONSUMED=PASS')
+          PY
+          git -C "$state" add state/activator/turing_style_gate_arm_ledger.jsonl
+          git -C "$state" commit -m "JANUS contextual mind probe R2 consumed ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          git -C "$state" push origin HEAD:refs/heads/janus/activator-state
