@@ -104,6 +104,35 @@ def test_success_keeps_probe_boundary_and_records_projection_model(tmp_path):
     assert probe["consciousness_verdict"] == "NOT_ESTABLISHED_BY_DIALOGUE_PROBE"
 
 
+def test_local_provider_reproducibility_metadata_is_sealed(tmp_path):
+    args = make_fixture(tmp_path, provider_ok=True)
+    provider_path = Path(args.provider_status)
+    provider = json.loads(provider_path.read_text())
+    provider.update({
+        "provider": "LOCAL_QWEN_LLAMA_CPP",
+        "model": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+        "provider_model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "provider_model_revision": "a615a81362316d7b9f5a7a9c4313adfdf9b54588",
+        "provider_runtime": "llama.cpp",
+        "provider_runtime_commit": "c1d0e7a004015f23bc0233470b747b596f29b264",
+        "provider_local_no_secret": True,
+        "provider_inference_network": False,
+        "provider_model_artifact_source": "HUGGINGFACE_PINNED_REVISION",
+        "provider_model_artifact_sha256_verified": True,
+    })
+    write(provider_path, provider)
+    assert gate_v2.adjudicate(args) == 0
+    result = json.loads(Path(args.result_out).read_text())
+    assert result["provider_success"] is True
+    assert result["provider_model_sha256"] == provider["provider_model_sha256"]
+    assert result["provider_model_revision"] == provider["provider_model_revision"]
+    assert result["provider_runtime"] == "llama.cpp"
+    assert result["provider_runtime_commit"] == provider["provider_runtime_commit"]
+    assert result["provider_local_no_secret"] is True
+    assert result["provider_inference_network"] is False
+    assert result["provider_model_artifact_sha256_verified"] is True
+
+
 def test_no_probe_session_remains_not_applicable(tmp_path):
     args = make_fixture(tmp_path, provider_ok=True)
     session_path = Path(args.prepared_dir) / "session.json"
