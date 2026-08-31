@@ -48,10 +48,15 @@ class GenesisAPITests(unittest.TestCase):
         self.assertEqual(response["intent_plan"]["kind"], "GENERATE_STRUCTURE")
         self.assertEqual(response["intent_plan"]["structure_kind"], "castle")
 
-    def test_spawn_living_noun_is_entity(self):
+    def test_spawn_living_noun_is_entity_without_substring_corruption(self):
         response = compile_intent(base_request("spawn dragon"))
         self.assertEqual(response["intent_plan"]["kind"], "SPAWN_ENTITY")
-        self.assertIn("dragon", response["intent_plan"]["concept"])
+        self.assertEqual(response["intent_plan"]["concept"], "dragon")
+
+    def test_short_command_word_does_not_match_inside_unrelated_noun(self):
+        response = compile_intent(base_request("dragon"))
+        self.assertEqual(response["status"], "UNRESOLVED")
+        self.assertEqual(response["intent_plan"]["kind"], "UNRESOLVED")
 
     def test_generic_build_has_generic_structure_recipe(self):
         response = compile_intent(base_request("build a crystal observatory"))
