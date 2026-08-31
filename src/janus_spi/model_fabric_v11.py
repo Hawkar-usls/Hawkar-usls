@@ -55,9 +55,11 @@ class GitHubRepositoryReaderV11(GitHubRepositoryReader):
 
     def _ls_remote(self, repository: str, *args: str) -> str | None:
         url = self._remote_url(repository)
+        options = [arg for arg in args if str(arg).startswith("-")]
+        patterns = [arg for arg in args if not str(arg).startswith("-")]
         try:
             result = self._git_runner(
-                ["git", "ls-remote", *args, url],
+                ["git", "ls-remote", *options, url, *patterns],
                 capture_output=True,
                 text=True,
                 timeout=20,
@@ -84,7 +86,6 @@ class GitHubRepositoryReaderV11(GitHubRepositoryReader):
                     break
                 self._git_default_cache[repository] = branch
                 return branch
-        # REST fallback preserves v1.1 behavior when git transport is unavailable.
         owner, name = repository.split("/", 1)
         value = self._request_json(
             f"{self.api_base}/repos/{urllib.parse.quote(owner)}/{urllib.parse.quote(name)}",
@@ -118,7 +119,6 @@ class GitHubRepositoryReaderV11(GitHubRepositoryReader):
                 if _SHA40_RE.fullmatch(sha):
                     self._git_head_cache[key] = sha
                     return sha
-        # REST fallback remains available for environments without git transport.
         head = super().branch_head(repository, branch)
         self._git_head_cache[key] = head
         return head
