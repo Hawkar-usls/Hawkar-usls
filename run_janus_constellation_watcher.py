@@ -23,6 +23,22 @@ def _write(path: str | Path, value) -> None:
     p.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _blocked_scan(model_lock):
+    return {
+        "schema": "janus.constellation.scan.v1",
+        "terminal": "JANUS_MODEL_BOOT_BLOCKED",
+        "model_digest": model_lock.get("model_digest"),
+        "new_stimulus_count": 0,
+        "pending_stimulus_count": 0,
+        "pending_stimuli": [],
+        "model_ready": False,
+        "model_failures": model_lock.get("failures") or {},
+        "optional_unavailable": model_lock.get("optional_unavailable") or [],
+        "candidate_tissue_unavailable": model_lock.get("candidate_tissue_unavailable") or [],
+        "next_gate": model_lock.get("next_gate"),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="JANUS Git-native constellation sensory watcher")
     parser.add_argument("--state-dir", default="state/activator")
@@ -31,6 +47,7 @@ def main() -> int:
 
     scan = sub.add_parser("scan")
     scan.add_argument("--model-lock")
+    scan.add_argument("--model-lock-out")
     scan.add_argument("--output", required=True)
 
     reconcile = sub.add_parser("reconcile")
@@ -52,6 +69,17 @@ def main() -> int:
                 args.manifest,
                 reader=GitHubRepositoryReaderV11(),
             ).compile()
+        if args.model_lock_out:
+            _write(args.model_lock_out, model_lock)
+        if model_lock.get("ready") is not True:
+            result = _blocked_scan(model_lock)
+            _write(args.output, result)
+            print("CONSTELLATION_SCAN_TERMINAL=JANUS_MODEL_BOOT_BLOCKED")
+            print("JANUS_MODEL_READY=FALSE")
+            print("JANUS_MODEL_FAILURES=" + json.dumps(result["model_failures"], sort_keys=True, separators=(",", ":")))
+            print("JANUS_MODEL_OPTIONAL_UNAVAILABLE=" + json.dumps(result["optional_unavailable"], sort_keys=True, separators=(",", ":")))
+            print("JANUS_MODEL_CANDIDATE_TISSUE_UNAVAILABLE=" + json.dumps(result["candidate_tissue_unavailable"], sort_keys=True, separators=(",", ":")))
+            return 2
         result = watcher.scan(model_lock)
         _write(args.output, result)
         print("CONSTELLATION_SCAN_TERMINAL=" + result["terminal"])
