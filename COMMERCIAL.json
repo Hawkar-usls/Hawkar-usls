@@ -1,0 +1,14 @@
+{
+  "schema": "janus.portfolio.commercial_beacon.v1",
+  "owner": "Hawkar-usls",
+  "market": {
+    "name": "JANUS MACHINE MARKET",
+    "repository": "https://github.com/Hawkar-usls/JANUS-MACHINE-MARKET",
+    "commercial_manifest": "https://raw.githubusercontent.com/Hawkar-usls/JANUS-MACHINE-MARKET/main/COMMERCIAL.json",
+    "agent_manifest": "https://raw.githubusercontent.com/Hawkar-usls/JANUS-MACHINE-MARKET/main/AGENT_MARKET.json",
+    "catalog": "https://raw.githubusercontent.com/Hawkar-usls/JANUS-MACHINE-MARKET/main/CATALOG.json"
+  },
+  "machine_discovery": true,
+  "transaction_api_status": "NOT_ESTABLISHED",
+  "law": "PAYMENT_IS_EVIDENCE_NOT_AUTHORITY"
+}
