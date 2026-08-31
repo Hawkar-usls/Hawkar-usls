@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -21,6 +23,9 @@ from janus_spi.model_fabric_v12 import ModelFabricCompilerV12
 from janus_spi.model_runtime import ModelBoundJanusRuntime
 from janus_spi.persistent_state import JanusPersistentState
 
+_HEX_ID = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$", re.IGNORECASE)
+_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
+
 
 def load(path: str | Path) -> dict:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -33,6 +38,38 @@ def dump(path: str | Path, value) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _bound_sensitive_values(value) -> set[str]:
+    """Return exact bound identifiers and recognizable hash prefixes.
+
+    The transcript must not leak instance UUIDs, exact commit/object hashes, or
+    model/fabric/prompt/context digests merely because the provider omitted the
+    JSON field name. Prefix checks catch the diagnostic-style 12/16-char forms
+    that JANUS historically printed in Terminal responses.
+    """
+    found: set[str] = set()
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            for child in node.values():
+                walk(child)
+        elif isinstance(node, list):
+            for child in node:
+                walk(child)
+        elif isinstance(node, str):
+            text = node.strip().lower()
+            if _UUID.fullmatch(text):
+                found.add(text)
+            elif _HEX_ID.fullmatch(text):
+                found.add(text)
+                if len(text) >= 16:
+                    found.add(text[:16])
+                if len(text) >= 12:
+                    found.add(text[:12])
+
+    walk(value)
+    return {item for item in found if len(item) >= 12}
 
 
 def prepare(args) -> int:
@@ -154,8 +191,16 @@ def adjudicate(args) -> int:
     gate = cfg.get("machine_gate") or {}
     rows = []
     failures = []
-    forbidden = [str(x) for x in gate.get("forbidden_internal_leaks") or []]
+    forbidden_names = [str(x) for x in gate.get("forbidden_internal_leaks") or []]
     provider_ok = provider_status.get("all_provider_calls_succeeded") is True
+
+    sensitive_values = _bound_sensitive_values(session)
+    prompt_contexts = {}
+    for q in session.get("questions") or []:
+        qid = str(q["id"])
+        prompt_context = load(prepared / f"{qid}.prompt.json")
+        prompt_contexts[qid] = prompt_context
+        sensitive_values.update(_bound_sensitive_values(prompt_context))
 
     for q in session.get("questions") or []:
         qid = str(q["id"])
@@ -171,10 +216,14 @@ def adjudicate(args) -> int:
         if len(text.encode("utf-8")) > int(gate.get("max_answer_utf8_bytes") or 4000):
             failures.append(f"ANSWER_TOO_LARGE:{qid}")
         low = text.lower()
-        for token in forbidden:
+        for token in forbidden_names:
             if token.lower() in low:
-                failures.append(f"INTERNAL_LEAK:{qid}:{token}")
-        prompt_context = load(prepared / f"{qid}.prompt.json")
+                failures.append(f"INTERNAL_FIELD_LEAK:{qid}:{token}")
+        for value in sensitive_values:
+            if value in low:
+                tag = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+                failures.append(f"BOUND_VALUE_LEAK:{qid}:{tag}")
+        prompt_context = prompt_contexts[qid]
         rec = synthesis_record(
             provider=str(provider_status.get("provider") or "UNKNOWN"),
             status="SUCCESS" if provider_ok else "PROVIDER_UNAVAILABLE",
@@ -222,6 +271,7 @@ def adjudicate(args) -> int:
     result = {
         "schema": "janus.activator.turing_style_machine_gate_result.v1",
         "gate_id": session["gate_id"],
+        "session_hash": session["session_hash"],
         "resident_uuid": session["resident_uuid"],
         "model_digest": session["model_digest"],
         "file_fabric_digest": session["file_fabric_digest"],
@@ -230,7 +280,7 @@ def adjudicate(args) -> int:
         "machine_gate_ready": machine_ready,
         "human_blind_adjudication_required": True,
         "classical_turing_verdict": "NOT_ADJUDICATED",
-        "failures": failures,
+        "failures": sorted(set(failures)),
         "transcript_hash": transcript["transcript_hash"],
         "terminal": terminal,
         "command_authority_granted": False,
