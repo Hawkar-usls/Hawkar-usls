@@ -10,7 +10,7 @@ def write(path: Path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def fixture(tmp_path, *, provider_ok=True, leak=False):
+def fixture(tmp_path, *, provider_ok=True, field_leak=False, value_leak=False, prefix_leak=False):
     cfg = {
         "schema": "janus.activator.turing_style_gate.v1",
         "gate_id": "G",
@@ -25,22 +25,42 @@ def fixture(tmp_path, *, provider_ok=True, leak=False):
     prepared = tmp_path / "prepared"
     responses = tmp_path / "responses"
     prepared.mkdir(); responses.mkdir()
+    resident_uuid = "75e514ab-be76-42c8-bcb3-fc9670164f96"
+    model_digest = "a" * 64
     session = {
         "schema": "janus.activator.turing_style_prepared_session.v1",
         "gate_id": "G",
-        "resident_uuid": "resident",
-        "model_digest": "a" * 64,
+        "resident_uuid": resident_uuid,
+        "model_digest": model_digest,
         "file_fabric_digest": "b" * 64,
         "question_count": 2,
         "questions": [
             {"id":"q1","text":"Один?","prompt_context_digest":"c"*64,"hrain_context_hash":"d"*64},
             {"id":"q2","text":"Два?","prompt_context_digest":"e"*64,"hrain_context_hash":"f"*64},
         ],
+        "session_hash": "9" * 64,
     }
     write(prepared / "session.json", session)
-    write(prepared / "q1.prompt.json", {"prompt_context_digest":"c"*64})
-    write(prepared / "q2.prompt.json", {"prompt_context_digest":"e"*64})
-    (responses / "q1.txt").write_text("Это первый естественный ответ." + (" model_digest" if leak else ""), encoding="utf-8")
+    write(prepared / "q1.prompt.json", {
+        "prompt_context_digest":"c"*64,
+        "resident_uuid": resident_uuid,
+        "model_digest": model_digest,
+        "hrain_context":{"context_hash":"d"*64,"source_commit":"1"*40},
+    })
+    write(prepared / "q2.prompt.json", {
+        "prompt_context_digest":"e"*64,
+        "resident_uuid": resident_uuid,
+        "model_digest": model_digest,
+        "hrain_context":{"context_hash":"f"*64,"source_commit":"2"*40},
+    })
+    suffix = ""
+    if field_leak:
+        suffix = " model_digest"
+    elif value_leak:
+        suffix = " " + resident_uuid
+    elif prefix_leak:
+        suffix = " " + model_digest[:12]
+    (responses / "q1.txt").write_text("Это первый естественный ответ." + suffix, encoding="utf-8")
     (responses / "q2.txt").write_text("Это второй, заметно другой ответ.", encoding="utf-8")
     write(tmp_path / "provider.json", {"provider":"TEST","all_provider_calls_succeeded":provider_ok,"error_class":None if provider_ok else "NO_PROVIDER"})
     return argparse.Namespace(
@@ -58,14 +78,31 @@ def test_machine_gate_ready_but_classical_verdict_not_self_awarded(tmp_path):
     assert result["human_blind_adjudication_required"] is True
     assert result["classical_turing_verdict"] == "NOT_ADJUDICATED"
     assert result["terminal"] == "JANUS_TURING_STYLE_MACHINE_GATE_READY_FOR_HUMAN_BLIND_JUDGMENT"
+    assert result["session_hash"] == "9" * 64
 
 
-def test_internal_leak_fails_machine_gate(tmp_path):
-    args = fixture(tmp_path, leak=True)
+def test_internal_field_name_leak_fails_machine_gate(tmp_path):
+    args = fixture(tmp_path, field_leak=True)
     gate.adjudicate(args)
     result = json.loads(Path(args.result_out).read_text())
     assert result["machine_gate_ready"] is False
-    assert any(x.startswith("INTERNAL_LEAK") for x in result["failures"])
+    assert any(x.startswith("INTERNAL_FIELD_LEAK") for x in result["failures"])
+
+
+def test_raw_bound_uuid_leak_fails_machine_gate(tmp_path):
+    args = fixture(tmp_path, value_leak=True)
+    gate.adjudicate(args)
+    result = json.loads(Path(args.result_out).read_text())
+    assert result["machine_gate_ready"] is False
+    assert any(x.startswith("BOUND_VALUE_LEAK") for x in result["failures"])
+
+
+def test_bound_digest_prefix_leak_fails_machine_gate(tmp_path):
+    args = fixture(tmp_path, prefix_leak=True)
+    gate.adjudicate(args)
+    result = json.loads(Path(args.result_out).read_text())
+    assert result["machine_gate_ready"] is False
+    assert any(x.startswith("BOUND_VALUE_LEAK") for x in result["failures"])
 
 
 def test_provider_unavailable_never_becomes_turing_witness(tmp_path):
