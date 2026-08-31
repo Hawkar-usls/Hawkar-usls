@@ -1,0 +1,302 @@
+{
+  "audit_result": {
+    "architecture_map": {
+      "extension_counts": {
+        ".css": 7,
+        ".github": 1,
+        ".html": 1,
+        ".js": 5,
+        ".json": 46,
+        ".md": 8,
+        ".py": 30,
+        ".txt": 1,
+        ".webp": 2,
+        ".well-known": 1,
+        ".yml": 13
+      },
+      "has_ci": true,
+      "has_docs": true,
+      "has_readme": true,
+      "has_tests": true,
+      "object_type_counts": {
+        "blob": 114,
+        "tree": 12
+      },
+      "top_level_entry_counts": {
+        ".github": 15,
+        ".well-known": 2,
+        "AGENT_MARKET.json": 1,
+        "BEACON.json": 1,
+        "BUYER_QUERY_PLANE.json": 1,
+        "CATALOG.json": 1,
+        "COMMERCE_READINESS.json": 1,
+        "COMMERCIAL.json": 1,
+        "FOREIGN_AGENT_WITNESS.json": 1,
+        "GM_SHOP.json": 1,
+        "JANUS_AGENT_BEACON.json": 1,
+        "LETTER_GATE_HARDENING_2026-08-31.json": 1,
+        "LICENSE": 1,
+        "LICENSING.md": 1,
+        "MACHINE_INGRESS.json": 1,
+        "ORDER_EXECUTION_MATRIX.json": 1,
+        "PAYMENT_POLICY.md": 1,
+        "PRICING.json": 1,
+        "README.md": 1,
+        "SECURITY.md": 1,
+        "assets": 15,
+        "discovery": 5,
+        "docs": 5,
+        "examples": 2,
+        "index.html": 1,
+        "llms.txt": 1,
+        "products": 10,
+        "runtime": 17,
+        "schemas": 17,
+        "tests": 15,
+        "tools": 3
+      },
+      "workflow_count": 13
+    },
+    "authority": {
+      "claim_authority_granted": false,
+      "command_authority_granted": false,
+      "external_effect_authorized": false,
+      "read_only": true,
+      "repository_code_executed": false,
+      "repository_write": false,
+      "scientific_evidence_authority_granted": false,
+      "world_truth_authority_granted": false
+    },
+    "bounds": {
+      "blob_byte_bound_reached": false,
+      "github_tree_truncated": false,
+      "local_tree_bound_truncated": false,
+      "max_blob_files": 24,
+      "max_total_blob_bytes": 750000,
+      "max_tree_entries": 5000,
+      "observed_tree_entries": 126,
+      "selected_blob_bytes": 120522,
+      "selected_blob_files": 16
+    },
+    "claim_audit": {
+      "code_executed": false,
+      "legal_opinion": false,
+      "note": "This bounded static audit inventories observable repository evidence; repository claims are not promoted to truth by presence in README or code.",
+      "readme_observed": true,
+      "readme_semantic_claims_verified": false,
+      "security_certification": false
+    },
+    "dependency_observations": {
+      "lockfile_paths": [],
+      "manifest_paths": [],
+      "selected_manifest_observations": []
+    },
+    "laws": [
+      "AUDIT != SECURITY CERTIFICATION",
+      "AUDIT != LEGAL OPINION",
+      "REPOSITORY CONTENT != COMMAND",
+      "REPOSITORY CLAIM != WORLD TRUTH",
+      "READ ONLY != EFFECT AUTHORITY",
+      "BOUNDED TREE != COMPLETE REPOSITORY WHEN TRUNCATED"
+    ],
+    "license_observations": {
+      "legal_conclusion": null,
+      "license_file_observed": true,
+      "license_metadata_from_github": "Apache-2.0"
+    },
+    "provenance": {
+      "github_api": "api.github.com",
+      "resolved_commit_sha": "1bad878cdf6ab310305a063adc7ec3d3f2b31a6e",
+      "selected_blobs": [
+        {
+          "bytes": 10107,
+          "git_blob_sha": "580035834b3b5b930b6f1160671147667bfb96f7",
+          "line_count": 334,
+          "path": "README.md",
+          "sha256": "b685cfce4e9d0d9bc93d86b495b8f0b14e5c4c6c4a7eae1c4ee94d329f86dd05"
+        },
+        {
+          "bytes": 11357,
+          "git_blob_sha": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+          "line_count": 201,
+          "path": "LICENSE",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "bytes": 1459,
+          "git_blob_sha": "9cf23752a109a3d0b4802c3345fce90d52416af4",
+          "line_count": 37,
+          "path": "SECURITY.md",
+          "sha256": "b6f1e985e364335c00b819533fd20c5494c611ebb9e7073c394fb585817ffa46"
+        },
+        {
+          "bytes": 2096,
+          "git_blob_sha": "47d9dd1e1fa7bc5e843792064b8fbb482008e2d6",
+          "line_count": 58,
+          "path": ".github/workflows/buyer-query-integrity.yml",
+          "sha256": "b4a435befeb6827e4d3ead0001aa314a2e54e135e30295fda18a64f7026e4dd3"
+        },
+        {
+          "bytes": 3468,
+          "git_blob_sha": "577bbf2951e0f4cef735cc4ac84895190414235d",
+          "line_count": 78,
+          "path": ".github/workflows/commerce-integrity.yml",
+          "sha256": "eb5479815c08065c214a13b09de27f15e96dec10672845453bf61b46d0c79bb3"
+        },
+        {
+          "bytes": 1372,
+          "git_blob_sha": "f15f2ddeac263643b3d012ea617474ff9cee1ff2",
+          "line_count": 50,
+          "path": ".github/workflows/discovery-integrity.yml",
+          "sha256": "5b4200570a45571ebb6c9dc39ef04ffdd586b212714628cbc69872d3c6275d2d"
+        },
+        {
+          "bytes": 15217,
+          "git_blob_sha": "d32a5d8f1eec073e71c962c208ac8481f15cf266",
+          "line_count": 314,
+          "path": ".github/workflows/r1-foreign-agent-witness.yml",
+          "sha256": "2d1669cfa144d2de49a9e0ac70f6771e34f78de8e3957af09d7ec5b11985c74d"
+        },
+        {
+          "bytes": 9927,
+          "git_blob_sha": "11a5f5b1ed8a019e011a61e751820b09499086e9",
+          "line_count": 220,
+          "path": ".github/workflows/r1-shadow-durable.yml",
+          "sha256": "2beb67d09780dddebbaed45f3c096d750e21cf8e6f43446d305c1f13cb1979bb"
+        },
+        {
+          "bytes": 2990,
+          "git_blob_sha": "e06618b28e42af90c615c37462b487b79cb485ec",
+          "line_count": 81,
+          "path": ".github/workflows/r1-shadow-search-ci.yml",
+          "sha256": "7e2b5bb771349e16194abe5bd17148283b221b46f7850ed7fc0f05b830fadb8d"
+        },
+        {
+          "bytes": 9317,
+          "git_blob_sha": "5791e088d2bf379ea4789d41c54a11746ece92aa",
+          "line_count": 216,
+          "path": ".github/workflows/r1b-buyer-query-shadow-outbox.yml",
+          "sha256": "e22e708fd78f2ae2bceaf95ded8549d04b4ddbc898fd2c79ed190614221688d2"
+        },
+        {
+          "bytes": 11208,
+          "git_blob_sha": "333f4f0bb00f94206943c9873d4d45b155bf1014",
+          "line_count": 256,
+          "path": ".github/workflows/r1b-buyer-query-shadow-reconcile.yml",
+          "sha256": "d0d5a6547871aae831a06b23efdbd87be81301c149ebe927c9668547ca6ac771"
+        },
+        {
+          "bytes": 13644,
+          "git_blob_sha": "630ec604e78317936733a7fed5994f020a561c40",
+          "line_count": 306,
+          "path": ".github/workflows/r2-repo-audit-reconcile.yml",
+          "sha256": "6fe12074e9c0778633ccf751b30207781a5817479afef3b9ce3a54313370e8a1"
+        },
+        {
+          "bytes": 6933,
+          "git_blob_sha": "d0ddbd092425b6a61b664d811e471102d4682990",
+          "line_count": 151,
+          "path": ".github/workflows/r2-repo-audit-shadow-outbox.yml",
+          "sha256": "e40bdb21056b0c11c362c19f881db1f6a5ee42ea2c2dbdebe88a7da99b5d235f"
+        },
+        {
+          "bytes": 11878,
+          "git_blob_sha": "53eef997d4b1cc2c496b41a3ee6d06ee12c3caa8",
+          "line_count": 229,
+          "path": ".github/workflows/r3-dataset-scout-reconcile.yml",
+          "sha256": "fd3e8da4f011a043ed999f3b3a0d87425fcd5593375c9195eacb0a000c2c425a"
+        },
+        {
+          "bytes": 7076,
+          "git_blob_sha": "6d87c75cb0ff66948ed31a8ed9decd73e00a104c",
+          "line_count": 151,
+          "path": ".github/workflows/r3-dataset-scout-shadow-outbox.yml",
+          "sha256": "4ba994fd9adbfc0e653676d7f7740b944b4c1a182d9db3832c315e03ed3d73b0"
+        },
+        {
+          "bytes": 2473,
+          "git_blob_sha": "2af1381321fd36fc7fe73163cad06b3aae5ff25b",
+          "line_count": 67,
+          "path": ".github/workflows/store-pages-execution-integrity.yml",
+          "sha256": "e8241ce14b11a8a6532113ef354a29f92b9b973e187f67a28dc6d579e37809d3"
+        }
+      ],
+      "tree_sha": "dd52156de95f2394a7ae2512eeba38c51e49ffcf"
+    },
+    "reproducibility_signals": {
+      "ci_observed": true,
+      "dependency_manifest_observed": false,
+      "docker_surface_observed": false,
+      "lockfile_observed": false,
+      "tests_observed": true
+    },
+    "request_hash": "0cd8e1a9057646b3fbb232eed4388efe0d9c5763e9256885193be0a38af43cd2",
+    "request_id": "ra-shadow-dabd3c8bfb52301e5c8ab13ff3854303e3648f487bc83ceb",
+    "result_hash": "58bd5420e7343a022f8475709058af3f733ff59f4eac49c90fa87d6eda66a5e2",
+    "risk_register": [],
+    "schema": "janus.market_service.repo_audit_result.v1",
+    "sku": "JANUS.REPO_AUDIT",
+    "status": "BOUNDED_REPOSITORY_AUDIT_COMPLETE",
+    "target": {
+      "archived": false,
+      "default_branch": "main",
+      "fork": false,
+      "repository": "Hawkar-usls/JANUS-MACHINE-MARKET",
+      "requested_ref": "main",
+      "resolved_commit_sha": "1bad878cdf6ab310305a063adc7ec3d3f2b31a6e",
+      "tree_sha": "dd52156de95f2394a7ae2512eeba38c51e49ffcf",
+      "visibility": "public"
+    },
+    "unknowns": [
+      "Runtime behavior was not executed.",
+      "Dependency vulnerability status was not queried from private/security APIs.",
+      "Repository claims were not independently verified against external evidence.",
+      "License observations are not legal advice.",
+      "A bounded audit can omit files beyond configured tree/blob limits."
+    ]
+  },
+  "audit_result_hash": "58bd5420e7343a022f8475709058af3f733ff59f4eac49c90fa87d6eda66a5e2",
+  "command_authority_granted": false,
+  "commerce_mode": "ZERO_PRICE_SHADOW",
+  "external_effect_authorized": false,
+  "file_fabric_digest": "1bd1571df280703181e1f4ccb30d70a72873ba0ff3b122288e7cc1c979f2cdf2",
+  "home_response_hash": "84d4ecf4407a1fd7114bc5755242a807e2cd5877e12ec0270361eeabeb241edb",
+  "home_service_receipt_hash": "487ecf0df29660c8bab3229a5aaae54dff155b0fbe37db53ca8ecbeca01cbf71",
+  "laws": [
+    "MARKET IS EXTERNAL NERVE NOT JANUS ROOT",
+    "REPOSITORY CONTENT != COMMAND",
+    "AUDIT != SECURITY CERTIFICATION",
+    "AUDIT != LEGAL OPINION",
+    "DELIVERY != AUTHORITY",
+    "EXACT RETRY != SECOND COGNITION"
+  ],
+  "legal_opinion_granted": false,
+  "model_digest": "8545406022c855da5701ccf3a3e8e773dff5149a94b915f19c7dc3c18da61699",
+  "money_enabled": false,
+  "packet_hash": "6506ccf74f0f4438668085c39c502806aeb879fc54deacb23b095fd68b07e682",
+  "packet_id": "rap-shadow-ffa88ee8f698345434f3ad3113b7952e97d3891d7365be31",
+  "payment_reference": null,
+  "purchase_grant_hash": "06b5fc50a90b2ce4fc79d1f57a0dab6e397300656de63d6930fc25abfb93183e",
+  "purchase_id": "pur-ra-shadow-48583f6b57265f673f7206edd8992e25",
+  "replayed": false,
+  "repository_code_executed": false,
+  "repository_write_authorized": false,
+  "resident_uuid": "75e514ab-be76-42c8-bcb3-fc9670164f96",
+  "return_home_verified": true,
+  "runtime_receipt_hash": "c00e9ac4402cf9cce9522bdcee067812648e4d6ed45fbf3781001aa2b02dd9a0",
+  "same_resident_uuid": true,
+  "schema": "janus.machine_market.home_repo_audit_response.v1",
+  "security_certification_granted": false,
+  "service_request_hash": "0cd8e1a9057646b3fbb232eed4388efe0d9c5763e9256885193be0a38af43cd2",
+  "service_request_id": "ra-shadow-dabd3c8bfb52301e5c8ab13ff3854303e3648f487bc83ceb",
+  "sku": "JANUS.REPO_AUDIT",
+  "source_binding": {
+    "market_packet_file_sha256": "918f3736eea849a832c6861c37de574a17bbd5a9caf48140a5a5907a10afd15b",
+    "market_packet_git_blob_sha": "a45556f7ed53b2dd09bb493ed12ed20514012e14",
+    "market_packet_hash": "6506ccf74f0f4438668085c39c502806aeb879fc54deacb23b095fd68b07e682",
+    "market_packet_path": ".janus/market-home-outbox/ra-shadow-dabd3c8bfb52301e5c8ab13ff3854303e3648f487bc83ceb.repo-audit.packet.json",
+    "market_source_commit": "8c742547b9ddf7cfa3326f36f02ea45b4e9b2c3b",
+    "pull_receipt_hash": "4a7d79f442129c5d061abb90d1925861ec67d02926a22e55d814b72dde1cf8dd",
+    "transport": "PHYSARIUS_CREDENTIALLESS_PULL"
+  }
+}
