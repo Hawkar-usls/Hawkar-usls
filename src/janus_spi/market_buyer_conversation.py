@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import datetime
 from typing import Any, Mapping
 
@@ -9,14 +8,18 @@ from .activator import canonical_hash
 from .terminal_conversation import build_terminal_message, verify_terminal_message, verify_terminal_response
 
 PACKET_SCHEMA = "janus.machine_market.home_buyer_query_packet.v1"
+PAID_PACKET_SCHEMA = "janus.machine_market.home_paid_buyer_query_packet.v1"
 QUERY_SCHEMA = "janus.machine_market.buyer_query.v1"
 GRANT_SCHEMA = "janus.machine_market.purchase_grant.v1"
+PAYMENT_RECEIPT_SCHEMA = "janus.machine_market.payment_receipt.v1"
 HOME_RESPONSE_SCHEMA = "janus.home.market_buyer_query_response.v1"
 BUYER_RECEIPT_SCHEMA = "janus.machine_market.buyer_query_receipt.v1"
 MARKET_REPOSITORY = "Hawkar-usls/JANUS-MACHINE-MARKET"
 HOME_REPOSITORY = "Hawkar-usls/Hawkar-usls"
 MACHINE_BUYER_CLASSIFICATION = "machine_buyer_read_only_conversation"
 MACHINE_BUYER_SOURCE_KIND = "MARKET_BUYER_CONVERSATION"
+USDT_ETHEREUM_CONTRACT = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+MARKET_MERCHANT_ADDRESS = "0x7149081aea54fbef57effeb52a5a966b81cc03a0"
 
 
 class MarketBuyerConversationError(ValueError):
@@ -43,6 +46,59 @@ def _iso_to_timestamp(value: str) -> float:
         raise MarketBuyerConversationError("MARKET_BUYER_CREATED_AT_INVALID") from exc
 
 
+def _verify_paid_payment(value: Mapping[str, Any], grant: Mapping[str, Any]) -> bool:
+    payment = value.get("payment_receipt")
+    if not isinstance(payment, Mapping):
+        return False
+    payment = dict(payment)
+    if payment.get("schema") != PAYMENT_RECEIPT_SCHEMA:
+        return False
+    pbody = dict(payment)
+    claimed = str(pbody.pop("receipt_hash", ""))
+    if len(claimed) != 64 or canonical_hash(pbody) != claimed:
+        return False
+    if claimed != value.get("payment_receipt_hash"):
+        return False
+    if payment.get("chain_id") != 1 or payment.get("asset") != "USDT":
+        return False
+    if str(payment.get("token_contract") or "").lower() != USDT_ETHEREUM_CONTRACT:
+        return False
+    if str(payment.get("to_address") or "").lower() != MARKET_MERCHANT_ADDRESS:
+        return False
+    if payment.get("verification_status") != "VERIFIED_EXACT_ERC20_TRANSFER":
+        return False
+    if not isinstance(payment.get("amount_atomic"), int) or isinstance(payment.get("amount_atomic"), bool) or payment["amount_atomic"] <= 0:
+        return False
+    if not isinstance(payment.get("confirmations"), int) or payment["confirmations"] < 12:
+        return False
+    if not isinstance(payment.get("rpc_quorum"), int) or payment["rpc_quorum"] < 2:
+        return False
+    if not isinstance(payment.get("rpc_provider_count"), int) or payment["rpc_provider_count"] < payment["rpc_quorum"]:
+        return False
+    payment_reference = str(payment.get("payment_reference") or "")
+    if not payment_reference or grant.get("payment_reference") != payment_reference:
+        return False
+    offer = value.get("offer")
+    if not isinstance(offer, Mapping):
+        return False
+    price = offer.get("price")
+    if not isinstance(price, Mapping):
+        return False
+    if price.get("asset") != "USDT" or price.get("network") != "ethereum-mainnet":
+        return False
+    if price.get("amount_atomic") != payment.get("amount_atomic") or price.get("decimals") != 6:
+        return False
+    if offer.get("payment_route_id") != payment.get("route_id"):
+        return False
+    expected_purchase_id = "pur-paid-" + canonical_hash({
+        "request_id": value.get("request_id"),
+        "request_hash": value.get("request_hash"),
+        "offer_hash": value.get("offer_hash"),
+        "payment_reference": payment_reference,
+    })[:40]
+    return grant.get("purchase_id") == expected_purchase_id
+
+
 def verify_market_buyer_packet(packet: Mapping[str, Any]) -> bool:
     if not isinstance(packet, Mapping):
         return False
@@ -50,17 +106,14 @@ def verify_market_buyer_packet(packet: Mapping[str, Any]) -> bool:
     claimed_packet_hash = str(value.pop("packet_hash", ""))
     if len(claimed_packet_hash) != 64 or canonical_hash(value) != claimed_packet_hash:
         return False
-    if value.get("schema") != PACKET_SCHEMA:
+    schema = value.get("schema")
+    if schema not in {PACKET_SCHEMA, PAID_PACKET_SCHEMA}:
         return False
     if value.get("market_repository") != MARKET_REPOSITORY or value.get("home_repository") != HOME_REPOSITORY:
         return False
     if value.get("transport_mode") != "PHYSARIUS_CREDENTIALLESS_PULL":
         return False
-    if value.get("mode") != "ZERO_PRICE_SHADOW" or value.get("money_enabled") is not False:
-        return False
     for field in (
-        "payment_required",
-        "production_purchase",
         "execution_authority_granted",
         "command_authority_granted",
         "external_effect_authorized",
@@ -83,8 +136,22 @@ def verify_market_buyer_packet(packet: Mapping[str, Any]) -> bool:
         return False
     if grant.get("status") != "PURCHASE_ELIGIBLE" or grant.get("execution_authority_granted") is not False:
         return False
-    if grant.get("payment_reference") is not None:
-        return False
+
+    if schema == PACKET_SCHEMA:
+        if value.get("mode") != "ZERO_PRICE_SHADOW" or value.get("money_enabled") is not False:
+            return False
+        if any(value.get(k) is not False for k in ("payment_required", "production_purchase")):
+            return False
+        if grant.get("payment_reference") is not None:
+            return False
+    else:
+        if value.get("mode") != "PAID_ERC20" or value.get("money_enabled") is not True:
+            return False
+        if value.get("payment_required") is not True or value.get("production_purchase") is not True:
+            return False
+        if not _verify_paid_payment(value, grant):
+            return False
+
     entitlement = grant.get("buyer_query_entitlement")
     if not isinstance(entitlement, Mapping):
         return False
@@ -147,8 +214,6 @@ def build_market_terminal_message(packet: Mapping[str, Any]) -> dict[str, Any]:
         source_ref=f"MARKET_BUYER_QUERY/{query['purchase_id']}/{query['query_id']}",
         created_at=created_at,
     )
-    # Keep the legacy `human_actor` field required by janus.terminal.message.v1,
-    # but make the principal kind explicit and machine-verifiable.
     terminal.update({
         "actor_kind": "MACHINE_BUYER",
         "external_nerve": "JANUS_MACHINE_MARKET",
@@ -158,11 +223,14 @@ def build_market_terminal_message(packet: Mapping[str, Any]) -> dict[str, Any]:
         "market_query_id": query["query_id"],
         "market_query_hash": query["query_hash"],
         "market_packet_hash": packet["packet_hash"],
-        "market_mode": "ZERO_PRICE_SHADOW",
-        "market_money_enabled": False,
+        "market_mode": packet["mode"],
+        "market_money_enabled": packet["money_enabled"],
         "market_execution_authority_granted": False,
         "market_external_effect_authorized": False,
     })
+    if packet["mode"] == "PAID_ERC20":
+        terminal["market_payment_reference"] = packet["payment_receipt"]["payment_reference"]
+        terminal["market_payment_receipt_hash"] = packet["payment_receipt_hash"]
     terminal.pop("message_hash", None)
     terminal["message_hash"] = canonical_hash(terminal)
     if not verify_terminal_message(terminal):
@@ -187,6 +255,7 @@ def build_market_home_response(
     packet = dict(packet)
     query = dict(packet["buyer_query"])
     terminal_response = dict(terminal_response)
+    paid = packet["mode"] == "PAID_ERC20"
     _require(terminal_request.get("actor_kind") == "MACHINE_BUYER", "MARKET_RESPONSE_ACTOR_KIND_MISMATCH")
     _require(terminal_request.get("market_query_id") == query["query_id"], "MARKET_RESPONSE_QUERY_BINDING_MISMATCH")
     _require(terminal_response.get("command_authority_granted") is False, "MARKET_RESPONSE_COMMAND_AUTHORITY_FORBIDDEN")
@@ -214,13 +283,13 @@ def build_market_home_response(
         "scientific_evidence_authority_granted": False,
         "world_truth_authority_granted": False,
         "replayed": bool(replayed),
-        "billable_execution_delta": 0,
+        "billable_execution_delta": 0 if replayed or not paid else 1,
     }
     response = {
         "schema": HOME_RESPONSE_SCHEMA,
         "market_repository": MARKET_REPOSITORY,
         "home_repository": HOME_REPOSITORY,
-        "mode": "ZERO_PRICE_SHADOW",
+        "mode": packet["mode"],
         "query_id": query["query_id"],
         "query_hash": query["query_hash"],
         "purchase_id": query["purchase_id"],
@@ -233,13 +302,19 @@ def build_market_home_response(
         "buyer_query_receipt": receipt,
         "terminal_response": terminal_response,
         "return_route": dict(packet.get("return_route") or {}),
-        "money_enabled": False,
+        "money_enabled": bool(packet["money_enabled"]),
         "execution_authority_granted": False,
         "command_authority_granted": False,
         "external_effect_authorized": False,
         "same_resident_required": True,
         "exact_retry_is_second_cognition": False,
     }
+    if paid:
+        response.update({
+            "production_purchase": True,
+            "payment_reference": packet["payment_receipt"]["payment_reference"],
+            "payment_receipt_hash": packet["payment_receipt_hash"],
+        })
     response["home_response_hash"] = canonical_hash(response)
     return response
 
@@ -255,7 +330,16 @@ def verify_market_home_response(response: Mapping[str, Any]) -> bool:
         return False
     if value.get("market_repository") != MARKET_REPOSITORY or value.get("home_repository") != HOME_REPOSITORY:
         return False
-    if value.get("money_enabled") is not False:
+    mode = value.get("mode")
+    if mode == "ZERO_PRICE_SHADOW":
+        if value.get("money_enabled") is not False:
+            return False
+    elif mode == "PAID_ERC20":
+        if value.get("money_enabled") is not True or value.get("production_purchase") is not True:
+            return False
+        if not str(value.get("payment_reference") or "") or len(str(value.get("payment_receipt_hash") or "")) != 64:
+            return False
+    else:
         return False
     for field in ("execution_authority_granted", "command_authority_granted", "external_effect_authorized"):
         if value.get(field) is not False:
@@ -269,6 +353,11 @@ def verify_market_home_response(response: Mapping[str, Any]) -> bool:
     if receipt.get("query_id") != value.get("query_id") or receipt.get("purchase_id") != value.get("purchase_id"):
         return False
     if receipt.get("execution_authority_granted") is not False or receipt.get("external_effect_authorized") is not False:
+        return False
+    delta = receipt.get("billable_execution_delta")
+    if mode == "ZERO_PRICE_SHADOW" and delta != 0:
+        return False
+    if mode == "PAID_ERC20" and delta not in {0, 1}:
         return False
     if terminal.get("resident_uuid") != receipt.get("resident_uuid"):
         return False
