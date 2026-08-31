@@ -167,38 +167,113 @@ def packet() -> dict:
     return result
 
 
-def test_market_packet_verifies_and_adapts_to_existing_terminal_message():
-    p = packet()
-    assert verify_market_buyer_packet(p)
-    message = build_market_terminal_message(p)
-    assert verify_terminal_message(message)
-    assert message["actor_kind"] == "MACHINE_BUYER"
-    assert message["external_nerve"] == "JANUS_MACHINE_MARKET"
-    assert message["market_query_id"] == p["query_id"]
-    assert message["market_purchase_id"] == p["purchase_grant"]["purchase_id"]
-    assert message["market_packet_hash"] == p["packet_hash"]
-    assert message["command_authority_granted"] is False
-    assert message["external_effect_authorized"] is False
+def paid_packet() -> dict:
+    base = packet()
+    payment = {
+        "schema": "janus.machine_market.payment_receipt.v1",
+        "route_id": "JANUS_USDT_ETHEREUM_MAINNET_V1",
+        "chain_id": 1,
+        "asset": "USDT",
+        "token_contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "tx_hash": "0x" + "ab" * 32,
+        "block_hash": "0x" + "cd" * 32,
+        "block_number": 100,
+        "log_index": 7,
+        "from_address": "0x1111111111111111111111111111111111111111",
+        "to_address": "0x7149081aea54fbef57effeb52a5a966b81cc03a0",
+        "amount_atomic": 1_000_000,
+        "confirmations": 21,
+        "rpc_quorum": 2,
+        "rpc_provider_count": 2,
+        "verification_status": "VERIFIED_EXACT_ERC20_TRANSFER",
+        "payment_reference": "ethereum:1:0x" + "ab" * 32 + ":7",
+    }
+    payment["receipt_hash"] = canonical_hash(payment)
+    offer = {
+        "schema": "janus.machine_market.paid_offer.v1",
+        "sku": "JANUS.SEARCH",
+        "price": {"asset": "USDT", "network": "ethereum-mainnet", "amount_atomic": 1_000_000, "decimals": 6},
+        "price_manifest_hash": "1" * 64,
+        "payment_route_id": payment["route_id"],
+        "buyer_query_turns": 1,
+        "production_purchase": True,
+    }
+    offer_hash = canonical_hash(offer)
+    purchase_id = "pur-paid-" + canonical_hash({
+        "request_id": base["request_id"],
+        "request_hash": base["request_hash"],
+        "offer_hash": offer_hash,
+        "payment_reference": payment["payment_reference"],
+    })[:40]
+    nonce = "paid-" + canonical_hash({
+        "purchase_id": purchase_id,
+        "payment_reference": payment["payment_reference"],
+        "purpose": "R2_PAID_BUYER_QUERY_ENTITLEMENT",
+    })[:40]
+    grant = dict(base["purchase_grant"])
+    grant.update({
+        "purchase_id": purchase_id,
+        "offer_hash": offer_hash,
+        "payment_reference": payment["payment_reference"],
+        "terms_hash": "2" * 64,
+        "reasons": ["R2_EXACT_USDT_PAYMENT_VERIFIED", "PURCHASE_GRANT_IS_NOT_EXECUTION_AUTHORITY", "BUYER_QUERY_IS_NOT_COMMAND_AUTHORITY"],
+    })
+    grant["buyer_query_entitlement"] = dict(grant["buyer_query_entitlement"])
+    grant["buyer_query_entitlement"].update({"buyer_actor_id": "github:foreign-agent", "entitlement_nonce": nonce})
+    grant_hash = canonical_hash(grant)
+    message = base["buyer_query"]["message_text"]
+    message_hash = sha_text(message)
+    query_id = "bq-" + canonical_hash({
+        "purchase_id": purchase_id,
+        "conversation_id": "r1b-home-test",
+        "turn_index": 0,
+        "message_hash": message_hash,
+        "entitlement_nonce": nonce,
+    })
+    query = dict(base["buyer_query"])
+    query.update({
+        "purchase_id": purchase_id,
+        "purchase_grant_hash": grant_hash,
+        "buyer_actor_id": "github:foreign-agent",
+        "entitlement_nonce": nonce,
+        "query_id": query_id,
+    })
+    query["query_hash"] = canonical_hash({k: v for k, v in query.items() if k != "query_hash"})
+    result = {
+        "schema": "janus.machine_market.home_paid_buyer_query_packet.v1",
+        "market_repository": base["market_repository"],
+        "home_repository": base["home_repository"],
+        "transport_mode": base["transport_mode"],
+        "mode": "PAID_ERC20",
+        "request_origin": "FOREIGN_MACHINE_PURCHASE",
+        "request_id": base["request_id"],
+        "request_hash": base["request_hash"],
+        "offer": offer,
+        "offer_hash": offer_hash,
+        "payment_receipt": payment,
+        "payment_receipt_hash": payment["receipt_hash"],
+        "purchase_grant": grant,
+        "purchase_grant_hash": grant_hash,
+        "buyer_query": query,
+        "query_id": query_id,
+        "query_hash": query["query_hash"],
+        "return_route": base["return_route"],
+        "money_enabled": True,
+        "payment_required": True,
+        "production_purchase": True,
+        "execution_authority_granted": False,
+        "command_authority_granted": False,
+        "external_effect_authorized": False,
+        "physical_runtime_effect_authorized": False,
+        "scientific_evidence_authority_granted": False,
+        "world_truth_authority_granted": False,
+        "laws": ["PAYMENT != COMMAND", "PAYMENT != EXECUTION_AUTHORITY", "PHYSARIUS_DELIVERY != AUTHORITY"],
+    }
+    result["packet_hash"] = canonical_hash(result)
+    return result
 
 
-def test_market_packet_tamper_fails_closed():
-    p = packet()
-    p["buyer_query"]["message_text"] = "tampered"
-    assert not verify_market_buyer_packet(p)
-    with pytest.raises(MarketBuyerConversationError, match="MARKET_BUYER_PACKET_INVALID"):
-        build_market_terminal_message(p)
-
-
-def test_wrong_buyer_entitlement_fails_closed():
-    p = packet()
-    p["purchase_grant"]["buyer_query_entitlement"]["buyer_actor_id"] = "github:other"
-    p["purchase_grant_hash"] = canonical_hash(p["purchase_grant"])
-    p["packet_hash"] = canonical_hash({k: v for k, v in p.items() if k != "packet_hash"})
-    assert not verify_market_buyer_packet(p)
-
-
-def test_home_response_wraps_same_existing_terminal_response():
-    p = packet()
+def make_terminal_response(p: dict):
     request = build_market_terminal_message(p)
     model = {"ready": True, "model_digest": "a" * 64}
     fabric = {"ready": True, "model_digest": "a" * 64, "file_fabric_digest": "b" * 64}
@@ -211,19 +286,73 @@ def test_home_response_wraps_same_existing_terminal_response():
         response_text="JANUS test response",
         now_fn=lambda: 1.0,
     )
+    return request, terminal
+
+
+def test_market_packet_verifies_and_adapts_to_existing_terminal_message():
+    p = packet()
+    assert verify_market_buyer_packet(p)
+    message = build_market_terminal_message(p)
+    assert verify_terminal_message(message)
+    assert message["actor_kind"] == "MACHINE_BUYER"
+    assert message["external_nerve"] == "JANUS_MACHINE_MARKET"
+    assert message["market_query_id"] == p["query_id"]
+    assert message["market_purchase_id"] == p["purchase_grant"]["purchase_id"]
+    assert message["market_packet_hash"] == p["packet_hash"]
+    assert message["market_money_enabled"] is False
+    assert message["command_authority_granted"] is False
+    assert message["external_effect_authorized"] is False
+
+
+def test_paid_market_packet_verifies_and_uses_same_terminal_tissue():
+    p = paid_packet()
+    assert verify_market_buyer_packet(p)
+    message = build_market_terminal_message(p)
+    assert verify_terminal_message(message)
+    assert message["actor_kind"] == "MACHINE_BUYER"
+    assert message["external_nerve"] == "JANUS_MACHINE_MARKET"
+    assert message["market_mode"] == "PAID_ERC20"
+    assert message["market_money_enabled"] is True
+    assert message["market_payment_reference"] == p["payment_receipt"]["payment_reference"]
+    assert message["market_execution_authority_granted"] is False
+    assert message["market_external_effect_authorized"] is False
+
+
+def test_market_packet_tamper_fails_closed():
+    p = packet()
+    p["buyer_query"]["message_text"] = "tampered"
+    assert not verify_market_buyer_packet(p)
+    with pytest.raises(MarketBuyerConversationError, match="MARKET_BUYER_PACKET_INVALID"):
+        build_market_terminal_message(p)
+
+
+def test_paid_payment_tamper_fails_closed():
+    p = paid_packet()
+    p["payment_receipt"]["amount_atomic"] -= 1
+    p["payment_receipt"]["receipt_hash"] = canonical_hash({k: v for k, v in p["payment_receipt"].items() if k != "receipt_hash"})
+    p["payment_receipt_hash"] = p["payment_receipt"]["receipt_hash"]
+    p["packet_hash"] = canonical_hash({k: v for k, v in p.items() if k != "packet_hash"})
+    assert not verify_market_buyer_packet(p)
+
+
+def test_wrong_buyer_entitlement_fails_closed():
+    p = packet()
+    p["purchase_grant"]["buyer_query_entitlement"]["buyer_actor_id"] = "github:other"
+    p["purchase_grant_hash"] = canonical_hash(p["purchase_grant"])
+    p["packet_hash"] = canonical_hash({k: v for k, v in p.items() if k != "packet_hash"})
+    assert not verify_market_buyer_packet(p)
+
+
+def test_home_response_wraps_same_existing_terminal_response():
+    p = packet()
+    request, terminal = make_terminal_response(p)
     source = {
         "market_source_commit": "c" * 40,
         "market_packet_git_blob_sha": "d" * 40,
         "market_packet_hash": p["packet_hash"],
         "pull_receipt_hash": "e" * 64,
     }
-    response = build_market_home_response(
-        packet=p,
-        terminal_request=request,
-        terminal_response=terminal,
-        source_binding=source,
-        replayed=False,
-    )
+    response = build_market_home_response(packet=p, terminal_request=request, terminal_response=terminal, source_binding=source, replayed=False)
     assert verify_market_home_response(response)
     receipt = response["buyer_query_receipt"]
     assert receipt["resident_uuid"] == terminal["resident_uuid"]
@@ -232,6 +361,27 @@ def test_home_response_wraps_same_existing_terminal_response():
     assert receipt["billable_execution_delta"] == 0
     assert response["money_enabled"] is False
     assert response["exact_retry_is_second_cognition"] is False
+
+
+def test_paid_home_response_is_billable_once_but_still_read_only():
+    p = paid_packet()
+    request, terminal = make_terminal_response(p)
+    source = {
+        "market_source_commit": "c" * 40,
+        "market_packet_git_blob_sha": "d" * 40,
+        "market_packet_hash": p["packet_hash"],
+        "pull_receipt_hash": "e" * 64,
+    }
+    response = build_market_home_response(packet=p, terminal_request=request, terminal_response=terminal, source_binding=source, replayed=False)
+    assert verify_market_home_response(response)
+    assert response["mode"] == "PAID_ERC20"
+    assert response["money_enabled"] is True
+    assert response["production_purchase"] is True
+    assert response["payment_reference"] == p["payment_receipt"]["payment_reference"]
+    assert response["buyer_query_receipt"]["billable_execution_delta"] == 1
+    assert response["execution_authority_granted"] is False
+    assert response["command_authority_granted"] is False
+    assert response["external_effect_authorized"] is False
 
 
 def test_machine_buyer_route_exists_and_is_read_only():
