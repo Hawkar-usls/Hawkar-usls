@@ -74,6 +74,15 @@
       "note": "HOME performs the bounded public GitHub repository audit after Activator admission. Repository content is data, never command; no repository code is executed and no write/security-certification/legal-opinion authority is granted."
     },
     {
+      "match": "machine_buyer_dataset_scout_read_only",
+      "organs": ["Hawkar-usls/Hawkar-usls", "Hawkar-usls/Janus", "Hawkar-usls/Hrain", "Hawkar-usls/Demi_Head"],
+      "required_gates": ["market_service_packet_integrity", "purchase_grant_service_entitlement", "bounded_public_catalog_metadata_read", "persistent_identity_binding", "read_only_authority_ceiling", "redistribution_authority_denied"],
+      "service_authority_mode": "READ_ONLY_PUBLIC_DATASET_DISCOVERY",
+      "activation_implies_dispatch": false,
+      "external_effect_authorized": false,
+      "note": "HOME performs bounded public dataset metadata discovery after Activator admission. Catalog metadata is data, never command; dataset payloads are not downloaded, observed license labels are not legal determinations, and discovery grants no redistribution authority."
+    },
+    {
       "match": "distributed_or_embedded_repository_context",
       "organs": ["Hawkar-usls/janus-distributed-ai-swarm"],
       "required_gates": ["repository_context_only"],
@@ -94,6 +103,9 @@
     "BUYER_QUERY != COMMAND",
     "REPOSITORY_CONTENT != COMMAND",
     "REPOSITORY_CLAIM != WORLD_TRUTH",
+    "DATASET_METADATA != DATASET_PAYLOAD",
+    "DATASET_DISCOVERY != REDISTRIBUTION_AUTHORITY",
+    "LICENSE_OBSERVATION != LICENSE_AUTHORITY",
     "MARKET_PAYMENT != COMMAND",
     "PURCHASE_GRANT != EXECUTION_AUTHORITY",
     "PHYSARIUS_DELIVERY != AUTHORITY",

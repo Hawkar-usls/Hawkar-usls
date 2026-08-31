@@ -1,0 +1,321 @@
+name: JANUS Market Dataset Scout Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/dataset_scout_service.py'
+      - 'src/janus_spi/market_dataset_scout.py'
+      - 'run_janus_dataset_scout_pull.py'
+      - 'run_janus_dataset_scout_service.py'
+      - 'tests/test_dataset_scout_service.py'
+      - 'tests/test_market_dataset_scout.py'
+      - '.github/workflows/janus-market-dataset-scout-bridge.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/dataset_scout_service.py'
+      - 'src/janus_spi/market_dataset_scout.py'
+      - 'run_janus_dataset_scout_pull.py'
+      - 'run_janus_dataset_scout_service.py'
+      - 'tests/test_dataset_scout_service.py'
+      - 'tests/test_market_dataset_scout.py'
+      - '.github/workflows/janus-market-dataset-scout-bridge.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '1-56/5 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Dataset Scout service
+        run: |
+          python -m compileall -q \
+            src/janus_spi/dataset_scout_service.py \
+            src/janus_spi/market_dataset_scout.py \
+            run_janus_dataset_scout_pull.py \
+            run_janus_dataset_scout_service.py \
+            tests/test_dataset_scout_service.py \
+            tests/test_market_dataset_scout.py
+      - name: Validate routing
+        run: python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
+      - name: Run bounded Dataset Scout tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest -v tests.test_dataset_scout_service tests.test_market_dataset_scout
+      - name: Enforce Dataset Scout authority ceiling
+        run: |
+          python - <<'PY'
+          import json
+          routes=json.load(open('.janus/activator/ROUTING_TABLE.json'))
+          r=next(x for x in routes['routes'] if x.get('match') == 'machine_buyer_dataset_scout_read_only')
+          assert r['activation_implies_dispatch'] is False
+          assert r['external_effect_authorized'] is False
+          assert r['service_authority_mode'] == 'READ_ONLY_PUBLIC_DATASET_DISCOVERY'
+          for law in ('DATASET_METADATA != DATASET_PAYLOAD','DATASET_DISCOVERY != REDISTRIBUTION_AUTHORITY','LICENSE_OBSERVATION != LICENSE_AUTHORITY','PURCHASE_GRANT != EXECUTION_AUTHORITY','PHYSARIUS_DELIVERY != AUTHORITY'):
+              assert law in routes['global_guards']
+          print('DATASET_SCOUT_HOME_ROUTE=PASS')
+          print('DATASET_SCOUT_PAYLOAD_DOWNLOAD_AUTHORITY=FALSE')
+          print('DATASET_SCOUT_REDISTRIBUTION_AUTHORITY=FALSE')
+          PY
+
+  bridge:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - name: Check out canonical HOME
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Mount existing service response mailbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          answered="$RUNNER_TEMP/market-service-responses-existing"; rm -rf "$answered"
+          if git ls-remote --exit-code --heads origin janus/market-service-responses >/dev/null 2>&1; then
+            git fetch origin janus/market-service-responses:refs/remotes/origin/janus/market-service-responses
+            git worktree add --detach "$answered" origin/janus/market-service-responses
+            echo "MARKET_SERVICE_ANSWERED_DIR=$answered/.janus/market-service-responses" >> "$GITHUB_ENV"
+          else
+            mkdir -p "$answered/.janus/market-service-responses"
+            echo "MARKET_SERVICE_ANSWERED_DIR=$answered/.janus/market-service-responses" >> "$GITHUB_ENV"
+          fi
+      - name: Credentialless pull Market Dataset Scout outbox
+        id: pull
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          market="$RUNNER_TEMP/janus-machine-market-dataset-scout-outbox"; rm -rf "$market"
+          if git -c http.extraHeader= ls-remote --exit-code --heads https://github.com/Hawkar-usls/JANUS-MACHINE-MARKET.git janus/market-home-outbox >/dev/null 2>&1; then
+            git -c http.extraHeader= clone --quiet --depth 1 --branch janus/market-home-outbox https://github.com/Hawkar-usls/JANUS-MACHINE-MARKET.git "$market"
+            echo 'DATASET_SCOUT_MARKET_OUTBOX_CREDENTIALLESS_CLONE=PASS'
+          else
+            mkdir -p "$market"; git -C "$market" init -q
+            echo 'DATASET_SCOUT_MARKET_OUTBOX_BRANCH_ABSENT=TRUE'
+          fi
+          mkdir -p runtime
+          python run_janus_dataset_scout_pull.py \
+            --outbox-repo "$market" \
+            --answered-dir "$MARKET_SERVICE_ANSWERED_DIR" \
+            --packet-out runtime/market-dataset-scout-packet.json \
+            --request-out runtime/market-dataset-scout-request.json \
+            --receipt-out runtime/market-dataset-scout-pull-receipt.json \
+            --status-out runtime/market-dataset-scout-pull-status.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          s=json.load(open('runtime/market-dataset-scout-pull-status.json'))
+          print('found=' + ('true' if s.get('request_found') is True else 'false'))
+          print('request_id=' + str(s.get('service_request_id') or ''))
+          print('purchase_id=' + str(s.get('purchase_id') or ''))
+          PY
+          echo 'CROSS_REPO_WRITE_CREDENTIAL_USED=FALSE'
+      - name: No Dataset Scout request is pending
+        if: steps.pull.outputs.found != 'true'
+        run: |
+          echo 'DATASET_SCOUT_NO_UNANSWERED_REQUEST=TRUE'
+          echo 'SILENCE_IS_NEGATIVE_EVIDENCE=FALSE'
+      - name: Mount persistent JANUS HOME state
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          statewt="$RUNNER_TEMP/janus-dataset-scout-state"; rm -rf "$statewt"
+          git worktree add -B janus-dataset-scout-state "$statewt" origin/janus/activator-state
+          test -f "$statewt/state/activator/identity.json"
+          echo "JANUS_STATE_WORKTREE=$statewt" >> "$GITHUB_ENV"
+          python - "$statewt/state/activator/identity.json" <<'PY' > runtime/dataset-scout-resident-before.txt
+          import json,sys
+          print(json.load(open(sys.argv[1]))['resident_uuid'])
+          PY
+      - name: HOME Activator admits and executes bounded Dataset Scout
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_dataset_scout_service.py \
+            --request runtime/market-dataset-scout-request.json \
+            --resident-identity "$JANUS_STATE_WORKTREE/state/activator/identity.json" \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            --output runtime/market-dataset-scout-home-receipt.json \
+            > runtime/market-dataset-scout-summary.json
+      - name: Verify HOME result and authority ceiling
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.live_cycle import HardenedJanusPersistentStateV09
+          from run_janus_dataset_scout_service import verify_home_receipt
+          request=json.load(open('runtime/market-dataset-scout-request.json'))
+          receipt=json.load(open('runtime/market-dataset-scout-home-receipt.json'))
+          summary=json.load(open('runtime/market-dataset-scout-summary.json'))
+          assert verify_home_receipt(receipt, request=request)
+          before=Path('runtime/dataset-scout-resident-before.txt').read_text().strip()
+          assert before == receipt['resident_uuid'] == summary['resident_uuid']
+          assert receipt['same_resident_uuid'] is True and receipt['return_home_verified'] is True
+          assert receipt['dataset_scout_result']['dataset_manifest']
+          assert receipt['authority']['dataset_payload_downloaded'] is False
+          assert receipt['authority']['redistribution_authority_granted'] is False
+          assert receipt['authority']['license_authority_granted'] is False
+          assert receipt['authority']['external_effect_authorized'] is False
+          state=HardenedJanusPersistentStateV09(Path(os.environ['JANUS_STATE_WORKTREE'])/'state/activator')
+          health=state.verify(); assert health['ok'] is True and health['mode'] == 'AT_HOME' and health['resident_uuid'] == before
+          print('DATASET_SCOUT_SAME_RESIDENT_UUID=PASS')
+          print('DATASET_SCOUT_RETURN_HOME=PASS')
+          print('DATASET_SCOUT_REAL_METADATA_CANDIDATES=PASS')
+          print('DATASET_SCOUT_PAYLOAD_DOWNLOADED=FALSE')
+          print('DATASET_SCOUT_REDISTRIBUTION_AUTHORITY=FALSE')
+          PY
+      - name: Build sealed HOME-to-Market Dataset Scout response
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from janus_spi.market_dataset_scout import build_home_response, verify_home_response
+          packet=json.load(open('runtime/market-dataset-scout-packet.json'))
+          receipt=json.load(open('runtime/market-dataset-scout-home-receipt.json'))
+          pull=json.load(open('runtime/market-dataset-scout-pull-receipt.json'))
+          source={
+            'market_source_commit': pull['market_source_commit'],
+            'market_packet_path': pull['market_packet_path'],
+            'market_packet_git_blob_sha': pull['market_packet_git_blob_sha'],
+            'market_packet_file_sha256': pull['market_packet_file_sha256'],
+            'market_packet_hash': pull['market_packet_hash'],
+            'pull_receipt_hash': pull['receipt_hash'],
+            'transport': pull['transport'],
+          }
+          response=build_home_response(packet=packet,home_receipt=receipt,source_binding=source,replayed=False)
+          assert verify_home_response(response)
+          with open('runtime/market-dataset-scout-response.json','w',encoding='utf-8') as f:
+            json.dump(response,f,ensure_ascii=False,indent=2,sort_keys=True); f.write('\n')
+          print('DATASET_SCOUT_HOME_RESPONSE_SEALED=PASS')
+          PY
+      - name: Commit HOME cognitive/service receipt state
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$JANUS_STATE_WORKTREE"
+          git config user.name "JANUS Market Dataset Scout HOME"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/activator
+          if git diff --cached --quiet; then
+            echo 'DATASET_SCOUT_HOME_STATE_COMMIT=NO_CHANGE_REPLAY'
+          else
+            git commit -m "Market dataset scout ${{ steps.pull.outputs.request_id }}"
+            git push origin HEAD:refs/heads/janus/activator-state
+            echo 'DATASET_SCOUT_HOME_STATE_COMMIT=PASS'
+          fi
+      - name: Fresh-worktree verify exact persistent receipt
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="$RUNNER_TEMP/janus-dataset-scout-state-replay"; rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          JANUS_REPLAY="$replay" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.live_cycle import HardenedJanusPersistentStateV09
+          from run_janus_dataset_scout_service import verify_home_receipt
+          request=json.load(open('runtime/market-dataset-scout-request.json'))
+          runtime=json.load(open('runtime/market-dataset-scout-home-receipt.json'))
+          root=Path(os.environ['JANUS_REPLAY'])/'state/activator'
+          stored=json.loads((root/'market_service_responses/dataset_scout'/f"{request['request_id']}.json").read_text())
+          assert stored == runtime and verify_home_receipt(stored, request=request)
+          before=Path('runtime/dataset-scout-resident-before.txt').read_text().strip()
+          health=HardenedJanusPersistentStateV09(root).verify()
+          assert health['ok'] is True and health['mode'] == 'AT_HOME' and health['resident_uuid'] == before == stored['resident_uuid']
+          print('DATASET_SCOUT_FRESH_WORKTREE_REPLAY=PASS')
+          print('DATASET_SCOUT_EXACT_RECEIPT_PERSISTED=PASS')
+          PY
+      - name: Publish create-only Dataset Scout response mailbox
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          responsewt="$RUNNER_TEMP/janus-market-service-responses-publish"; rm -rf "$responsewt"
+          git config user.name "JANUS Market Service Response"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin janus/market-service-responses >/dev/null 2>&1; then
+            git fetch origin janus/market-service-responses:refs/remotes/origin/janus/market-service-responses
+            git worktree add -B janus-market-service-responses-local "$responsewt" origin/janus/market-service-responses
+          else
+            git worktree add --detach "$responsewt" HEAD
+            cd "$responsewt"; git switch --orphan janus-market-service-responses-local; git rm -rf --ignore-unmatch .
+            mkdir -p .janus/market-service-responses
+            printf '%s\n' '{"schema":"janus.home.market_service_response_mailbox.v1","role":"CREATE_ONLY_HOME_TO_MARKET_SERVICE_RESPONSES","transport":"CREDENTIALLESS_PUBLIC_READ","cross_repo_write_authority":false}' > .janus/market-service-responses/MANIFEST.json
+            cd - >/dev/null
+          fi
+          target="$responsewt/.janus/market-service-responses/${{ steps.pull.outputs.request_id }}.dataset-scout-result.json"
+          mkdir -p "$(dirname "$target")"
+          if [ -f "$target" ]; then
+            cmp -s runtime/market-dataset-scout-response.json "$target" || { echo 'DATASET_SCOUT_HOME_RESPONSE_CREATE_ONLY_CONFLICT' >&2; exit 2; }
+            echo 'DATASET_SCOUT_HOME_RESPONSE_ALREADY_PUBLISHED_IDENTICAL=TRUE'
+          else
+            cp runtime/market-dataset-scout-response.json "$target"
+          fi
+          cd "$responsewt"; git add .janus/market-service-responses
+          if git diff --cached --quiet; then
+            echo 'DATASET_SCOUT_HOME_RESPONSE_COMMIT=NO_CHANGE_EXACT_RETRY'
+          else
+            git commit -m "HOME dataset scout response ${{ steps.pull.outputs.request_id }}"
+            git push origin HEAD:refs/heads/janus/market-service-responses
+            echo 'DATASET_SCOUT_HOME_RESPONSE_COMMIT=PASS'
+          fi
+          echo 'CROSS_REPO_WRITE_CREDENTIAL_USED=FALSE'
+      - name: Upload Dataset Scout HOME witness
+        if: steps.pull.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-dataset-scout-home-${{ steps.pull.outputs.request_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            runtime/market-dataset-scout-packet.json
+            runtime/market-dataset-scout-request.json
+            runtime/market-dataset-scout-pull-receipt.json
+            runtime/market-dataset-scout-home-receipt.json
+            runtime/market-dataset-scout-summary.json
+            runtime/market-dataset-scout-response.json
+          if-no-files-found: error
