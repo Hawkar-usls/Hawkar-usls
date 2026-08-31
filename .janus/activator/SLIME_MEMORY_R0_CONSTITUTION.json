@@ -1,0 +1,124 @@
+{
+  "schema": "janus.activator.slime_memory.r0.constitution.v1",
+  "component_id": "JANUS_ACTIVATOR_SLIME_MEMORY_R0",
+  "status": "CANDIDATE_RUNTIME_ORGAN__ADVISORY_ONLY__TEST_GATE_REQUIRED",
+  "date": "2026-08-31",
+  "placement": {
+    "read_phase": "LOAD_PROVENANCE_AND_STATE -> SLIME_MEMORY_RETRIEVE_AND_RANK -> GENERATE_BOUNDED_CANDIDATES",
+    "write_phase": "FINALIZED_VERIFIED_ROUTE_RECEIPT -> VALIDATE_ALL_REQUIRED_FIELDS_AND_HASH -> APPEND_EPISODE",
+    "activation_may_learn": false
+  },
+  "ancestry": [
+    "GOLDEN_SLIME_AND_ARENA",
+    "OLDPVP_LOSER_LEARNS_AND_ELITE_VAULT",
+    "M2R_EXACT_EPISODE_MEMORY",
+    "PHEROMONE_ROUTE_MEMORY",
+    "TOPA_SPIDER_FLYWHEEL",
+    "TOPA_SPIRAL_ATTENTION_REPLAY_FATIGUE",
+    "PIPPI_ANTI_MONOCULTURE_NEGATIVE_CHECKPOINT",
+    "MICROGPT_SLIME_TEACHER_STUDENT_QUANTIZATION",
+    "ABSOLUTE_IDLE_CONSOLIDATION",
+    "TRUE_SLIME_REALITYCHECK_ANTIBRITTLENESS",
+    "KLGJ_NET_RESOURCE_ACCOUNTING"
+  ],
+  "goldslime_superset_claim": {
+    "claim": "R0 is a mechanism-contract superset of the inspected Golden Slime ancestry, not yet an empirically universal performance winner.",
+    "gold_retained": [
+      "arena/champion competition",
+      "loser information preservation",
+      "mutation/search-policy adaptation",
+      "escalating curriculum",
+      "elite historical snapshots"
+    ],
+    "added": [
+      "exact finalized-receipt admission",
+      "immutable deduplicated episode memory",
+      "small-N shrinkage",
+      "exploration floor",
+      "volatile Spider attention separated from evidence/confidence",
+      "stale replay fatigue without history deletion",
+      "contradiction inspection urgency",
+      "UNKNOWN preservation",
+      "training/calibration cost charged against gross savings",
+      "Activator freshness/authority firewall"
+    ],
+    "empirical_better_than_gold_gate": "Must beat frozen Golden/STATIC/adviser baselines on fingerprint-separated holdouts after total learning cost, while preserving all authority and epistemic invariants."
+  },
+  "authority": {
+    "root_activation_authority": false,
+    "claim_verdict_authority": false,
+    "authorization_authority": false,
+    "dispatch_authority": false,
+    "effect_authority": false,
+    "fresh_trigger_authority": false,
+    "declared_route_reordering_only": true
+  },
+  "memory_planes": {
+    "verified_episode_memory": "Append-only finalized route outcomes keyed by integrity-valid receipt hash.",
+    "route_confidence": "Directional operational utility with four-neutral-observation small-N shrinkage.",
+    "resource_memory": "gross_saved_work - learning_cost_work; training cost is never free.",
+    "attention_memory": "Derived volatile advisory salience using canonical TOPA early-burst/replay-fatigue shape.",
+    "failure_shadow_memory": "VERIFIED_FAILURE, VERIFIED_RESOURCE_LIMIT and VERIFIED_UNKNOWN remain queryable and are never rewritten into success."
+  },
+  "terminal_semantics": {
+    "VERIFIED_SUCCESS": "Operational success signal only; not claim truth.",
+    "VERIFIED_FAILURE": "Operational route failure signal only; not global falsity.",
+    "VERIFIED_RESOURCE_LIMIT": "Resource penalty; never negative evidence about the target claim.",
+    "VERIFIED_UNKNOWN": "Preserved and directionally neutral for promotable route confidence."
+  },
+  "anti_monoculture": {
+    "small_n_shrinkage": "utility_sum / (directional_n + 4)",
+    "exploration_bonus": "0.12 / sqrt(all_route_episodes + 1)",
+    "single_adviser_universal_weight_forbidden": true,
+    "no_route_drop_in_r0": true,
+    "stable_original_order_tie_break": true
+  },
+  "topa_attention": {
+    "repetition_burst": "0.18 * (1 - exp(-0.9 * min(replay_streak, 6)))",
+    "replay_fatigue": "0.58 * (1 - exp(-0.45 * max(0, replay_streak - 3)))",
+    "fresh_verified_episode_novelty_bonus": 0.14,
+    "attention_is_evidence": false,
+    "focus_is_truth": false,
+    "history_deleted_on_fatigue": false
+  },
+  "receipt_gate": {
+    "receipt_class": "JANUS_SLIME_VERIFIED_ROUTE_OUTCOME",
+    "required_before_write": [
+      "receipt_class",
+      "finalized",
+      "route_match",
+      "route_terminal",
+      "source_digest",
+      "verifier_digest",
+      "resource_cost",
+      "gross_saved_work",
+      "learning_cost_work",
+      "receipt_hash"
+    ],
+    "schema_and_semantics_before_persistence": true,
+    "hash_verified_before_selection_for_learning": true,
+    "duplicate_receipt_is_new_evidence": false,
+    "invalid_receipt_write": false
+  },
+  "laws": [
+    "SLIME_MAY_SUGGEST_AND_REORDER != SLIME_MAY_DECIDE",
+    "MEMORY != EVIDENCE",
+    "ATTENTION != EVIDENCE",
+    "ROUTE_SCORE != CLAIM_TRUTH",
+    "PHEROMONE != AUTHORIZATION",
+    "CHAMPION != VERDICT",
+    "REPLAY != NEW_EVIDENCE",
+    "UNKNOWN != NEGATIVE",
+    "RESOURCE_LIMIT != TARGET_NEGATIVE",
+    "IDLE_CONSOLIDATION != FRESH_TRIGGER",
+    "TRAINING_COST_IS_CHARGED",
+    "ONLY_FINALIZED_VERIFIED_RECEIPTS_UPDATE_PROMOTABLE_ROUTE_CONFIDENCE"
+  ],
+  "implementation": {
+    "memory": "src/janus_spi/slime_memory.py",
+    "activator_adapter": "src/janus_spi/activator_slime_r0.py",
+    "activation_cli": "run_janus_activator.py",
+    "learning_cli": "run_janus_slime_memory.py",
+    "tests": "tests/test_slime_memory.py"
+  }
+}
