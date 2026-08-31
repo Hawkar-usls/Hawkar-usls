@@ -1,0 +1,103 @@
+{
+  "schema": "janus.activator.slime_memory.r0.gold_gate_receipt.v1",
+  "receipt_id": "JANUS_ACTIVATOR_SLIME_MEMORY_R0_GOLD_GATE_2026-08-31",
+  "status": "PASS__BETTER_THAN_GOLDEN_ARENA_BASELINE_WITHIN_FROZEN_ACTIVATOR_ROUTE_MEMORY_BENCH",
+  "date": "2026-08-31",
+  "scope": "ADVISORY_ROUTE_MEMORY_AND_RANKING_ONLY",
+  "implementation": {
+    "r0_main_commit": "363b9325e026c3c62f657538cfcafd5f3348d01f",
+    "benchmark_main_commit": "bc9ba5219e52ca45944fbc8d7d4e8d7a33ea8d68",
+    "memory": "src/janus_spi/slime_memory.py",
+    "adapter": "src/janus_spi/activator_slime_r0.py"
+  },
+  "freeze": {
+    "spec": ".janus/activator/SLIME_GOLD_VS_IDEAL_FROZEN_BENCH_V1.json",
+    "freeze_commit_before_runner_and_ci": "b2af9a40634bf331d329883291639ff95534fa93",
+    "benchmark_core_sha256": "27455db8612cbd6e82eb3a364cce65f6985de5a72c0feaa7f9d6e579f3bebef1",
+    "winner_preregistered": false,
+    "holdout_learned_before_selection": false
+  },
+  "baseline": {
+    "id": "GOLDEN_ARENA_MECHANISM_BASELINE_V1",
+    "provenance": "Inspected OldPvP/GoldenSlime arena-champion ancestry",
+    "bit_for_bit_historical_goldslime": false,
+    "boundary": "This receipt establishes scoped superiority over the executable Golden arena mechanism baseline, not universal superiority over every historical GoldSlime implementation."
+  },
+  "github_actions": {
+    "benchmark_workflow": {
+      "name": "JANUS Slime Gold vs Ideal Frozen Bench",
+      "run_id": 33414695576,
+      "run_number": 1,
+      "conclusion": "success",
+      "job_id": 99562426229,
+      "execute_frozen_benchmark": "success",
+      "upload_benchmark_receipt": "success",
+      "artifact_id": 9766517420,
+      "artifact_name": "slime-gold-vs-ideal-frozen-bench-v1",
+      "artifact_zip_sha256": "9fa43da42de03f6e6ef35bfe66870b2e52d30ceec848231af603b3c56d63e6e7"
+    },
+    "repository_ci": {
+      "name": "JANUS-SPI CI",
+      "run_id": 33414695664,
+      "run_number": 427,
+      "conclusion": "success",
+      "compile": "success",
+      "validate_activator_json": "success",
+      "test": "success"
+    }
+  },
+  "result": {
+    "status": "PASS",
+    "training_episode_count": 48,
+    "shared_observed_learning_cost_work": 1082.0,
+    "authority_escalations": 0,
+    "gold": {
+      "verified_success": 3,
+      "verified_failure": 1,
+      "verified_unknown": 1,
+      "terminal_utility": 2.0,
+      "holdout_execution_cost_work": 475.0,
+      "training_cost_work": 1130.0,
+      "pre_training_composite": 1.525,
+      "net_composite": 0.395
+    },
+    "ideal": {
+      "verified_success": 5,
+      "verified_failure": 0,
+      "verified_unknown": 0,
+      "terminal_utility": 5.0,
+      "holdout_execution_cost_work": 115.0,
+      "training_cost_work": 1142.0,
+      "pre_training_composite": 4.885,
+      "net_composite": 3.743
+    },
+    "net_composite_margin_ideal_minus_gold": 3.348,
+    "all_preregistered_gates": "PASS"
+  },
+  "cases": [
+    {"id": "STABLE_CHAMPION_CONTROL", "gold": "route_A/VERIFIED_SUCCESS", "ideal": "route_A/VERIFIED_SUCCESS", "same_choice": true},
+    {"id": "SMALL_N_LUCKY_CHAMPION", "gold": "route_A/VERIFIED_FAILURE", "ideal": "route_B/VERIFIED_SUCCESS", "same_choice": false},
+    {"id": "GROSS_SUCCESS_COST_TRAP", "gold": "route_A/VERIFIED_SUCCESS/cost=400", "ideal": "route_B/VERIFIED_SUCCESS/cost=40", "same_choice": false},
+    {"id": "UNKNOWN_NO_CONTEST_TRAP", "gold": "route_A/VERIFIED_UNKNOWN", "ideal": "route_B/VERIFIED_SUCCESS", "same_choice": false},
+    {"id": "ROBUST_AGREEMENT_CONTROL", "gold": "route_A/VERIFIED_SUCCESS", "ideal": "route_A/VERIFIED_SUCCESS", "same_choice": true}
+  ],
+  "gate_results": {
+    "composite_net_margin": true,
+    "successes": true,
+    "failures": true,
+    "unknowns": true,
+    "execution_cost": true,
+    "declared_candidate_set": true,
+    "authority": true
+  },
+  "authority": {
+    "root_activation_authority": false,
+    "claim_verdict_authority": false,
+    "authorization_authority": false,
+    "dispatch_authority": false,
+    "effect_authority": false,
+    "fresh_trigger_authority": false
+  },
+  "claim_boundary": "PASS means BETTER_THAN_GOLDEN_ARENA_BASELINE_WITHIN_FROZEN_ACTIVATOR_ROUTE_MEMORY_BENCH. It does not mean universal AGI superiority, theorem authority, or bit-for-bit victory over every historical GoldSlime binary.",
+  "next_gate": "REAL_FINALIZED_ACTIVATOR_RECEIPT_REPLAY_AND_LONG_HORIZON_NET_GAIN_MONITORING"
+}

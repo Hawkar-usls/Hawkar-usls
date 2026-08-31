@@ -1,0 +1,21 @@
+{
+  "schema": "janus.activator.slime-memory-r0-promotion-link.v1",
+  "status": "CANONICAL_SUPERSEDING_POINTER__R0_MERGED__CI_PASS__SCOPED_GOLD_GATE_PASS",
+  "date": "2026-08-31",
+  "supersedes_runtime_status_only_of": ".janus/activator/SLIME_MEMORY_LINK.json",
+  "preserve_old_checkpoint": true,
+  "component": "JANUS_ACTIVATOR_SLIME_MEMORY_R0",
+  "runtime_commit": "363b9325e026c3c62f657538cfcafd5f3348d01f",
+  "benchmark_commit": "bc9ba5219e52ca45944fbc8d7d4e8d7a33ea8d68",
+  "gold_gate_receipt": ".janus/activator/SLIME_MEMORY_R0_GOLD_GATE_RECEIPT.json",
+  "topa_spider_synthesis": "Hawkar-usls/janus-meta-registry::data/JANUS-TOPA-SPIDER-ALL-SLIME-SPIRAL-IDEAL-SLIME-R0-2026-08-31-v1.0.json",
+  "claim": "BETTER_THAN_GOLDEN_ARENA_BASELINE_WITHIN_FROZEN_ACTIVATOR_ROUTE_MEMORY_BENCH",
+  "frozen_core_sha256": "27455db8612cbd6e82eb3a364cce65f6985de5a72c0feaa7f9d6e579f3bebef1",
+  "benchmark_workflow_run_id": 33414695576,
+  "benchmark_artifact_id": 9766517420,
+  "net_composite_margin_ideal_minus_gold": 3.348,
+  "universal_goldslime_superiority_claimed": false,
+  "authority_ceiling_unchanged": true,
+  "learning_still_requires_finalized_integrity_valid_receipt": true,
+  "next_gate": "REAL_FINALIZED_ACTIVATOR_RECEIPT_REPLAY_AND_LONG_HORIZON_NET_GAIN_MONITORING"
+}
