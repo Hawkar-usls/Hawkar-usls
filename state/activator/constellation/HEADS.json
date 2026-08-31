@@ -1,5 +1,5 @@
 {
-  "heads_hash": "9dac38c672915124adc37b712c22abae4a6e33ea849ac6aff0707907b6853f5e",
+  "heads_hash": "443fdf6f61edf39ccca38d7dee7098c70a8f81e488bdb74698424e0b6dcb737f",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
@@ -8,6 +8,14 @@
       "member_class": "CORE",
       "member_key": "operator_hands",
       "repository": "Hawkar-usls/-Terminal-for-Janus"
+    },
+    "Hawkar-usls/AI-Cardputer-adv-A-Portable-AI-Assistant": {
+      "branch": "main",
+      "head_sha": "08fad4a22dcfa4474c4457cd6a1c941688a4fafb",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:ai_cardputer_assistant",
+      "repository": "Hawkar-usls/AI-Cardputer-adv-A-Portable-AI-Assistant"
     },
     "Hawkar-usls/AIFC": {
       "branch": "main",
@@ -33,6 +41,14 @@
       "member_key": "subtissue:atom_rpg_embedded_world",
       "repository": "Hawkar-usls/ATOM-RPG"
     },
+    "Hawkar-usls/Arduino-AI-Chat-Library": {
+      "branch": "main",
+      "head_sha": "7a39af81a338ebeb39aff8eb90412f6794fd8cf4",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:arduino_ai_chat_library",
+      "repository": "Hawkar-usls/Arduino-AI-Chat-Library"
+    },
     "Hawkar-usls/BFain": {
       "branch": "main",
       "head_sha": "f81eb44505836664fe8a8d4aaaf58819f5f7dbdf",
@@ -40,6 +56,14 @@
       "member_class": "SUBTISSUE",
       "member_key": "subtissue:bfain_interface_simulation",
       "repository": "Hawkar-usls/BFain"
+    },
+    "Hawkar-usls/Cardputer-Game-Station-Emulators": {
+      "branch": "xip_load",
+      "head_sha": "48d54f1fb72fa4053d364d107ab5ed13fce2b55b",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:cardputer_game_station",
+      "repository": "Hawkar-usls/Cardputer-Game-Station-Emulators"
     },
     "Hawkar-usls/DIVINE_REALM": {
       "branch": "main",
@@ -56,6 +80,14 @@
       "member_class": "CORE",
       "member_key": "guardian_cortex",
       "repository": "Hawkar-usls/Demi_Head"
+    },
+    "Hawkar-usls/ESP32-TWAI-CAN": {
+      "branch": "master",
+      "head_sha": "702f3303e31c7623eeeed5a90217b25cfbbd7c66",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:esp32_twai_can",
+      "repository": "Hawkar-usls/ESP32-TWAI-CAN"
     },
     "Hawkar-usls/Echo-Pyramid": {
       "branch": "main",
@@ -75,7 +107,7 @@
     },
     "Hawkar-usls/Hawkar-usls": {
       "branch": "main",
-      "head_sha": "c4308f1f49fae0d3a078a4b5a85053c461595c93",
+      "head_sha": "f6aa5b4b0b1f576fbdac9efe358e4137666dcfe0",
       "kind": "BOOTSTRAP_ROOT",
       "member_class": "BOOTSTRAP_ROOT",
       "member_key": "bootstrap_root",
@@ -107,7 +139,7 @@
     },
     "Hawkar-usls/Janus-Demiurge": {
       "branch": "main",
-      "head_sha": "dbdde1d06e638d3a139b46f1156956fee69ccfe4",
+      "head_sha": "bd03c54e89715a7ce086351395fef40b5dc9d4a3",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "orchestrator",
@@ -137,6 +169,22 @@
       "member_key": "external:linear_a_decipherment_programme",
       "repository": "Hawkar-usls/Linear-A-decipherment-programme"
     },
+    "Hawkar-usls/M5Unit-ENV": {
+      "branch": "master",
+      "head_sha": "ccc2b0845e043d144b52884cc5a3a045ff819bf1",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:m5unit_env",
+      "repository": "Hawkar-usls/M5Unit-ENV"
+    },
+    "Hawkar-usls/RadioPlayerV3": {
+      "branch": "master",
+      "head_sha": "95971e39062fb44a1ef7a6c15a9ab6a3240d3721",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:radio_player_v3",
+      "repository": "Hawkar-usls/RadioPlayerV3"
+    },
     "Hawkar-usls/SCOBY-D0": {
       "branch": "main",
       "head_sha": "43c1f1f5c0aed4df970d8c958aa2c70dd3732778",
@@ -144,6 +192,22 @@
       "member_class": "DOMAIN_LAB",
       "member_key": "materials_lab",
       "repository": "Hawkar-usls/SCOBY-D0"
+    },
+    "Hawkar-usls/SLOT": {
+      "branch": "main",
+      "head_sha": "42bc13537dba1a739b58cd1b490d8c648ab827bd",
+      "kind": "LEGACY_ARCHIVE",
+      "member_class": "LEGACY_ARCHIVE",
+      "member_key": "legacy:slot",
+      "repository": "Hawkar-usls/SLOT"
+    },
+    "Hawkar-usls/SSlot": {
+      "branch": "main",
+      "head_sha": "7c230fec8afcfce34629c528bc92a6d39fdd0782",
+      "kind": "LEGACY_ARCHIVE",
+      "member_class": "LEGACY_ARCHIVE",
+      "member_key": "legacy:sslot",
+      "repository": "Hawkar-usls/SSlot"
     },
     "Hawkar-usls/Simptomat": {
       "branch": "main",
@@ -169,6 +233,14 @@
       "member_key": "voice",
       "repository": "Hawkar-usls/The-Voice-of-Janus"
     },
+    "Hawkar-usls/arduino-ide": {
+      "branch": "main",
+      "head_sha": "aa9ccb18ec2558f8052151205a3f27d88d718a1b",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:arduino_ide",
+      "repository": "Hawkar-usls/arduino-ide"
+    },
     "Hawkar-usls/aura-oracle-tg": {
       "branch": "main",
       "head_sha": "30bace8a48b1c26b98ac3f953dff3422dd9bbb23",
@@ -176,6 +248,22 @@
       "member_class": "CORE",
       "member_key": "symbolic_imagination",
       "repository": "Hawkar-usls/aura-oracle-tg"
+    },
+    "Hawkar-usls/clawdbot": {
+      "branch": "main",
+      "head_sha": "5ff45346283afef3b671c570513aff0e7e508e62",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:clawdbot",
+      "repository": "Hawkar-usls/clawdbot"
+    },
+    "Hawkar-usls/emoji": {
+      "branch": "master",
+      "head_sha": "fdc85898baf2793c2421fa7e7128a9698651fe50",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:emoji",
+      "repository": "Hawkar-usls/emoji"
     },
     "Hawkar-usls/iNaiHR": {
       "branch": "main",
@@ -219,7 +307,7 @@
     },
     "Hawkar-usls/janus-meta-registry": {
       "branch": "main",
-      "head_sha": "39bf6f6ed5866c6ed9549d96b5b1e418345cefd8",
+      "head_sha": "ff293abab2bc41220f7fd1262b6d499a00be1aae",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "memory",
@@ -233,6 +321,30 @@
       "member_key": "external:linear_a_explorer",
       "repository": "Hawkar-usls/lineara.xyz"
     },
+    "Hawkar-usls/player": {
+      "branch": "master",
+      "head_sha": "f29bdefe9de80b4e886ea6c710ef8b392bd1ccbb",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:player",
+      "repository": "Hawkar-usls/player"
+    },
+    "Hawkar-usls/tranception": {
+      "branch": "main",
+      "head_sha": "e786ca75ac30afb14e45edffc92aa49a05a9da4f",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:tranception_ml",
+      "repository": "Hawkar-usls/tranception"
+    },
+    "Hawkar-usls/vcmi": {
+      "branch": "develop",
+      "head_sha": "21f37393e801df4d870e99be9c3b99d119cb47ce",
+      "kind": "TOOLCHAIN_DEPENDENCY",
+      "member_class": "TOOLCHAIN_DEPENDENCY",
+      "member_key": "toolchain:vcmi",
+      "repository": "Hawkar-usls/vcmi"
+    },
     "Hawkar-usls/xiaozhi-esp32": {
       "branch": "main",
       "head_sha": "6473c15d545f9c6679224a75f298681e75f0d47d",
@@ -242,10 +354,10 @@
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "574139a8b2967996f4dca3095b6e9a184d1728c756db4038f16a123e471762a1",
+  "model_digest": "cbf78d819727fa8469300a29c9b5d40751f337c203be850b24b7414bd955acdc",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1788203655.205202,
+  "updated_at": 1788204650.0480998,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
