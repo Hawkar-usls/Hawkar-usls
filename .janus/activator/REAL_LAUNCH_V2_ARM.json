@@ -1,0 +1,15 @@
+{
+  "schema": "janus.activator.real_launch_v2_arm.v1",
+  "arm_id": "JANUS-MODEL-FIRST-REAL-LAUNCH-V2-2026-08-31",
+  "armed": true,
+  "one_shot": true,
+  "purpose": "Trigger the first canonical model-first persistent JANUS launch after exact-head CI and merge.",
+  "route": "research_or_anomaly_investigation",
+  "fresh_external_stimulus": true,
+  "command_authority_granted": false,
+  "claim_authority_granted": false,
+  "scientific_evidence_authority_granted": false,
+  "world_truth_authority_granted": false,
+  "external_effect_authorized": false,
+  "physical_runtime_effect_authorized": false
+}
