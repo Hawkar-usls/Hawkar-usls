@@ -58,7 +58,10 @@ def snapshot_from_model_lock(model_lock: Mapping[str, Any]) -> Dict[str, Dict[st
         branch = str(raw.get("resolved_branch") or raw.get("branch") or "").strip()
         if not repository or not head_sha or not branch:
             continue
-        _require(len(head_sha) == 40 and all(c in "0123456789abcdef" for c in head_sha.lower()), f"MEMBER_HEAD_INVALID:{repository}")
+        _require(
+            len(head_sha) == 40 and all(c in "0123456789abcdef" for c in head_sha.lower()),
+            f"MEMBER_HEAD_INVALID:{repository}",
+        )
         if repository in snapshot:
             raise ConstellationWatcherError(f"DUPLICATE_REPOSITORY:{repository}")
         snapshot[repository] = {
@@ -102,6 +105,15 @@ class ConstellationWatcher:
         body["heads_hash"] = canonical_hash(body)
         return body
 
+    def _verify_baseline(self, baseline: Mapping[str, Any]) -> Mapping[str, Any]:
+        claimed_heads_hash = str(baseline.get("heads_hash") or "")
+        baseline_body = dict(baseline)
+        baseline_body.pop("heads_hash", None)
+        _require(canonical_hash(baseline_body) == claimed_heads_hash, "CONSTELLATION_BASELINE_HASH_INVALID")
+        members = baseline.get("members") or {}
+        _require(isinstance(members, Mapping), "CONSTELLATION_BASELINE_MEMBERS_INVALID")
+        return members
+
     def _verify_ledger(self, rows: list[Mapping[str, Any]]) -> None:
         parent = None
         seen: set[str] = set()
@@ -131,6 +143,118 @@ class ConstellationWatcher:
                 ids.add(str(value.get("stimulus_id")))
         return ids
 
+    def _pending_rows(self) -> list[Dict[str, Any]]:
+        rows = _read_jsonl(self.ledger_path)
+        self._verify_ledger(rows)
+        closed = self._closed_cycle_ids()
+        return [dict(row) for row in rows if str(row.get("stimulus_id")) not in closed]
+
+    def preflight(self, reader: Any) -> Dict[str, Any]:
+        """Cheap exact-HEAD gate before a full federated model compile.
+
+        Quiet polls resolve only the branches already sealed in HEADS.json. They do
+        not fetch topology/descriptor JSON and never mutate baseline or ledger.
+        Any drift, unresolved ref, missing baseline, or crash-left pending stimulus
+        escalates to the existing full scan, which remains the only authority for
+        changing membership and sealing new stimuli.
+        """
+
+        baseline = _read_json(self.heads_path)
+        if baseline is None:
+            return {
+                "schema": "janus.constellation.preflight.v1",
+                "terminal": "CONSTELLATION_PREFLIGHT_BASELINE_MISSING",
+                "requires_full_scan": True,
+                "drift_count": 0,
+                "unresolved_count": 0,
+                "pending_stimulus_count": 0,
+                "drift": [],
+                "unresolved": [],
+                "reason": "BASELINE_MISSING",
+            }
+
+        members = self._verify_baseline(baseline)
+        pending = self._pending_rows()
+        if pending:
+            return {
+                "schema": "janus.constellation.preflight.v1",
+                "terminal": "CONSTELLATION_PREFLIGHT_PENDING_STIMULI",
+                "requires_full_scan": True,
+                "drift_count": 0,
+                "unresolved_count": 0,
+                "pending_stimulus_count": len(pending),
+                "drift": [],
+                "unresolved": [],
+                "reason": "CRASH_SAFE_PENDING_RESUME",
+            }
+
+        drift: list[Dict[str, Any]] = []
+        unresolved: list[Dict[str, Any]] = []
+        for repository, old in sorted(members.items()):
+            _require(isinstance(old, Mapping), f"CONSTELLATION_BASELINE_MEMBER_INVALID:{repository}")
+            branch = str(old.get("branch") or "").strip()
+            expected = str(old.get("head_sha") or "").strip().lower()
+            _require(branch and expected, f"CONSTELLATION_BASELINE_REF_INVALID:{repository}")
+            try:
+                current = reader.branch_head(str(repository), branch)
+            except Exception as exc:  # fail closed into full verification
+                unresolved.append(
+                    {
+                        "repository": str(repository),
+                        "branch": branch,
+                        "expected_head": expected,
+                        "error": type(exc).__name__,
+                    }
+                )
+                continue
+            current_text = str(current or "").strip().lower()
+            if not current_text:
+                unresolved.append(
+                    {
+                        "repository": str(repository),
+                        "branch": branch,
+                        "expected_head": expected,
+                        "error": "HEAD_UNRESOLVED",
+                    }
+                )
+                continue
+            if current_text != expected:
+                drift.append(
+                    {
+                        "repository": str(repository),
+                        "branch": branch,
+                        "previous_head": expected,
+                        "current_head": current_text,
+                    }
+                )
+
+        if unresolved:
+            terminal = "CONSTELLATION_PREFLIGHT_INDETERMINATE"
+            reason = "HEAD_RESOLUTION_INDETERMINATE"
+            requires_full_scan = True
+        elif drift:
+            terminal = "CONSTELLATION_PREFLIGHT_DRIFT"
+            reason = "EXACT_MEMBER_HEAD_DRIFT"
+            requires_full_scan = True
+        else:
+            terminal = "CONSTELLATION_PREFLIGHT_QUIET"
+            reason = "NO_REGISTERED_HEAD_DRIFT"
+            requires_full_scan = False
+
+        return {
+            "schema": "janus.constellation.preflight.v1",
+            "terminal": terminal,
+            "requires_full_scan": requires_full_scan,
+            "drift_count": len(drift),
+            "unresolved_count": len(unresolved),
+            "pending_stimulus_count": 0,
+            "drift": drift,
+            "unresolved": unresolved,
+            "reason": reason,
+            "heads_hash": baseline.get("heads_hash"),
+            "persistent_state_branches_are_sensory_inputs": False,
+        }
+
     def scan(self, model_lock: Mapping[str, Any]) -> Dict[str, Any]:
         snapshot = snapshot_from_model_lock(model_lock)
         current_baseline = _read_json(self.heads_path)
@@ -150,13 +274,7 @@ class ConstellationWatcher:
                 "heads_hash": baseline["heads_hash"],
             }
 
-        claimed_heads_hash = str(current_baseline.get("heads_hash") or "")
-        baseline_body = dict(current_baseline)
-        baseline_body.pop("heads_hash", None)
-        _require(canonical_hash(baseline_body) == claimed_heads_hash, "CONSTELLATION_BASELINE_HASH_INVALID")
-        previous = current_baseline.get("members") or {}
-        _require(isinstance(previous, Mapping), "CONSTELLATION_BASELINE_MEMBERS_INVALID")
-
+        previous = self._verify_baseline(current_baseline)
         existing_ids = {str(row.get("stimulus_id")) for row in rows}
         parent = str(rows[-1]["stimulus_receipt_hash"]) if rows else None
         new_rows: list[Dict[str, Any]] = []
@@ -254,6 +372,15 @@ class ConstellationWatcher:
         runtime_hash = str(runtime_receipt.get("runtime_receipt_hash") or "")
         _require(bool(runtime_hash), "RUNTIME_RECEIPT_HASH_REQUIRED")
 
+        target = self.cycles_dir / f"{stimulus_id}.json"
+        existing = _read_json(target)
+        if existing is not None:
+            _require(existing.get("stimulus_id") == stimulus_id, "CYCLE_STIMULUS_ID_MISMATCH")
+            _require(existing.get("stimulus_receipt_hash") == row.get("stimulus_receipt_hash"), "CYCLE_STIMULUS_HASH_MISMATCH")
+            _require(existing.get("runtime_receipt_hash") == runtime_hash, "CYCLE_RUNTIME_RECEIPT_HASH_MISMATCH")
+            _require(existing.get("state") == "CLOSED_AT_HOME", "CYCLE_NOT_CLOSED_AT_HOME")
+            return existing
+
         cycle_body: Dict[str, Any] = {
             "schema": "janus.constellation.cycle_receipt.v1",
             "created_at": float(self.now_fn()),
@@ -271,21 +398,14 @@ class ConstellationWatcher:
             "next_gate": "WAIT_FOR_NEW_FRESH_STIMULUS",
         }
         cycle_body["cycle_receipt_hash"] = canonical_hash(cycle_body)
-        target = self.cycles_dir / f"{stimulus_id}.json"
-        existing = _read_json(target)
-        if existing is not None:
-            _require(existing == cycle_body, "CYCLE_CREATE_ONLY_CONFLICT")
-            return existing
         _write_json(target, cycle_body)
         return cycle_body
 
     def verify(self) -> Dict[str, Any]:
         baseline = _read_json(self.heads_path)
         _require(baseline is not None, "CONSTELLATION_BASELINE_MISSING")
+        self._verify_baseline(baseline)
         claimed = str(baseline.get("heads_hash") or "")
-        body = dict(baseline)
-        body.pop("heads_hash", None)
-        _require(canonical_hash(body) == claimed, "CONSTELLATION_BASELINE_HASH_INVALID")
         rows = _read_jsonl(self.ledger_path)
         self._verify_ledger(rows)
         known = {str(row.get("stimulus_id")): row for row in rows}
