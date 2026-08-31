@@ -1,0 +1,312 @@
+name: JANUS Activator Real Launch v2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'run_janus_real_launch_v2.py'
+      - 'tests/test_real_launch_v2.py'
+      - '.janus/activator/REAL_LAUNCH_V2_CONSTITUTION.json'
+      - '.janus/activator/REAL_LAUNCH_V2_ARM.json'
+      - '.janus/activator/JANUS_MODEL_MANIFEST.json'
+      - 'src/janus_spi/model_fabric_v12.py'
+      - 'src/janus_spi/file_fabric.py'
+      - 'src/janus_spi/candidate_tissue_materializer.py'
+      - 'src/janus_spi/specialized_turn.py'
+      - '.github/workflows/janus-activator-real-launch-v2.yml'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/REAL_LAUNCH_V2_ARM.json'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime and tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Compile model-first launch path
+        run: |
+          python -m compileall -q \
+            run_janus_real_launch_v2.py \
+            src/janus_spi/model_fabric_v12.py \
+            src/janus_spi/file_fabric.py \
+            src/janus_spi/candidate_tissue_materializer.py \
+            src/janus_spi/specialized_turn.py \
+            tests/test_real_launch_v2.py
+      - name: Validate launch contracts and arm
+        run: |
+          python -m json.tool .janus/activator/REAL_LAUNCH_V2_CONSTITUTION.json >/dev/null
+          python -m json.tool .janus/activator/REAL_LAUNCH_V2_ARM.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('.janus/activator/REAL_LAUNCH_V2_CONSTITUTION.json').read_text())
+          a=json.loads(Path('.janus/activator/REAL_LAUNCH_V2_ARM.json').read_text())
+          m=json.loads(Path('.janus/activator/JANUS_MODEL_MANIFEST.json').read_text())
+          assert c['launch_success_terminal']=='JANUS_REAL_LAUNCH_V2_COMPLETED_RETURNED_HOME'
+          assert c['legacy']['must_not_be_used_as_v2_launch_witness'] is True
+          assert a['armed'] is True and a['one_shot'] is True
+          assert a['external_effect_authorized'] is False
+          trump=next(x for x in m['candidate_runtime_tissues'] if x['tissue_key']=='trump')
+          assert trump['manifest_path']=='trump/TRUMP_MANIFEST.json'
+          assert trump['wake_allowed'] is True and trump['use_allowed'] is True
+          assert trump['proof_authority'] is False
+          print('JANUS_REAL_LAUNCH_V2_CONTRACT=PASS')
+          PY
+      - name: Run launch blast-radius tests
+        env:
+          PYTHONPATH: src:.
+        run: |
+          pytest -q \
+            tests/test_real_launch_v2.py \
+            tests/test_model_fabric_v12.py \
+            tests/test_file_fabric.py \
+            tests/test_candidate_tissue_materializer.py \
+            tests/test_specialized_turn.py \
+            tests/test_dual_transport.py
+
+  live-launch:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Check out canonical HOME architecture
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install runtime
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify one-shot arm on push launch
+        if: github.event_name == 'push'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          arm=json.loads(Path('.janus/activator/REAL_LAUNCH_V2_ARM.json').read_text())
+          assert arm['armed'] is True
+          assert arm['one_shot'] is True
+          assert arm['arm_id']=='JANUS-MODEL-FIRST-REAL-LAUNCH-V2-2026-08-31'
+          for key in ('command_authority_granted','claim_authority_granted','scientific_evidence_authority_granted','world_truth_authority_granted','external_effect_authorized','physical_runtime_effect_authorized'):
+              assert arm[key] is False
+          print('REAL_LAUNCH_V2_ARM=VERIFIED')
+          PY
+
+      - name: Mount persistent JANUS HOME state as isolated worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="${RUNNER_TEMP}/janus-real-launch-v2-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          git -C "$state" config user.name "JANUS Real Launch v2"
+          git -C "$state" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "JANUS_STATE_WORKTREE=$state" >> "$GITHUB_ENV"
+          cp "$state/state/activator/identity.json" "$RUNNER_TEMP/resident-before.json"
+
+      - name: Verify persistent resident before WAKE
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python run_janus_activator_hearth.py \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" verify > "$RUNNER_TEMP/pre-health.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          health=json.loads(Path(os.environ['RUNNER_TEMP']+'/pre-health.json').read_text())
+          ident=json.loads(Path(os.environ['RUNNER_TEMP']+'/resident-before.json').read_text())
+          assert health['ok'] is True
+          assert health['mode']=='AT_HOME'
+          assert health['active_cycle_id'] is None
+          assert health['resident_uuid']==ident['resident_uuid']
+          print('REAL_LAUNCH_V2_PRE_HOME=HEALTHY_AT_HOME')
+          print('REAL_LAUNCH_V2_RESIDENT_UUID='+ident['resident_uuid'])
+          PY
+
+      - name: Materialize unique bounded launch stimulus
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          row={
+            'source_kind':'EXPLICIT_HUMAN_ACTIVATOR_LAUNCH',
+            'source_ref':f"HAWKAR/JANUS_MODEL_FIRST_REAL_LAUNCH_V2#github-run-{os.environ['GITHUB_RUN_ID']}.{os.environ['GITHUB_RUN_ATTEMPT']}",
+            'payload':{
+              'purpose':'JANUS_MODEL_FIRST_REAL_LAUNCH_V2_WITNESS',
+              'architecture_sha':os.environ['GITHUB_SHA'],
+              'route':'research_or_anomaly_investigation',
+              'trump_mode':'CANDIDATE_RUNTIME_TISSUE',
+              'cross_repo_transport_invoked':False,
+              'physical_runtime_effect_authorized':False,
+            },
+            'classifications':['research_or_anomaly_investigation'],
+            'fresh':True,
+            'self_generated':False,
+            'command_authority':False,
+            'effect_authorized':False,
+          }
+          Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-event.json').write_text(json.dumps(row,indent=2,sort_keys=True)+'\n')
+          print('REAL_LAUNCH_V2_FRESH_STIMULUS=TRUE')
+          PY
+
+      - name: WAKE full JANUS, materialize exact organs and TRUMP, then RETURN HOME
+        env:
+          PYTHONPATH: src:.
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_real_launch_v2.py \
+            --event-file "$RUNNER_TEMP/real-launch-v2-event.json" \
+            --resident-identity "$RUNNER_TEMP/resident-before.json" \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            --model-lock-out "$RUNNER_TEMP/real-launch-v2-model-lock.json" \
+            --file-fabric-out "$RUNNER_TEMP/real-launch-v2-file-fabric.json" \
+            --runtime-receipt-out "$RUNNER_TEMP/real-launch-v2-runtime-receipt.json" \
+            --materialization-out "$RUNNER_TEMP/real-launch-v2-materialization.json" \
+            --turn-out "$RUNNER_TEMP/real-launch-v2-specialized-turn.json" \
+            --result-out "$RUNNER_TEMP/real-launch-v2-result.json" \
+            --organ-workspace "$RUNNER_TEMP/real-launch-v2-organs"
+
+      - name: Adjudicate model-first launch before persistence
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from run_janus_real_launch_v2 import validate_launch_receipt
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-result.json').read_text())
+          lock=json.loads(Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-model-lock.json').read_text())
+          fabric=json.loads(Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-file-fabric.json').read_text())
+          turn=json.loads(Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-specialized-turn.json').read_text())
+          assert validate_launch_receipt(result)
+          assert lock['ready'] is True
+          assert not lock['optional_unavailable']
+          assert not lock['candidate_tissue_unavailable']
+          assert lock['candidate_runtime_tissues']['trump']['admission_status']=='ADMITTED_CANDIDATE_RUNTIME'
+          assert fabric['coverage_complete'] is True
+          assert 'trump' in turn['executed_candidate_tissues']
+          assert turn['candidate_result_promotion_performed'] is False
+          print('JANUS_REAL_LAUNCH_V2_PRECOMMIT_ADJUDICATION=PASS')
+          print('MODEL_DIGEST='+result['model_digest'])
+          print('FILE_FABRIC_DIGEST='+result['file_fabric_digest'])
+          print('TRUMP_NATIVE_SELFTEST=PASS')
+          PY
+
+      - name: Persist successful launch lineage only after RETURN HOME
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C "$JANUS_STATE_WORKTREE" add state/activator
+          if git -C "$JANUS_STATE_WORKTREE" diff --cached --quiet; then
+            echo "REAL_LAUNCH_V2_STATE_COMMIT=NO_CHANGE"
+          else
+            git -C "$JANUS_STATE_WORKTREE" commit -m "JANUS model-first real launch v2 ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            git -C "$JANUS_STATE_WORKTREE" push origin HEAD:refs/heads/janus/activator-state
+            echo "REAL_LAUNCH_V2_STATE_COMMIT=PASS"
+          fi
+          echo "REAL_LAUNCH_V2_MAIN_MUTATION=FALSE"
+
+      - name: Fresh-worktree verify same resident, sealed launch receipt and AT_HOME
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="${RUNNER_TEMP}/janus-real-launch-v2-replay"
+          rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          python run_janus_activator_hearth.py --state-dir "$replay/state/activator" verify > "$RUNNER_TEMP/replay-health.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from run_janus_real_launch_v2 import validate_launch_receipt
+          before=json.loads(Path(os.environ['RUNNER_TEMP']+'/resident-before.json').read_text())
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-result.json').read_text())
+          health=json.loads(Path(os.environ['RUNNER_TEMP']+'/replay-health.json').read_text())
+          replay=Path(os.environ['RUNNER_TEMP'])/'janus-real-launch-v2-replay/state/activator'
+          identity=json.loads((replay/'identity.json').read_text())
+          stored=json.loads((replay/'real_launch_v2_receipts'/f"{result['cycle_id']}.json").read_text())
+          assert health['ok'] is True
+          assert health['mode']=='AT_HOME'
+          assert health['active_cycle_id'] is None
+          assert identity['resident_uuid']==before['resident_uuid']==result['resident_uuid']
+          assert stored==result
+          assert validate_launch_receipt(stored)
+          print('JANUS_REAL_LAUNCH_V2_FRESH_WORKTREE=PASS')
+          print('SAME_RESIDENT_UUID=PASS')
+          print('RETURN_NOT_RESET=PASS')
+          PY
+
+      - name: Final launch verdict
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from run_janus_real_launch_v2 import validate_launch_receipt
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/real-launch-v2-result.json').read_text())
+          assert validate_launch_receipt(result)
+          assert result['terminal']=='JANUS_REAL_LAUNCH_V2_COMPLETED_RETURNED_HOME'
+          print('JANUS_REAL_LAUNCH_V2_WITNESS=PASS')
+          print('JANUS_REAL_LAUNCH_V2_TERMINAL='+result['terminal'])
+          print('JANUS_RESIDENT_UUID='+result['resident_uuid'])
+          print('JANUS_MODEL_DIGEST='+result['model_digest'])
+          print('JANUS_FILE_FABRIC_DIGEST='+result['file_fabric_digest'])
+          print('JANUS_TRUMP_CANDIDATE_EXECUTED=TRUE')
+          print('JANUS_TRUMP_PROOF_AUTHORITY=FALSE')
+          print('JANUS_RETURNED_AT_HOME=TRUE')
+          PY
+
+      - name: Upload model-first launch witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-real-launch-v2-witness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/real-launch-v2-event.json
+            ${{ runner.temp }}/real-launch-v2-model-lock.json
+            ${{ runner.temp }}/real-launch-v2-file-fabric.json
+            ${{ runner.temp }}/real-launch-v2-runtime-receipt.json
+            ${{ runner.temp }}/real-launch-v2-materialization.json
+            ${{ runner.temp }}/real-launch-v2-specialized-turn.json
+            ${{ runner.temp }}/real-launch-v2-result.json
+            ${{ runner.temp }}/pre-health.json
+            ${{ runner.temp }}/replay-health.json
+          if-no-files-found: warn
+          retention-days: 30
