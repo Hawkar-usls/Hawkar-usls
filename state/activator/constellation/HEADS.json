@@ -1,5 +1,5 @@
 {
-  "heads_hash": "443fdf6f61edf39ccca38d7dee7098c70a8f81e488bdb74698424e0b6dcb737f",
+  "heads_hash": "4e49cce162040ded9a4735b10404099f996fca36278a94e12f75a6b06a4288e3",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
@@ -354,10 +354,10 @@
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "cbf78d819727fa8469300a29c9b5d40751f337c203be850b24b7414bd955acdc",
+  "model_digest": "e14f9a2101f1fac22e2393c1087ce4ee9198929597d049d8b7044db1f02eddae",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1788204650.0480998,
+  "updated_at": 1788204863.0411751,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
