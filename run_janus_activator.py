@@ -7,11 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from janus_spi.activator import ActivationEvent, JanusActivator
+from janus_spi.activator import ActivationEvent
+from janus_spi.activator_slime_r0 import SlimeAwareJanusActivatorR0
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="JANUS HOME bounded root activator")
+    parser = argparse.ArgumentParser(description="JANUS HOME bounded root activator with advisory Slime Memory R0")
     parser.add_argument("--event-file", required=True, help="JSON activation event file")
     parser.add_argument("--state-dir", default="state/activator")
     parser.add_argument("--routing", default=".janus/activator/ROUTING_TABLE.json")
@@ -32,7 +33,7 @@ def main() -> None:
         command_authority=bool(raw.get("command_authority", False)),
         effect_authorized=bool(raw.get("effect_authorized", False)),
     )
-    activator = JanusActivator(
+    activator = SlimeAwareJanusActivatorR0(
         state_dir=args.state_dir,
         routing_path=args.routing,
         policy_path=args.policy,
