@@ -1,0 +1,20 @@
+{
+  "schema": "janus.activator.slime-memory-link.v1.0",
+  "status": "CANONICAL_SEMANTIC_LINK__RUNTIME_NOT_IMPLEMENTED",
+  "home": "Hawkar-usls/Hawkar-usls",
+  "role": "ADVISORY_PERSISTENT_ADAPTATION_AND_ROUTE_MEMORY",
+  "authority": {
+    "root_activation_authority": false,
+    "claim_verdict_authority": false,
+    "authorization_authority": false,
+    "effect_authority": false,
+    "can_create_fresh_trigger": false
+  },
+  "canonical_registry_artifact": "Hawkar-usls/janus-meta-registry::data/JANUS-ACTIVATOR-SLIME-MEMORY-LINEAGE-AND-IDEAL-CONTRACT-2026-08-31-v1.0.json",
+  "registry_commit": "1212a8456347e6f7fe92e0449f2f5dcde7ca02b6",
+  "binding_rule": "SLIME_MEMORY_MAY_RETRIEVE_AND_RANK__EXISTING_ACTIVATOR_CONSTITUTION_AND_EXACT_RECEIPTS_REMAIN_AUTHORITY",
+  "learning_rule": "ONLY_ADMISSIBLE_VERIFIED_RECEIPTS_MAY_UPDATE_PROMOTABLE_ROUTE_CONFIDENCE",
+  "freshness_rule": "IDLE_CONSOLIDATION_AND_SELF_OUTPUT_NEVER_BECOME_FRESH_TRIGGER",
+  "integration_target": "JANUS_ACTIVATOR_SLIME_MEMORY_R0",
+  "runtime_status": "NOT_IMPLEMENTED_BY_THIS_LINK"
+}
