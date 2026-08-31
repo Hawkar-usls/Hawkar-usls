@@ -4,12 +4,11 @@ import copy
 import unittest
 
 from src.janus_spi.genesis_api import REQUEST_SCHEMA, GenesisAPIError
-from src.janus_spi.genesis_scene_graph import (
-    MAX_NODES,
+from src.janus_spi.genesis_scene_graph import MAX_NODES, topological_order
+from src.janus_spi.genesis_scene_graph_r04 import (
     SCENE_GRAPH_SCHEMA,
     SCENE_GRAPH_VERSION,
     compile_scene_graph,
-    topological_order,
     validate_scene_graph,
     verify_scene_graph_response,
 )
