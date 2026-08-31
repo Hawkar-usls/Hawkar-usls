@@ -1,0 +1,1 @@
+{"schema":"janus.home.market_response_mailbox.v1","role":"CREATE_ONLY_HOME_TO_MARKET_BUYER_QUERY_RESPONSES","transport":"CREDENTIALLESS_PUBLIC_READ","cross_repo_write_authority":false,"money_enabled":false}
