@@ -57,6 +57,21 @@ def adjudicate(args) -> int:
     result["provider_error_class"] = provider_status.get("error_class")
     result["provider_quota_exhausted"] = provider_status.get("error_class") == "COPILOT_MONTHLY_QUOTA_EXHAUSTED"
 
+    # Preserve reproducibility metadata for a local/open-weight language tissue.
+    # These fields describe the projection runtime only; they grant no authority.
+    for key in (
+        "provider_model_sha256",
+        "provider_model_revision",
+        "provider_runtime",
+        "provider_runtime_commit",
+        "provider_local_no_secret",
+        "provider_inference_network",
+        "provider_model_artifact_source",
+        "provider_model_artifact_sha256_verified",
+    ):
+        if key in provider_status:
+            result[key] = provider_status[key]
+
     core = dict(result)
     core.pop("result_hash", None)
     result["result_hash"] = canonical_hash(core)
@@ -66,6 +81,9 @@ def adjudicate(args) -> int:
         "provider_success": result.get("provider_success"),
         "provider_model": result.get("provider_model"),
         "provider_error_class": result.get("provider_error_class"),
+        "provider_model_sha256": result.get("provider_model_sha256"),
+        "provider_runtime_commit": result.get("provider_runtime_commit"),
+        "provider_local_no_secret": result.get("provider_local_no_secret"),
         "contextual_probe_present": result["contextual_mind_probe"]["present"],
         "semantic_verdict": result["contextual_mind_probe"]["semantic_verdict"],
         "consciousness_verdict": result["contextual_mind_probe"]["consciousness_verdict"],
