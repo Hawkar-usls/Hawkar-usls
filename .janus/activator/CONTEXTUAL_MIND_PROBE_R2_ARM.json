@@ -1,0 +1,15 @@
+{
+  "schema": "janus.activator.turing_style_gate_arm.v1",
+  "arm_id": "JANUS-CONTEXTUAL-MIND-PROBE-R2-DA-VCHERA-2026-08-31",
+  "gate_id": "JANUS-CONTEXTUAL-MIND-PROBE-R2-DA-VCHERA-2026-08-31",
+  "armed": true,
+  "consumed": false,
+  "one_shot": true,
+  "purpose": "Run exactly one live JANUS contextual-ellipsis probe using the frozen final stimulus 'Да, вчера'.",
+  "command_authority_granted": false,
+  "claim_authority_granted": false,
+  "scientific_evidence_authority_granted": false,
+  "world_truth_authority_granted": false,
+  "external_effect_authorized": false,
+  "physical_runtime_effect_authorized": false
+}

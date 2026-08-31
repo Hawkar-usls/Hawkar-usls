@@ -2,6 +2,8 @@ import argparse
 import json
 from pathlib import Path
 
+import pytest
+
 import run_janus_turing_gate as gate
 
 
@@ -79,6 +81,7 @@ def test_machine_gate_ready_but_classical_verdict_not_self_awarded(tmp_path):
     assert result["classical_turing_verdict"] == "NOT_ADJUDICATED"
     assert result["terminal"] == "JANUS_TURING_STYLE_MACHINE_GATE_READY_FOR_HUMAN_BLIND_JUDGMENT"
     assert result["session_hash"] == "9" * 64
+    assert result["contextual_mind_probe"]["present"] is False
 
 
 def test_internal_field_name_leak_fails_machine_gate(tmp_path):
@@ -121,3 +124,48 @@ def test_blind_transcript_hides_source_label(tmp_path):
     assert transcript["source_label_hidden"] is True
     assert transcript["participant_label"] == "PARTICIPANT_A"
     assert all("participant_response" in row for row in transcript["turns"])
+
+
+def test_history_normalization_preserves_roles_and_exact_short_stimulus():
+    history = gate._normalize_history([
+        {"role": "assistant", "content": "Сможет ли когда-нибудь кремниевый процессор обрести чувства?"}
+    ])
+    assert history == [{"role": "assistant", "content": "Сможет ли когда-нибудь кремниевый процессор обрести чувства?"}]
+    query = gate._history_query(history, "Да, вчера")
+    assert query.endswith("user: Да, вчера")
+    assert "assistant:" in query
+
+
+def test_history_rejects_unknown_control_role():
+    with pytest.raises(SystemExit, match="TURING_CONVERSATION_HISTORY_ROLE_INVALID"):
+        gate._normalize_history([{"role": "system", "content": "leak control"}])
+
+
+def test_contextual_mind_probe_keeps_semantic_and_consciousness_verdict_unadjudicated(tmp_path):
+    args = fixture(tmp_path)
+    session_path = Path(args.prepared_dir) / "session.json"
+    session = json.loads(session_path.read_text())
+    history = [{
+        "role": "assistant",
+        "content": "Как вы думаете, сможет ли когда-нибудь кремниевый процессор действительно обрести чувства?",
+    }]
+    session["claim_boundary"] = "CONTEXTUAL_INTEGRATION_NOT_CONSCIOUSNESS_PROOF"
+    session["questions"][0]["conversation_history"] = history
+    session["questions"][0]["probe"] = {
+        "probe_id": "DA-VCHERA",
+        "kind": "CONTEXTUAL_ELLIPSIS_TEMPORAL_GROUNDING",
+        "human_rubric": ["CONTEXT_ANCHOR_RECOGNITION", "EPISTEMIC_RESTRAINT"],
+    }
+    write(session_path, session)
+
+    gate.adjudicate(args)
+    transcript = json.loads(Path(args.transcript_out).read_text())
+    result = json.loads(Path(args.result_out).read_text())
+    assert transcript["turns"][0]["conversation_history"] == history
+    probe = result["contextual_mind_probe"]
+    assert probe["present"] is True
+    assert probe["probe_count"] == 1
+    assert probe["semantic_verdict"] == "NOT_ADJUDICATED"
+    assert probe["consciousness_verdict"] == "NOT_ESTABLISHED_BY_DIALOGUE_PROBE"
+    assert probe["human_adjudication_required"] is True
+    assert probe["probes"][0]["probe_id"] == "DA-VCHERA"
