@@ -13,7 +13,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from janus_spi.genesis_api import GenesisAPIError, health as legacy_health  # noqa: E402
-from janus_spi.genesis_scene_graph import compile_scene_graph  # noqa: E402
+from janus_spi.genesis_scene_graph_r04 import compile_scene_graph  # noqa: E402
 from run_janus_genesis_api import Handler as LegacyHandler, _read_json  # noqa: E402
 
 
@@ -30,6 +30,7 @@ class SceneGraphHandler(LegacyHandler):
                     "scene_graph_response_schema": "janus.genesis.scene_graph.response.v1",
                     "scene_graph_version": "0.4.0",
                     "scene_graph_route": "POST /v1/genesis/scene-graph",
+                    "scene_graph_compiler": "janus_spi.genesis_scene_graph_r04.compile_scene_graph",
                     "persistent_service_claim": "DEPLOYMENT_REQUIRED_NOT_IMPLIED_BY_SOURCE_CODE",
                     "cors_origin": self.server.allowed_origin,
                 }
