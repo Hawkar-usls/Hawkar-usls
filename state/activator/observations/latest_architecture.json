@@ -1,11 +1,11 @@
 {
   "architecture_branch": "main",
-  "architecture_sha": "bc9ba5219e52ca45944fbc8d7d4e8d7a33ea8d68",
+  "architecture_sha": "6343398b1377b2ce4367c96f348fa6b2405c3728",
   "command_authority_granted": false,
   "external_effect_authorized": false,
   "fresh_stimulus": false,
-  "observation_hash": "6e133dc61f23e54f9a871e529872f345c5399e353e2ed5487fa6b6e65249c7ea",
-  "observed_at": 1788194062.741241,
+  "observation_hash": "b460ed65b66c693f08b2f680d6cc6addbaa7aa9ace684fe0c68e4757e7d26f25",
+  "observed_at": 1788194163.96042,
   "schema": "janus.activator.architecture_observation.v0.6.2",
-  "workflow_run_id": "33414764631"
+  "workflow_run_id": "33414928839"
 }
