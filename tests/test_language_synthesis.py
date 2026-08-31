@@ -4,6 +4,7 @@ import pytest
 
 from janus_spi.activator import canonical_hash
 from janus_spi.language_synthesis import (
+    CURRENT_TURN_RENDERING_CONTRACT,
     LanguageSynthesisError,
     build_language_prompt,
     render_prompt,
@@ -92,8 +93,31 @@ def test_prompt_is_bound_to_model_fabric_and_hrain():
     )
     assert len(p["prompt_context_digest"]) == 64
     assert p["candidate_runtime_tissues"]["trump"]["proof_authority"] is False
+    assert p["rendering_contract"] == CURRENT_TURN_RENDERING_CONTRACT
     rendered = render_prompt(p)
     assert "BOUND_CONTEXT_JSON" in rendered
+
+
+def test_current_human_turn_is_structurally_last_after_history():
+    previous = "Как вы думаете, сможет ли когда-нибудь кремниевый процессор действительно обрести чувства?"
+    current = "Да, вчера"
+    p = build_language_prompt(
+        human_message=current,
+        resident_uuid="resident",
+        model_lock=model_lock(),
+        file_fabric_lock=fabric(),
+        active_organs=["left_context", "gateway"],
+        hrain_context=hrain_context(),
+        conversation_history=[{"role": "assistant", "content": previous}],
+        test_mode="JANUS_CONTEXTUAL_MIND_PROBE_R3",
+    )
+    rendered = render_prompt(p)
+    assert "CONVERSATION_HISTORY:\nASSISTANT: " + previous in rendered
+    assert "CURRENT_HUMAN_MESSAGE:\n" + current in rendered
+    assert rendered.endswith(current)
+    context_section = rendered.split("BOUND_CONTEXT_JSON:\n", 1)[1].split("\n\nCONVERSATION_HISTORY:", 1)[0]
+    assert '"human_message"' not in context_section
+    assert '"conversation_history"' not in context_section
 
 
 def test_prompt_tamper_fails():
@@ -104,6 +128,19 @@ def test_prompt_tamper_fails():
     p["human_message"] = "tampered"
     with pytest.raises(LanguageSynthesisError, match="PROMPT_DIGEST_INVALID"):
         render_prompt(p)
+
+
+def test_legacy_prompt_without_rendering_contract_keeps_legacy_layout():
+    p = build_language_prompt(
+        human_message="Привет", resident_uuid="r", model_lock=model_lock(), file_fabric_lock=fabric(),
+        active_organs=["left_context"], hrain_context=hrain_context()
+    )
+    p.pop("rendering_contract")
+    core = dict(p); core.pop("prompt_context_digest")
+    p["prompt_context_digest"] = canonical_hash(core)
+    rendered = render_prompt(p)
+    assert rendered.endswith("}")
+    assert '"human_message": "Привет"' in rendered
 
 
 def test_synthesis_record_has_zero_authority():
