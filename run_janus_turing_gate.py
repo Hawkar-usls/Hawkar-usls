@@ -7,6 +7,7 @@ import json
 import re
 import shutil
 from pathlib import Path
+from typing import Any, Mapping
 
 from janus_spi.activator import ActivationEvent, canonical_hash
 from janus_spi.file_fabric import FileFabricCompiler, GitHubTreeReader
@@ -25,6 +26,7 @@ from janus_spi.persistent_state import JanusPersistentState
 
 _HEX_ID = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$", re.IGNORECASE)
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
+_ALLOWED_HISTORY_ROLES = {"user", "assistant"}
 
 
 def load(path: str | Path) -> dict:
@@ -40,14 +42,33 @@ def dump(path: str | Path, value) -> None:
     out.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _bound_sensitive_values(value) -> set[str]:
-    """Return exact bound identifiers and recognizable hash prefixes.
+def _normalize_history(raw: Any) -> list[dict[str, str]]:
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise SystemExit("TURING_CONVERSATION_HISTORY_LIST_REQUIRED")
+    history: list[dict[str, str]] = []
+    for index, turn in enumerate(raw):
+        if not isinstance(turn, Mapping):
+            raise SystemExit(f"TURING_CONVERSATION_HISTORY_TURN_INVALID:{index}")
+        role = str(turn.get("role") or "").strip().lower()
+        content = str(turn.get("content") or "").strip()
+        if role not in _ALLOWED_HISTORY_ROLES:
+            raise SystemExit(f"TURING_CONVERSATION_HISTORY_ROLE_INVALID:{index}:{role}")
+        if not content:
+            raise SystemExit(f"TURING_CONVERSATION_HISTORY_CONTENT_REQUIRED:{index}")
+        history.append({"role": role, "content": content})
+    return history
 
-    The transcript must not leak instance UUIDs, exact commit/object hashes, or
-    model/fabric/prompt/context digests merely because the provider omitted the
-    JSON field name. Prefix checks catch the diagnostic-style 12/16-char forms
-    that JANUS historically printed in Terminal responses.
-    """
+
+def _history_query(history: list[dict[str, str]], final_message: str) -> str:
+    rows = [f"{turn['role']}: {turn['content']}" for turn in history]
+    rows.append(f"user: {final_message}")
+    return "\n".join(rows)
+
+
+def _bound_sensitive_values(value) -> set[str]:
+    """Return exact bound identifiers and recognizable hash prefixes."""
     found: set[str] = set()
 
     def walk(node) -> None:
@@ -103,16 +124,21 @@ def prepare(args) -> int:
 
     session_questions = []
     for q in cfg.get("questions") or []:
+        if not isinstance(q, Mapping):
+            raise SystemExit("TURING_QUESTION_OBJECT_REQUIRED")
         qid = str(q.get("id") or "")
         text = str(q.get("text") or "").strip()
+        history = _normalize_history(q.get("conversation_history"))
+        probe = dict(q.get("probe") or {}) if isinstance(q.get("probe"), Mapping) else None
         if not qid or not text:
             raise SystemExit("TURING_QUESTION_INVALID")
         qstate = scratch_state / qid
         qstate.mkdir(parents=True, exist_ok=True)
+        history_hash = canonical_hash(history)
         event = ActivationEvent.build(
             source_kind="TURING_STYLE_BLIND_DIALOGUE",
             source_ref=f"{cfg['gate_id']}#{qid}",
-            payload={"question_id": qid, "message": text},
+            payload={"question_id": qid, "message": text, "conversation_history_hash": history_hash},
             classifications=["human_read_only_conversation"],
             fresh=True,
             self_generated=False,
@@ -131,10 +157,12 @@ def prepare(args) -> int:
         active_organs = list(rr.get("active_organs") or [])
         if "left_context" not in active_organs:
             raise SystemExit(f"TURING_HRAIN_NOT_ACTIVE:{qid}")
+
         context_path = out / f"{qid}.hrain.json"
+        memory_query = _history_query(history, text)
         hrain_receipt = HrainConversationContextBridge(
             model_lock, workspace=out / f"{qid}-hrain-workspace"
-        ).build(text, context_output=context_path, limit=8)
+        ).build(memory_query, context_output=context_path, limit=8)
         hrain_context = load(context_path)
         prompt_context = build_language_prompt(
             human_message=text,
@@ -143,7 +171,8 @@ def prepare(args) -> int:
             file_fabric_lock=file_fabric,
             active_organs=active_organs,
             hrain_context=hrain_context,
-            test_mode="TURING_STYLE_BLIND_DIALOGUE",
+            conversation_history=history,
+            test_mode=str(q.get("test_mode") or cfg.get("mode") or "TURING_STYLE_BLIND_DIALOGUE"),
         )
         prompt_text = render_prompt(prompt_context)
         (out / f"{qid}.prompt.txt").write_text(prompt_text + "\n", encoding="utf-8")
@@ -152,6 +181,9 @@ def prepare(args) -> int:
         session_questions.append({
             "id": qid,
             "text": text,
+            "conversation_history": history,
+            "conversation_history_hash": history_hash,
+            "probe": probe,
             "prompt_context_digest": prompt_context["prompt_context_digest"],
             "hrain_context_hash": hrain_context["context_hash"],
             "hrain_memory_count": hrain_context["selected_memory_count"],
@@ -161,6 +193,8 @@ def prepare(args) -> int:
     session = {
         "schema": "janus.activator.turing_style_prepared_session.v1",
         "gate_id": cfg["gate_id"],
+        "mode": cfg.get("mode"),
+        "claim_boundary": cfg.get("claim_boundary"),
         "resident_uuid": resident_uuid,
         "model_digest": model_lock["model_digest"],
         "file_fabric_digest": file_fabric["file_fabric_digest"],
@@ -178,6 +212,7 @@ def prepare(args) -> int:
         "model_digest": model_lock["model_digest"],
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "question_count": len(session_questions),
+        "history_bound_questions": sum(1 for q in session_questions if q["conversation_history"]),
     }, ensure_ascii=False, indent=2))
     return 0
 
@@ -241,6 +276,8 @@ def adjudicate(args) -> int:
         rows.append({
             "id": qid,
             "question": q["text"],
+            "conversation_history": list(q.get("conversation_history") or []),
+            "probe": dict(q.get("probe") or {}) if isinstance(q.get("probe"), Mapping) else None,
             "answer": text,
             "answer_sha256": rec["output_sha256"],
             "record_hash": rec["synthesis_hash"],
@@ -260,14 +297,39 @@ def adjudicate(args) -> int:
         if not provider_ok
         else "JANUS_TURING_STYLE_MACHINE_GATE_FAILED"
     )
+
+    transcript_turns = []
+    for row in rows:
+        turn = {
+            "question": row["question"],
+            "participant_response": row["answer"],
+        }
+        if row["conversation_history"]:
+            turn["conversation_history"] = row["conversation_history"]
+        transcript_turns.append(turn)
     transcript = {
         "schema": "janus.activator.turing_style_blind_transcript.v1",
         "gate_id": session["gate_id"],
         "participant_label": "PARTICIPANT_A",
         "source_label_hidden": True,
-        "turns": [{"question": row["question"], "participant_response": row["answer"]} for row in rows],
+        "turns": transcript_turns,
     }
     transcript["transcript_hash"] = canonical_hash(transcript)
+
+    probe_specs = []
+    for row in rows:
+        if row["probe"]:
+            probe_specs.append({"question_id": row["id"], **row["probe"]})
+    contextual_probe = {
+        "present": bool(probe_specs),
+        "probe_count": len(probe_specs),
+        "semantic_verdict": "NOT_ADJUDICATED" if probe_specs else "NOT_APPLICABLE",
+        "consciousness_verdict": "NOT_ESTABLISHED_BY_DIALOGUE_PROBE" if probe_specs else "NOT_APPLICABLE",
+        "human_adjudication_required": bool(probe_specs),
+        "claim_boundary": session.get("claim_boundary"),
+        "probes": probe_specs,
+    }
+
     result = {
         "schema": "janus.activator.turing_style_machine_gate_result.v1",
         "gate_id": session["gate_id"],
@@ -280,6 +342,7 @@ def adjudicate(args) -> int:
         "machine_gate_ready": machine_ready,
         "human_blind_adjudication_required": True,
         "classical_turing_verdict": "NOT_ADJUDICATED",
+        "contextual_mind_probe": contextual_probe,
         "failures": sorted(set(failures)),
         "transcript_hash": transcript["transcript_hash"],
         "terminal": terminal,
