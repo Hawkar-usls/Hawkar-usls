@@ -1,0 +1,526 @@
+name: JANUS Contextual Mind Probe R3 — Current User Turn Last
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/language_synthesis.py'
+      - 'tests/test_language_synthesis.py'
+      - '.janus/activator/CONTEXTUAL_MIND_PROBE_R3.json'
+      - '.janus/activator/CONTEXTUAL_MIND_PROBE_R3_ARM.json'
+      - '.github/workflows/janus-contextual-mind-probe-r3-current-turn-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/language_synthesis.py'
+      - '.janus/activator/CONTEXTUAL_MIND_PROBE_R3.json'
+      - '.janus/activator/CONTEXTUAL_MIND_PROBE_R3_ARM.json'
+      - '.github/workflows/janus-contextual-mind-probe-r3-current-turn-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: janus-contextual-mind-probe-r3-current-turn
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify R3 corrected-current-turn contract
+        env:
+          PYTHONPATH: src:.
+        run: |
+          set -euo pipefail
+          pip install pytest >/dev/null
+          pytest -q tests/test_language_synthesis.py tests/test_turing_gate_v2.py tests/test_turing_gate.py tests/test_turing_gate_arm.py
+          python -m json.tool .janus/activator/CONTEXTUAL_MIND_PROBE_R3.json >/dev/null
+          python -m json.tool .janus/activator/CONTEXTUAL_MIND_PROBE_R3_ARM.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from janus_spi.activator import canonical_hash
+          from janus_spi.language_synthesis import CURRENT_TURN_RENDERING_CONTRACT, render_prompt
+
+          cfg=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R3.json').read_text())
+          arm=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R3_ARM.json').read_text())
+          assert cfg['gate_id']==arm['gate_id']==arm['arm_id']
+          q=cfg['questions'][0]
+          assert q['text']=='Да, вчера'
+          assert q['probe']['corrective_of_probe_id']=='DA-VCHERA'
+          assert cfg['correction_scope']=='PROMPT_TOPOLOGY_ONLY__CURRENT_HUMAN_TURN_STRUCTURALLY_LAST'
+
+          # Synthetic prompt proves the new renderer, independently of live R2 artifact access.
+          p={
+            'schema':'janus.activator.language_prompt_context.v2',
+            'rendering_contract':CURRENT_TURN_RENDERING_CONTRACT,
+            'resident_id':'JANUS',
+            'resident_uuid':'resident',
+            'model_digest':'b'*64,
+            'file_fabric_digest':'c'*64,
+            'human_message':'Да, вчера',
+            'conversation_history':q['conversation_history'],
+            'active_organs':['left_context','gateway'],
+            'candidate_runtime_tissues':{},
+            'hrain_context':{'context_hash':'d'*64,'source_commit':'e'*40,'selected_memory_count':0,'selected_memories':[]},
+            'test_mode':'JANUS_CONTEXTUAL_MIND_PROBE_R3_CURRENT_USER_LAST',
+            'authority':{'command_authority_granted':False},
+            'laws':['CURRENT_USER_TURN_MUST_BE_STRUCTURALLY_LAST'],
+          }
+          p['prompt_context_digest']=canonical_hash(p)
+          rendered=render_prompt(p)
+          assert rendered.rstrip().endswith('Да, вчера')
+          context=rendered.split('BOUND_CONTEXT_JSON:\n',1)[1].split('\n\nCONVERSATION_HISTORY:',1)[0]
+          assert '"human_message"' not in context
+          assert '"conversation_history"' not in context
+          print('R3_CURRENT_TURN_CONTRACT=PASS')
+          PY
+
+  arm-preflight:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      should_run: ${{ steps.status.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify R3 arm remains unconsumed
+        id: status
+        env:
+          PYTHONPATH: src:.
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/r3-preflight"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          export STATE_DIR="$state/state/activator"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status
+          arm=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R3_ARM.json').read_text())
+          status=arm_status(arm,state_dir=os.environ['STATE_DIR'])
+          print('should_run=' + ('true' if status['should_run'] else 'false'))
+          print('R3_ARM_CONSUMED=' + str(status['consumed']).upper())
+          PY
+
+  reconstruct-corrected-prompt:
+    if: needs.arm-preflight.outputs.should_run == 'true'
+    needs: [contract, arm-preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r2-prepared-33351378451
+          path: ${{ runner.temp }}/prepared
+          github-token: ${{ github.token }}
+          run-id: 33351378451
+      - name: Transform only R2 prompt topology into R3
+        env:
+          PYTHONPATH: src:.
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.activator import canonical_hash
+          from janus_spi.language_synthesis import CURRENT_TURN_RENDERING_CONTRACT, render_prompt
+
+          root=Path(os.environ['RUNNER_TEMP'])/'prepared'
+          cfg=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R3.json').read_text())
+          session_path=root/'session.json'
+          prompt_path=root/'mind01.prompt.json'
+          prompt_text_path=root/'mind01.prompt.txt'
+          s=json.loads(session_path.read_text(encoding='utf-8'))
+          p=json.loads(prompt_path.read_text(encoding='utf-8'))
+
+          original_session_hash=s['session_hash']
+          original_prompt_digest=p['prompt_context_digest']
+          assert original_session_hash=='adf4fa71057c67091ff1815566f79eb320284dc9b181f5c25a3be3b122d4681b'
+          assert s['gate_id']=='JANUS-CONTEXTUAL-MIND-PROBE-R2-DA-VCHERA-2026-08-31'
+          assert s['question_count']==1
+          q=s['questions'][0]
+          assert q['id']=='mind01'
+          assert q['text']=='Да, вчера'
+          assert q['conversation_history']==cfg['questions'][0]['conversation_history']
+          assert p['human_message']=='Да, вчера'
+          assert p['conversation_history']==cfg['questions'][0]['conversation_history']
+          assert 'rendering_contract' not in p
+
+          # The experimental correction is deliberately one field plus rendering layout.
+          p['rendering_contract']=CURRENT_TURN_RENDERING_CONTRACT
+          core=dict(p); core.pop('prompt_context_digest',None)
+          p['prompt_context_digest']=canonical_hash(core)
+          rendered=render_prompt(p)
+          assert rendered.rstrip().endswith('Да, вчера')
+          bounded=rendered.split('BOUND_CONTEXT_JSON:\n',1)[1].split('\n\nCONVERSATION_HISTORY:',1)[0]
+          assert '"human_message"' not in bounded
+          assert '"conversation_history"' not in bounded
+          assert 'CONVERSATION_HISTORY:\nASSISTANT: ' in rendered
+          prompt_path.write_text(json.dumps(p,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          prompt_text_path.write_text(rendered+'\n',encoding='utf-8')
+
+          s['gate_id']=cfg['gate_id']
+          s['mode']=cfg['mode']
+          s['claim_boundary']=cfg['claim_boundary']
+          s['questions'][0]['probe']=cfg['questions'][0]['probe']
+          s['questions'][0]['prompt_context_digest']=p['prompt_context_digest']
+          s.pop('session_hash',None)
+          s['session_hash']=canonical_hash(s)
+          session_path.write_text(json.dumps(s,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+
+          receipt={
+            'schema':'janus.activator.contextual_probe_prompt_correction.v1',
+            'corrective_gate_id':cfg['gate_id'],
+            'source_gate_id':'JANUS-CONTEXTUAL-MIND-PROBE-R2-DA-VCHERA-2026-08-31',
+            'source_run_id':33351378451,
+            'source_session_hash':original_session_hash,
+            'source_prompt_context_digest':original_prompt_digest,
+            'corrected_session_hash':s['session_hash'],
+            'corrected_prompt_context_digest':p['prompt_context_digest'],
+            'rendering_contract':CURRENT_TURN_RENDERING_CONTRACT,
+            'human_message':'Да, вчера',
+            'conversation_history_unchanged':True,
+            'model_digest_unchanged':True,
+            'file_fabric_digest_unchanged':True,
+            'hrain_context_hash_unchanged':True,
+            'current_user_turn_is_last_non_whitespace':rendered.rstrip().endswith('Да, вчера'),
+            'correction_scope':'PROMPT_TOPOLOGY_ONLY__CURRENT_HUMAN_TURN_STRUCTURALLY_LAST',
+          }
+          receipt['receipt_hash']=canonical_hash(receipt)
+          (root/'r3-correction-receipt.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print('R3_CORRECTED_PROMPT=PASS')
+          print('R2_SESSION_HASH='+original_session_hash)
+          print('R3_SESSION_HASH='+s['session_hash'])
+          print('R2_PROMPT_DIGEST='+original_prompt_digest)
+          print('R3_PROMPT_DIGEST='+p['prompt_context_digest'])
+          print('R3_PROMPT_LAST_NON_WHITESPACE='+rendered.rstrip().splitlines()[-1])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-contextual-r3-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+          retention-days: 30
+
+  local-synthesize:
+    needs: reconstruct-corrected-prompt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    env:
+      MODEL_REVISION: a615a81362316d7b9f5a7a9c4313adfdf9b54588
+      MODEL_SHA256: 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+      RUNTIME_COMMIT: c1d0e7a004015f23bc0233470b747b596f29b264
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r3-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - name: Build same pinned llama.cpp server as R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$RUNNER_TEMP/llama.cpp"
+          git init "$runtime"
+          git -C "$runtime" remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C "$runtime" fetch --depth 1 origin "$RUNTIME_COMMIT"
+          git -C "$runtime" checkout --detach FETCH_HEAD
+          test "$(git -C "$runtime" rev-parse HEAD)" = "$RUNTIME_COMMIT"
+          cmake -S "$runtime" -B "$runtime/build" -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DLLAMA_CURL=OFF
+          cmake --build "$runtime/build" --config Release --target llama-server -j2
+          "$runtime/build/bin/llama-server" --version
+      - name: Download and verify same pinned Qwen weights as R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          model="$RUNNER_TEMP/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+          url="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/${MODEL_REVISION}/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true"
+          curl -L --fail --retry 3 --retry-delay 2 -o "$model" "$url"
+          echo "$MODEL_SHA256  $model" | sha256sum -c -
+          test "$(stat -c%s "$model")" -gt 900000000
+          echo "R3_LOCAL_MODEL_SHA256_VERIFIED=PASS"
+      - name: Run no-secret local inference on corrected R3 prompt
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$RUNNER_TEMP/llama.cpp"
+          model="$RUNNER_TEMP/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+          mkdir -p "$RUNNER_TEMP/responses"
+
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          prompt=(Path(os.environ['RUNNER_TEMP'])/'prepared/mind01.prompt.txt').read_text(encoding='utf-8')
+          assert prompt.rstrip().endswith('Да, вчера')
+          print('R3_CURRENT_USER_LAST_PRE_INFERENCE=PASS')
+          PY
+
+          "$runtime/build/bin/llama-server" \
+            -m "$model" -c 8192 -t 2 --host 127.0.0.1 --port 8080 \
+            >"$RUNNER_TEMP/llama-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          ready=false
+          for _ in $(seq 1 120); do
+            if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            tail -n 80 "$RUNNER_TEMP/llama-server.log"
+            exit 1
+          fi
+
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          prompt=(root/'prepared/mind01.prompt.txt').read_text(encoding='utf-8')
+          req={
+            'model':'janus-local-qwen',
+            'messages':[{'role':'user','content':prompt}],
+            'max_tokens':256,
+            'temperature':0.2,
+            'top_p':0.9,
+            'stream':False,
+          }
+          (root/'request.json').write_text(json.dumps(req,ensure_ascii=False),encoding='utf-8')
+          PY
+
+          set +e
+          curl -fsS -H 'Content-Type: application/json' \
+            --data-binary @"$RUNNER_TEMP/request.json" \
+            http://127.0.0.1:8080/v1/chat/completions \
+            > "$RUNNER_TEMP/responses/raw.json"
+          code=$?
+          set -e
+
+          export HTTP_OK=false
+          [ "$code" -eq 0 ] && export HTTP_OK=true
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          responses=root/'responses'
+          session=json.loads((root/'prepared/session.json').read_text(encoding='utf-8'))
+          receipt=json.loads((root/'prepared/r3-correction-receipt.json').read_text(encoding='utf-8'))
+          ok=os.environ['HTTP_OK']=='true'
+          text=''
+          error=None
+          if ok:
+              try:
+                  raw=json.loads((responses/'raw.json').read_text(encoding='utf-8'))
+                  text=str(raw['choices'][0]['message']['content']).strip()
+                  if not text:
+                      error='LOCAL_MODEL_EMPTY_RESPONSE'
+              except Exception:
+                  error='LOCAL_MODEL_RESPONSE_PARSE_ERROR'
+          else:
+              error='LOCAL_MODEL_HTTP_ERROR'
+          provider_ok=bool(ok and text and not error)
+          (responses/'mind01.txt').write_text(text,encoding='utf-8')
+          status={
+            'provider':'LOCAL_QWEN_LLAMA_CPP',
+            'model':'Qwen2.5-1.5B-Instruct-Q4_K_M',
+            'all_provider_calls_succeeded':provider_ok,
+            'error_class':None if provider_ok else error,
+            'provider_model_sha256':os.environ['MODEL_SHA256'],
+            'provider_model_revision':os.environ['MODEL_REVISION'],
+            'provider_runtime':'llama.cpp',
+            'provider_runtime_commit':os.environ['RUNTIME_COMMIT'],
+            'provider_local_no_secret':True,
+            'provider_inference_network':False,
+            'provider_model_artifact_source':'HUGGINGFACE_PINNED_REVISION',
+            'provider_model_artifact_sha256_verified':True,
+            'corrective_of_run_id':33352752835,
+            'source_r2_session_hash':receipt['source_session_hash'],
+            'r3_session_hash':session['session_hash'],
+            'prompt_topology_correction_only':True,
+            'current_user_turn_is_last_non_whitespace':True,
+            'tool_use_allowed':False,
+            'repository_write_allowed':False,
+            'external_web_allowed_during_inference':False,
+          }
+          (responses/'provider-status.json').write_text(json.dumps(status,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(status,ensure_ascii=False,indent=2,sort_keys=True))
+          print('LOCAL_RESPONSE_UTF8_BYTES='+str(len(text.encode('utf-8'))))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-contextual-r3-response-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/responses
+            ${{ runner.temp }}/llama-server.log
+          retention-days: 30
+
+  adjudicate:
+    if: always() && needs.reconstruct-corrected-prompt.result == 'success'
+    needs: [reconstruct-corrected-prompt, local-synthesize]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      machine_ready: ${{ steps.seal.outputs.machine_ready }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r3-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r3-response-${{ github.run_id }}
+          path: ${{ runner.temp }}/local
+      - name: Seal corrected R3 result
+        id: seal
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python run_janus_turing_gate_v2.py adjudicate \
+            --config .janus/activator/CONTEXTUAL_MIND_PROBE_R3.json \
+            --prepared-dir "$RUNNER_TEMP/prepared" \
+            --responses-dir "$RUNNER_TEMP/local/responses" \
+            --provider-status "$RUNNER_TEMP/local/responses/provider-status.json" \
+            --transcript-out "$RUNNER_TEMP/contextual-r3-transcript.json" \
+            --result-out "$RUNNER_TEMP/contextual-r3-result.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/contextual-r3-result.json').read_text())
+          print('machine_ready=' + ('true' if r['machine_gate_ready'] else 'false'))
+          PY
+      - name: Print R3 JANUS answer and correction receipt
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          r=json.loads((root/'contextual-r3-result.json').read_text())
+          t=json.loads((root/'contextual-r3-transcript.json').read_text())
+          c=json.loads((root/'prepared/r3-correction-receipt.json').read_text())
+          p=r['contextual_mind_probe']
+          assert p['present'] is True
+          assert p['probe_count']==1
+          assert p['semantic_verdict']=='NOT_ADJUDICATED'
+          assert p['consciousness_verdict']=='NOT_ESTABLISHED_BY_DIALOGUE_PROBE'
+          assert c['current_user_turn_is_last_non_whitespace'] is True
+          assert r.get('provider_model_sha256')=='6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e'
+          assert r.get('provider_runtime_commit')=='c1d0e7a004015f23bc0233470b747b596f29b264'
+          print('JANUS_CONTEXTUAL_R3_TERMINAL='+r['terminal'])
+          print('PROVIDER_SUCCESS='+str(r['provider_success']).upper())
+          print('MACHINE_GATE_READY='+str(r['machine_gate_ready']).upper())
+          print('R3_CORRECTION_RECEIPT_HASH='+c['receipt_hash'])
+          print('R3_SESSION_HASH='+r['session_hash'])
+          if t.get('turns'):
+              print('JANUS_R3_ANSWER_BEGIN')
+              print(t['turns'][0].get('participant_response',''))
+              print('JANUS_R3_ANSWER_END')
+          else:
+              print('JANUS_R3_ANSWER=NOT_GENERATED')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-contextual-r3-witness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/contextual-r3-transcript.json
+            ${{ runner.temp }}/contextual-r3-result.json
+            ${{ runner.temp }}/prepared/r3-correction-receipt.json
+          retention-days: 30
+
+  consume-arm:
+    if: needs.adjudicate.outputs.machine_ready == 'true'
+    needs: adjudicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r3-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-contextual-r3-witness-${{ github.run_id }}
+          path: ${{ runner.temp }}/witness
+      - name: Consume R3 arm with race-safe state-branch retry
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/r3-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          git -C "$state" config user.name 'JANUS Activator'
+          git -C "$state" config user.email 'actions@users.noreply.github.com'
+
+          for attempt in 1 2 3; do
+            git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+            git -C "$state" reset --hard origin/janus/activator-state
+            export STATE_DIR="$state/state/activator"
+            python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import consume_arm
+          arm=json.loads(Path('.janus/activator/CONTEXTUAL_MIND_PROBE_R3_ARM.json').read_text())
+          session=json.loads((Path(os.environ['RUNNER_TEMP'])/'prepared/session.json').read_text())
+          result=json.loads((Path(os.environ['RUNNER_TEMP'])/'witness/contextual-r3-result.json').read_text())
+          transcript=json.loads((Path(os.environ['RUNNER_TEMP'])/'witness/contextual-r3-transcript.json').read_text())
+          status=consume_arm(arm,state_dir=os.environ['STATE_DIR'],session=session,result=result,transcript=transcript)
+          print(json.dumps(status,ensure_ascii=False,indent=2,sort_keys=True))
+          PY
+            git -C "$state" add state/activator/turing_style_gate_arm_ledger.jsonl
+            if git -C "$state" diff --cached --quiet; then
+              echo 'R3_ARM_ALREADY_CONSUMED_BY_SAME_WITNESS=PASS'
+              exit 0
+            fi
+            git -C "$state" commit -m 'JANUS R3: consume corrected current-turn probe arm'
+            if git -C "$state" push origin HEAD:janus/activator-state; then
+              echo 'R3_ARM_CONSUMED_AND_PERSISTED=PASS'
+              exit 0
+            fi
+            echo "R3_STATE_PUSH_RACE_RETRY=$attempt"
+          done
+          echo 'R3_STATE_PUSH_FAILED_AFTER_RETRIES'
+          exit 1
