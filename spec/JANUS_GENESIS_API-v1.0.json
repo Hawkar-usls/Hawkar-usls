@@ -1,0 +1,73 @@
+{
+  "schema_id": "janus.genesis.api.contract.v1",
+  "version": "1.0.0",
+  "status": "IMPLEMENTED_CANDIDATE_R0",
+  "home_repository": "Hawkar-usls/Hawkar-usls",
+  "purpose": "Expose JANUS HOME as a bounded cognition and asset-resolution nerve for Janus_Genesis without granting model output direct world authority.",
+  "routes": {
+    "health": "GET /v1/health",
+    "intent": "POST /v1/genesis/intent",
+    "asset_search": "GET /v1/genesis/assets/search?q=<query>&type=<textures|models|hdris>&limit=<n>",
+    "asset_files": "GET /v1/genesis/assets/files/<asset_id>"
+  },
+  "request_schema": "janus.genesis.api.request.v1",
+  "response_schema": "janus.genesis.api.response.v1",
+  "canonical_pipeline": [
+    "GENESIS_EXPLICIT_PLAYER_TEXT",
+    "JANUS_HOME_API",
+    "ACTIVATOR_BOUNDARY",
+    "SEMANTIC_TO_MECHANIC",
+    "FILE_FABRIC_ASSET_REQUIREMENTS",
+    "BOUNDED_INTENT_PROPOSAL",
+    "GENESIS_SIDE_VALIDATOR",
+    "GENESIS_WORLD_REDUCER",
+    "CHRONICLE_RECEIPT"
+  ],
+  "supported_intents_r0": [
+    "MOVE",
+    "RETURN_TO_HEARTH",
+    "PLACE_MARK",
+    "GENERATE_STRUCTURE",
+    "SET_CAMERA",
+    "SET_MIRROR",
+    "UNRESOLVED"
+  ],
+  "language_policy": {
+    "text_encoding": "UTF-8",
+    "unicode_normalization": "NFKC",
+    "r0_lexical_languages": ["en", "ru", "uk", "pl", "de", "es", "fr"],
+    "unknown_language_policy": "UNRESOLVED_NOT_GUESSED",
+    "future_language_tissue": "JANUS_LANGUAGE_SYNTHESIS"
+  },
+  "asset_policy": {
+    "registry_owner": "Janus_Genesis/asset_sources/ASSET_SOURCE_REGISTRY_V1.json",
+    "r0_live_adapter": "poly_haven",
+    "poly_haven_rights": "CC0",
+    "poly_haven_live_api_credit_required": true,
+    "metadata_and_pointers_may_pass_api": true,
+    "binary_asset_bytes_through_slime": false,
+    "binary_transport": "DIRECT_PROVIDER_CDN_NOT_SLIME",
+    "rights_gate_required_before_materialization": true
+  },
+  "authority_boundary": {
+    "janus_api_is_world_authority": false,
+    "model_output_is_command": false,
+    "genesis_validator_required": true,
+    "world_mutation_authorized_by_api": false,
+    "external_effect_authorized": false,
+    "raw_secrets_in_request_or_receipt": false,
+    "unknown_is_valid": true
+  },
+  "laws": [
+    "GENESIS_CALLS_JANUS_NOT_A_PROVIDER_MODEL",
+    "JANUS_RESPONSE_NE_COMMAND",
+    "JANUS_RESPONSE_NE_WORLD_AUTHORITY",
+    "GENESIS_VALIDATOR_REQUIRED_BEFORE_MUTATION",
+    "PLAYER_LANGUAGE_NE_AUTHORITY_CHANGE",
+    "ASSET_DISCOVERY_NE_LICENSE_AUTHORITY",
+    "RIGHTS_GATE_BEFORE_ASSET_MATERIALIZATION",
+    "SLIME_CARRIES_POINTERS_AND_PROVENANCE_NOT_BINARY_ASSET_BYTES",
+    "API_UNAVAILABLE_NE_WORLD_CORRUPTION",
+    "LOCAL_FALLBACK_MUST_BE_EXPLICITLY_DEGRADED"
+  ]
+}
