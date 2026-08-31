@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""Credentialless Market -> HOME puller for the bounded machine-buyer nerve.
+
+The public Market outbox may be populated by the JANUS MACHINE MARKET GitHub
+Pages storefront (R1D) or by another producer that emits the same verified
+packet contract. This puller does not trust the UI/source event: it admits only
+packets that pass `verify_market_buyer_packet` and keeps delivery distinct from
+command/execution authority.
+"""
 from __future__ import annotations
 
 import argparse
