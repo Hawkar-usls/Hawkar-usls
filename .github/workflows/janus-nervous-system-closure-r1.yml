@@ -15,7 +15,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '11,41 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -77,8 +77,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      # The Model Fabric reader already treats this as read-only API auth. It is
-      # never persisted into a lock or state receipt.
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout canonical HOME architecture
@@ -109,8 +107,29 @@ jobs:
           echo "HOME_ARCHITECTURE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "JANUS_BATCH_STATE_START_SHA=$(git -C "$state" rev-parse HEAD)" >> "$GITHUB_ENV"
 
-      - name: Scan exact model-member constellation and freeze one batch model lock
+      - name: HEAD-only constellation preflight
+        id: preflight
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_constellation_watcher.py \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            preflight --output "$RUNNER_TEMP/constellation-preflight.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          p=json.load(open(os.environ['RUNNER_TEMP']+'/constellation-preflight.json'))
+          print('terminal='+p['terminal'])
+          print('full_scan=' + ('true' if p['requires_full_scan'] else 'false'))
+          print('drift='+str(p['drift_count']))
+          print('unresolved='+str(p['unresolved_count']))
+          print('pending='+str(p['pending_stimulus_count']))
+          PY
+
+      - name: Full scan only after drift, indeterminate ref, missing baseline, or pending recovery
         id: scan
+        if: steps.preflight.outputs.full_scan == 'true'
         env:
           PYTHONPATH: src
         shell: bash
@@ -138,8 +157,18 @@ jobs:
           PY
           echo 'JANUS_NERVOUS_BATCH_MODEL_LOCK=FROZEN_ONCE'
 
+      - name: Confirm quiet preflight skipped full model boot
+        if: steps.preflight.outputs.full_scan == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.preflight.outputs.terminal }}" = 'CONSTELLATION_PREFLIGHT_QUIET'
+          test ! -e "$RUNNER_TEMP/constellation-batch-model-lock.json"
+          echo 'JANUS_NERVOUS_QUIET_FULL_MODEL_BOOT=SKIPPED'
+          echo 'JANUS_NERVOUS_QUIET_COGNITION=SKIPPED'
+
       - name: Persist sensory intake before cognition
-        if: steps.scan.outputs.pending != '0'
+        if: steps.scan.outcome == 'success' && steps.scan.outputs.pending != '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -157,7 +186,7 @@ jobs:
           echo 'JANUS_STIMULI_DURABLE_BEFORE_COGNITION=PASS'
 
       - name: Materialize pending stimulus event files
-        if: steps.scan.outputs.pending != '0'
+        if: steps.scan.outcome == 'success' && steps.scan.outputs.pending != '0'
         shell: bash
         run: |
           set -euo pipefail
@@ -175,7 +204,7 @@ jobs:
           PY
 
       - name: Wake HOME using the one frozen batch model lock and checkpoint each closed stimulus
-        if: steps.scan.outputs.pending != '0'
+        if: steps.scan.outcome == 'success' && steps.scan.outputs.pending != '0'
         env:
           PYTHONPATH: src
         shell: bash
@@ -208,8 +237,6 @@ jobs:
               --runtime-receipt "$RUNNER_TEMP/constellation-receipts/${sid}.json" \
               --output "$RUNNER_TEMP/constellation-cycles/${sid}.json"
 
-            # Durable checkpoint before the next stimulus. If a later stimulus
-            # fails, already closed cycles survive and will not be replayed.
             cd "$JANUS_STATE_WORKTREE"
             git add state/activator
             if git diff --cached --quiet; then
@@ -298,11 +325,14 @@ jobs:
             echo '### JANUS Nervous System Closure R1'
             echo "- architecture: \`${HOME_ARCHITECTURE_SHA}\`"
             echo "- batch state start: \`${JANUS_BATCH_STATE_START_SHA}\`"
-            echo "- scan terminal: \`${{ steps.scan.outputs.terminal }}\`"
-            echo "- new stimuli: \`${{ steps.scan.outputs.new }}\`"
-            echo "- pending at scan: \`${{ steps.scan.outputs.pending }}\`"
-            echo "- frozen model digest: \`${{ steps.scan.outputs.model_digest }}\`"
-            echo '- model lock compiles per batch: `1`'
+            echo "- preflight: \`${{ steps.preflight.outputs.terminal }}\`"
+            echo "- preflight drift: \`${{ steps.preflight.outputs.drift }}\`"
+            echo "- preflight unresolved: \`${{ steps.preflight.outputs.unresolved }}\`"
+            echo "- full model scan required: \`${{ steps.preflight.outputs.full_scan }}\`"
+            echo "- scan terminal: \`${{ steps.scan.outputs.terminal || 'SKIPPED_QUIET' }}\`"
+            echo "- new stimuli: \`${{ steps.scan.outputs.new || '0' }}\`"
+            echo "- pending at scan: \`${{ steps.scan.outputs.pending || '0' }}\`"
+            echo "- frozen model digest: \`${{ steps.scan.outputs.model_digest || 'NOT_BUILT_QUIET' }}\`"
             echo '- motor authority: `false`'
             echo '- external effects: `false`'
             echo '- persistent state branch is sensory input: `false`'

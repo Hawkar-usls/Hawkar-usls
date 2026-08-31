@@ -45,6 +45,9 @@ def main() -> int:
     parser.add_argument("--manifest", default=".janus/activator/JANUS_MODEL_MANIFEST.json")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    preflight = sub.add_parser("preflight")
+    preflight.add_argument("--output", required=True)
+
     scan = sub.add_parser("scan")
     scan.add_argument("--model-lock")
     scan.add_argument("--model-lock-out")
@@ -60,6 +63,16 @@ def main() -> int:
 
     args = parser.parse_args()
     watcher = ConstellationWatcher(args.state_dir)
+
+    if args.command == "preflight":
+        result = watcher.preflight(GitHubRepositoryReaderV11())
+        _write(args.output, result)
+        print("CONSTELLATION_PREFLIGHT_TERMINAL=" + result["terminal"])
+        print("CONSTELLATION_PREFLIGHT_REQUIRES_FULL_SCAN=" + ("TRUE" if result["requires_full_scan"] else "FALSE"))
+        print("CONSTELLATION_PREFLIGHT_DRIFT_COUNT=" + str(result["drift_count"]))
+        print("CONSTELLATION_PREFLIGHT_UNRESOLVED_COUNT=" + str(result["unresolved_count"]))
+        print("CONSTELLATION_PREFLIGHT_PENDING_STIMULUS_COUNT=" + str(result["pending_stimulus_count"]))
+        return 0
 
     if args.command == "scan":
         if args.model_lock:
