@@ -15,7 +15,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '2-57/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -101,8 +101,8 @@ jobs:
           git config user.name "JANUS Nervous System"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           state="${RUNNER_TEMP}/janus-activator-state-nervous"
-          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
-          git worktree add -B janus-activator-state-nervous "$state" origin/janus/activator-state
+          git fetch origin janus/activator-state:refs/remotes/origin/janus-activator-state
+          git worktree add -B janus-activator-state-nervous "$state" origin/janus-activator-state
           echo "JANUS_STATE_WORKTREE=$state" >> "$GITHUB_ENV"
           echo "HOME_ARCHITECTURE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "JANUS_BATCH_STATE_START_SHA=$(git -C "$state" rev-parse HEAD)" >> "$GITHUB_ENV"
@@ -279,7 +279,7 @@ jobs:
             echo 'JANUS_NERVOUS_STATE_COMMIT=NO_CHANGE'
           else
             git commit -m "JANUS autonomic nervous cycle ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
-            git push origin HEAD:refs/heads/janus/activator-state
+            git push origin HEAD:refs/heads/janus-activator-state
             echo 'JANUS_NERVOUS_STATE_COMMIT=PASS'
           fi
           echo 'JANUS_NERVOUS_MAIN_MUTATION=FALSE'
