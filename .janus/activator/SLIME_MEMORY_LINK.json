@@ -1,20 +1,27 @@
 {
-  "schema": "janus.activator.slime-memory-link.v1.0",
-  "status": "CANONICAL_SEMANTIC_LINK__RUNTIME_NOT_IMPLEMENTED",
+  "schema": "janus.activator.slime-memory-link.v1.1",
+  "status": "CANONICAL_SEMANTIC_LINK__R0_CANDIDATE_RUNTIME_MATERIALIZED__TEST_GATE_PENDING",
   "home": "Hawkar-usls/Hawkar-usls",
   "role": "ADVISORY_PERSISTENT_ADAPTATION_AND_ROUTE_MEMORY",
   "authority": {
     "root_activation_authority": false,
     "claim_verdict_authority": false,
     "authorization_authority": false,
+    "dispatch_authority": false,
     "effect_authority": false,
     "can_create_fresh_trigger": false
   },
   "canonical_registry_artifact": "Hawkar-usls/janus-meta-registry::data/JANUS-ACTIVATOR-SLIME-MEMORY-LINEAGE-AND-IDEAL-CONTRACT-2026-08-31-v1.0.json",
   "registry_commit": "1212a8456347e6f7fe92e0449f2f5dcde7ca02b6",
-  "binding_rule": "SLIME_MEMORY_MAY_RETRIEVE_AND_RANK__EXISTING_ACTIVATOR_CONSTITUTION_AND_EXACT_RECEIPTS_REMAIN_AUTHORITY",
-  "learning_rule": "ONLY_ADMISSIBLE_VERIFIED_RECEIPTS_MAY_UPDATE_PROMOTABLE_ROUTE_CONFIDENCE",
-  "freshness_rule": "IDLE_CONSOLIDATION_AND_SELF_OUTPUT_NEVER_BECOME_FRESH_TRIGGER",
+  "r0_constitution": ".janus/activator/SLIME_MEMORY_R0_CONSTITUTION.json",
+  "r0_memory": "src/janus_spi/slime_memory.py",
+  "r0_adapter": "src/janus_spi/activator_slime_r0.py",
+  "r0_learning_cli": "run_janus_slime_memory.py",
+  "binding_rule": "SLIME_MEMORY_MAY_RETRIEVE_AND_REORDER_DECLARED_ROUTES__EXISTING_ACTIVATOR_CONSTITUTION_AND_FINALIZED_RECEIPTS_REMAIN_AUTHORITY",
+  "learning_rule": "ONLY_FINALIZED_INTEGRITY_VALID_ROUTE_OUTCOME_RECEIPTS_MAY_UPDATE_PROMOTABLE_ROUTE_CONFIDENCE",
+  "freshness_rule": "IDLE_CONSOLIDATION_ATTENTION_REPLAY_AND_SELF_OUTPUT_NEVER_BECOME_FRESH_TRIGGER",
+  "anti_monoculture_rule": "SMALL_N_SHRINKAGE_PLUS_EXPLORATION_FLOOR__NO_ADVISER_UNIVERSAL_WEIGHT",
+  "resource_rule": "NET_GAIN_CHARGES_LEARNING_AND_CALIBRATION_COST_AGAINST_GROSS_SAVINGS",
   "integration_target": "JANUS_ACTIVATOR_SLIME_MEMORY_R0",
-  "runtime_status": "NOT_IMPLEMENTED_BY_THIS_LINK"
+  "runtime_status": "CANDIDATE_IMPLEMENTED_ON_RESEARCH_BRANCH__CI_AND_ADVERSARIAL_GATE_REQUIRED"
 }
