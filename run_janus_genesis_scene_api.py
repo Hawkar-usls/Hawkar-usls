@@ -5,33 +5,38 @@ import os
 import sys
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from janus_spi.genesis_api import GenesisAPIError, health as legacy_health  # noqa: E402
-from janus_spi.genesis_scene_graph_transport import compile_scene_graph  # noqa: E402
-from run_janus_genesis_api import Handler as LegacyHandler, _read_json  # noqa: E402
+from janus_spi.genesis_api import GenesisAPIError  # noqa: E402
+from janus_spi.genesis_api_r05 import health as r05_health  # noqa: E402
+from janus_spi.genesis_scene_graph_transport_r05 import compile_scene_graph  # noqa: E402
+from run_janus_genesis_api import _read_json  # noqa: E402
+from run_janus_genesis_api_r05 import Handler as R05Handler  # noqa: E402
 
 
-class SceneGraphHandler(LegacyHandler):
-    server_version = "JANUSGenesisSceneAPI/0.4"
+class SceneGraphHandler(R05Handler):
+    server_version = "JANUSGenesisSceneAPI/0.5"
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path.split("?", 1)[0] == "/v1/health":
-            payload = legacy_health()
+            payload = r05_health()
             payload.update(
                 {
                     "scene_graph_available": True,
                     "scene_graph_schema": "janus.genesis.scene_graph.v1",
                     "scene_graph_response_schema": "janus.genesis.scene_graph.response.v1",
-                    "scene_graph_version": "0.4.0",
+                    "scene_graph_version": "0.4.0+r0.5",
                     "scene_graph_route": "POST /v1/genesis/scene-graph",
-                    "scene_graph_compiler": "janus_spi.genesis_scene_graph_transport.compile_scene_graph",
+                    "scene_graph_compiler": "janus_spi.genesis_scene_graph_transport_r05.compile_scene_graph",
                     "transport_proof": "EXACT_UTF8_CANONICAL_GRAPH_JSON_SHA256",
+                    "jump_graph_available": True,
+                    "asset_federation_available": True,
+                    "asset_federation_route": "GET /v1/genesis/assets/federated/search",
+                    "asset_federation_channels": ["material", "mesh", "audio", "mechanic"],
                     "persistent_service_claim": "DEPLOYMENT_REQUIRED_NOT_IMPLIED_BY_SOURCE_CODE",
                     "cors_origin": self.server.allowed_origin,
                 }
@@ -49,24 +54,26 @@ class SceneGraphHandler(LegacyHandler):
             self._send(200, compile_scene_graph(payload))
         except GenesisAPIError as exc:
             self._send(400, {"error": "GENESIS_SCENE_GRAPH_REJECT", "detail": str(exc)})
+        except ValueError as exc:
+            self._send(400, {"error": "GENESIS_SCENE_GRAPH_REJECT", "detail": str(exc)})
         except Exception as exc:
             self._send(500, {"error": type(exc).__name__, "detail": str(exc)[:300]})
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="JANUS HOME Genesis Scene Intent Graph API adapter")
+    parser = argparse.ArgumentParser(description="JANUS HOME Genesis Scene Intent Graph API R0.5 adapter")
     parser.add_argument("--host", default=os.getenv("JANUS_API_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.getenv("PORT", os.getenv("JANUS_API_PORT", "8765"))))
     parser.add_argument("--allow-origin", default=os.getenv("JANUS_API_ALLOW_ORIGIN", "https://hawkar-usls.github.io"))
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-
     server = ThreadingHTTPServer((args.host, args.port), SceneGraphHandler)
     server.allowed_origin = args.allow_origin
     server.quiet = args.quiet
-    print(f"JANUS Genesis Scene API listening on http://{args.host}:{args.port}")
+    print(f"JANUS Genesis Scene API R0.5 listening on http://{args.host}:{args.port}")
     print(f"CORS origin: {args.allow_origin}")
-    print("Scene graph route: POST /v1/genesis/scene-graph")
+    print("Scene graph: POST /v1/genesis/scene-graph")
+    print("Asset federation: GET /v1/genesis/assets/federated/search")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

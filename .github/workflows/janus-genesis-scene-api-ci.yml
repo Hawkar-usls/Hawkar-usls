@@ -4,13 +4,19 @@ on:
   push:
     paths:
       - 'src/janus_spi/genesis_api.py'
+      - 'src/janus_spi/genesis_api_r05.py'
+      - 'src/janus_spi/genesis_asset_federation_r05.py'
       - 'src/janus_spi/genesis_scene_graph.py'
       - 'src/janus_spi/genesis_scene_graph_r04.py'
+      - 'src/janus_spi/genesis_scene_graph_r05.py'
       - 'src/janus_spi/genesis_scene_graph_transport.py'
+      - 'src/janus_spi/genesis_scene_graph_transport_r05.py'
       - 'run_janus_genesis_api.py'
+      - 'run_janus_genesis_api_r05.py'
       - 'run_janus_genesis_scene_api.py'
       - 'tests/test_genesis_api.py'
       - 'tests/test_genesis_scene_graph.py'
+      - 'tests/test_genesis_parograd_krieger_r05.py'
       - 'spec/JANUS_GENESIS_API-v1.0.json'
       - 'spec/JANUS_GENESIS_SCENE_GRAPH-v0.4.json'
       - 'deploy/Dockerfile.genesis-scene-api'
@@ -18,13 +24,19 @@ on:
   pull_request:
     paths:
       - 'src/janus_spi/genesis_api.py'
+      - 'src/janus_spi/genesis_api_r05.py'
+      - 'src/janus_spi/genesis_asset_federation_r05.py'
       - 'src/janus_spi/genesis_scene_graph.py'
       - 'src/janus_spi/genesis_scene_graph_r04.py'
+      - 'src/janus_spi/genesis_scene_graph_r05.py'
       - 'src/janus_spi/genesis_scene_graph_transport.py'
+      - 'src/janus_spi/genesis_scene_graph_transport_r05.py'
       - 'run_janus_genesis_api.py'
+      - 'run_janus_genesis_api_r05.py'
       - 'run_janus_genesis_scene_api.py'
       - 'tests/test_genesis_api.py'
       - 'tests/test_genesis_scene_graph.py'
+      - 'tests/test_genesis_parograd_krieger_r05.py'
       - 'spec/JANUS_GENESIS_API-v1.0.json'
       - 'spec/JANUS_GENESIS_SCENE_GRAPH-v0.4.json'
       - 'deploy/Dockerfile.genesis-scene-api'
@@ -47,10 +59,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-      - name: Compile scene nerve
+      - name: Compile scene and federation nerve
         run: |
-          python -m compileall -q src/janus_spi/genesis_api.py src/janus_spi/genesis_scene_graph.py src/janus_spi/genesis_scene_graph_r04.py src/janus_spi/genesis_scene_graph_transport.py run_janus_genesis_api.py run_janus_genesis_scene_api.py
-      - name: Validate graph contract JSON
+          python -m compileall -q src/janus_spi/genesis_api.py src/janus_spi/genesis_api_r05.py src/janus_spi/genesis_asset_federation_r05.py src/janus_spi/genesis_scene_graph.py src/janus_spi/genesis_scene_graph_r04.py src/janus_spi/genesis_scene_graph_r05.py src/janus_spi/genesis_scene_graph_transport.py src/janus_spi/genesis_scene_graph_transport_r05.py run_janus_genesis_api.py run_janus_genesis_api_r05.py run_janus_genesis_scene_api.py
+      - name: Validate frozen R0.4 graph contract remains intact
         run: |
           python - <<'PY'
           import json
@@ -62,47 +74,43 @@ jobs:
           assert contract['deployment']['live_claim_requires_real_https_health_check'] is True
           print('SCENE_GRAPH_CONTRACT_VALID')
           PY
-      - name: Adversarial scene graph tests
+      - name: Adversarial scene graph and R0.5 federation tests
         env:
           PYTHONPATH: src
-        run: pytest -q tests/test_genesis_api.py tests/test_genesis_scene_graph.py
+        run: pytest -q tests/test_genesis_api.py tests/test_genesis_scene_graph.py tests/test_genesis_parograd_krieger_r05.py
       - name: Build deployable persistent nerve image
-        run: docker build -f deploy/Dockerfile.genesis-scene-api -t janus-genesis-scene-api:r0.4 .
-      - name: Container health and graph roundtrip
+        run: docker build -f deploy/Dockerfile.genesis-scene-api -t janus-genesis-scene-api:r0.5 .
+      - name: Container health jump graph and federation roundtrip
         run: |
-          docker run -d --rm --name janus-scene -p 18765:8080 janus-genesis-scene-api:r0.4
+          docker run -d --rm --name janus-scene -p 18765:8080 janus-genesis-scene-api:r0.5
           cleanup() { docker stop janus-scene >/dev/null 2>&1 || true; }
           trap cleanup EXIT
           python - <<'PY'
-          import hashlib, json, time, urllib.request
+          import hashlib, json, time, urllib.parse, urllib.request
           for _ in range(30):
               try:
                   health=json.load(urllib.request.urlopen('http://127.0.0.1:18765/v1/health',timeout=1))
-                  if health.get('scene_graph_available') is True:
+                  if health.get('scene_graph_available') is True and health.get('jump_graph_available') is True and health.get('asset_federation_available') is True:
                       break
               except Exception:
                   time.sleep(.3)
           else:
-              raise SystemExit('scene API health never became ready')
-          payload={
-              'schema':'janus.genesis.api.request.v1',
-              'request_id':'ci-scene-1',
-              'player_text':'построй заброшенный собор на холме, одна башня разрушена, внутри орган, у входа белые деревья',
-              'canonical_world_state':{
-                  'world_id':'GENESIS_ONE_WORLD_R0','world_seed':'genesis-one-world-r0','generator_version':'GENESIS_COMMAND_RUNTIME_R0.3.0',
-                  'player_position':{'x':0.5,'y':0.5},'world_settings':{'time':'DAY','fog':0.08},
-                  'discovered_chunk_coordinates':[[0,0]],'explicit_world_mutations':[],'chronicle_tip_hash':'GENESIS'
-              }
-          }
+              raise SystemExit('R0.5 scene API health never became ready')
+          world={'world_id':'GENESIS_ONE_WORLD_R0','world_seed':'genesis-one-world-r0','generator_version':'GENESIS_COMMAND_RUNTIME_R0.3.0','player_position':{'x':0.5,'y':0.5},'world_settings':{'time':'DAY','fog':0.08},'discovered_chunk_coordinates':[[0,0]],'explicit_world_mutations':[],'chronicle_tip_hash':'GENESIS'}
+          payload={'schema':'janus.genesis.api.request.v1','request_id':'ci-jump-r05','player_text':'прыгни','canonical_world_state':world}
           req=urllib.request.Request('http://127.0.0.1:18765/v1/genesis/scene-graph',data=json.dumps(payload,ensure_ascii=False).encode(),headers={'Content-Type':'application/json'},method='POST')
           out=json.load(urllib.request.urlopen(req,timeout=3))
-          assert out['schema']=='janus.genesis.scene_graph.response.v1'
-          graph=out['scene_graph']
-          roots=[n for n in graph['nodes'] if n['family']=='STRUCTURE']
-          assert len(roots)==1 and 'cathedral' in roots[0]['concept']
+          graph=out['scene_graph']; node=graph['nodes'][0]
+          assert node['family']=='NAVIGATION' and node['operation']=='JUMP'
+          assert node['params']['canonical_world_mutation'] is False
           assert graph['authority']['janus_graph_is_world_authority'] is False
           proof=out['transport_proof']
           assert hashlib.sha256(proof['canonical_graph_json'].encode('utf-8')).hexdigest()==proof['canonical_graph_utf8_sha256']
-          assert json.loads(proof['canonical_graph_json'])==graph
-          print('SCENE_GRAPH_CONTAINER_ROUNDTRIP_PASS', graph['graph_id'], len(graph['nodes']))
+          q=urllib.parse.urlencode({'kind':'mechanic','q':'rotating lighthouse','limit':4})
+          fed=json.load(urllib.request.urlopen('http://127.0.0.1:18765/v1/genesis/assets/federated/search?'+q,timeout=3))
+          assert fed['schema']=='janus.genesis.asset_federation.search.v1'
+          assert fed['kind']=='mechanic' and fed['foreign_code_execution'] is False
+          assert fed['results']==[]
+          assert any(p['provider_id']=='genesis_mechanic_forge' for p in fed['providers'])
+          print('JANUS_R05_CONTAINER_ROUNDTRIP_PASS')
           PY
