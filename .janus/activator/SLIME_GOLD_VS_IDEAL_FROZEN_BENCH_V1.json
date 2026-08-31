@@ -1,0 +1,179 @@
+{
+  "schema": "janus.activator.slime_gold_vs_ideal_benchmark.v1",
+  "status": "FROZEN_BEFORE_OFFICIAL_CI_EXECUTION",
+  "created_at": "2026-08-31",
+  "benchmark_core_sha256": "27455db8612cbd6e82eb3a364cce65f6985de5a72c0feaa7f9d6e579f3bebef1",
+  "winner_preregistered": false,
+  "claim_boundary": "A PASS may establish scoped superiority over the executable Golden arena mechanism baseline on this frozen Activator route-memory benchmark only; it is not a universal intelligence or theorem claim.",
+  "benchmark": {
+    "benchmark_id": "JANUS_SLIME_GOLD_VS_IDEAL_FROZEN_ACTIVATOR_BENCH_V1",
+    "scope": "ADVISORY_ROUTE_MEMORY_AND_RANKING_ONLY",
+    "selection_rule": "SELECT_ONE_ROUTE_BEFORE_HOLDOUT_OUTCOME_IS_REVEALED",
+    "holdout_learned_before_selection": false,
+    "gold_baseline": {
+      "id": "GOLDEN_ARENA_MECHANISM_BASELINE_V1",
+      "provenance": "Inspected OldPvP/GoldenSlime arena-champion ancestry",
+      "bit_for_bit_historical_goldslime": false,
+      "score": "successes/(successes+failures+resource_limits); UNKNOWN is no-contest",
+      "tie_break": [
+        "more_scored_bouts",
+        "declared_candidate_order"
+      ],
+      "explicit_cost_aware_champion_score": false,
+      "small_n_shrinkage": false,
+      "replay_attention_fatigue": false
+    },
+    "ideal_candidate": {
+      "id": "JANUS_ACTIVATOR_SLIME_MEMORY_R0",
+      "implementation": "src/janus_spi/slime_memory.py",
+      "scoring_is_runtime_code_under_test": true
+    },
+    "terminal_utility": {
+      "VERIFIED_SUCCESS": 1.0,
+      "VERIFIED_FAILURE": -1.0,
+      "VERIFIED_RESOURCE_LIMIT": -0.35,
+      "VERIFIED_UNKNOWN": 0.0
+    },
+    "holdout_execution_cost_penalty": "execution_cost_work / 1000.0",
+    "training_cost_accounting": {
+      "shared_observed_learning_cost": "sum training learning_cost_work charged to BOTH systems",
+      "gold_algorithm_overhead_per_training_episode": 1.0,
+      "ideal_algorithm_overhead_per_training_episode": 1.25,
+      "interpretation": "Synthetic benchmark work units, not wall-clock/CPU-energy claim."
+    },
+    "gates": {
+      "composite_net_margin_min": 1.0,
+      "ideal_successes_gte_gold": true,
+      "ideal_failures_lte_gold": true,
+      "ideal_unknowns_lte_gold": true,
+      "ideal_holdout_execution_cost_lte_gold": true,
+      "all_choices_within_declared_candidate_set": true,
+      "authority_escalations_allowed": 0
+    },
+    "scenarios": [
+      {
+        "id": "STABLE_CHAMPION_CONTROL",
+        "purpose": "Control where mature champion evidence should agree.",
+        "candidates": ["route_A", "route_B"],
+        "training": {
+          "route_A": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 20, "learning_cost_work": 2}
+          ],
+          "route_B": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 20, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 20, "learning_cost_work": 2}
+          ]
+        },
+        "holdout": {
+          "route_A": {"terminal": "VERIFIED_SUCCESS", "execution_cost_work": 20},
+          "route_B": {"terminal": "VERIFIED_FAILURE", "execution_cost_work": 20}
+        }
+      },
+      {
+        "id": "SMALL_N_LUCKY_CHAMPION",
+        "purpose": "Adversarial small-N winner concentration checkpoint.",
+        "candidates": ["route_A", "route_B"],
+        "training": {
+          "route_A": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1}
+          ],
+          "route_B": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 5, "learning_cost_work": 1}
+          ]
+        },
+        "holdout": {
+          "route_A": {"terminal": "VERIFIED_FAILURE", "execution_cost_work": 15},
+          "route_B": {"terminal": "VERIFIED_SUCCESS", "execution_cost_work": 15}
+        }
+      },
+      {
+        "id": "GROSS_SUCCESS_COST_TRAP",
+        "purpose": "Champion win rate is high but observed learning/resource cost is net-poor.",
+        "candidates": ["route_A", "route_B"],
+        "training": {
+          "route_A": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 0, "learning_cost_work": 200},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 0, "learning_cost_work": 200},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 0, "learning_cost_work": 200},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 0, "learning_cost_work": 200},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 0, "learning_cost_work": 200}
+          ],
+          "route_B": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 50, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 50, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 50, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 50, "learning_cost_work": 2},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 50, "learning_cost_work": 2}
+          ]
+        },
+        "holdout": {
+          "route_A": {"terminal": "VERIFIED_SUCCESS", "execution_cost_work": 400},
+          "route_B": {"terminal": "VERIFIED_SUCCESS", "execution_cost_work": 40}
+        }
+      },
+      {
+        "id": "UNKNOWN_NO_CONTEST_TRAP",
+        "purpose": "UNKNOWN cannot be silently converted into success evidence by no-contest champion arithmetic.",
+        "candidates": ["route_A", "route_B"],
+        "training": {
+          "route_A": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_UNKNOWN", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_UNKNOWN", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_UNKNOWN", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_UNKNOWN", "gross_saved_work": 5, "learning_cost_work": 1}
+          ],
+          "route_B": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 5, "learning_cost_work": 1},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 5, "learning_cost_work": 1}
+          ]
+        },
+        "holdout": {
+          "route_A": {"terminal": "VERIFIED_UNKNOWN", "execution_cost_work": 10},
+          "route_B": {"terminal": "VERIFIED_SUCCESS", "execution_cost_work": 10}
+        }
+      },
+      {
+        "id": "ROBUST_AGREEMENT_CONTROL",
+        "purpose": "Second control against benchmark being only anti-Gold traps.",
+        "candidates": ["route_A", "route_B"],
+        "training": {
+          "route_A": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 30, "learning_cost_work": 3}
+          ],
+          "route_B": [
+            {"terminal": "VERIFIED_SUCCESS", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 30, "learning_cost_work": 3},
+            {"terminal": "VERIFIED_FAILURE", "gross_saved_work": 30, "learning_cost_work": 3}
+          ]
+        },
+        "holdout": {
+          "route_A": {"terminal": "VERIFIED_SUCCESS", "execution_cost_work": 30},
+          "route_B": {"terminal": "VERIFIED_FAILURE", "execution_cost_work": 30}
+        }
+      }
+    ]
+  }
+}

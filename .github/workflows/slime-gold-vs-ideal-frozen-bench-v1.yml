@@ -1,0 +1,36 @@
+name: JANUS Slime Gold vs Ideal Frozen Bench
+
+on:
+  pull_request:
+    paths:
+      - '.janus/activator/SLIME_GOLD_VS_IDEAL_FROZEN_BENCH_V1.json'
+      - 'src/janus_spi/slime_memory.py'
+      - 'src/janus_spi/slime_gold_benchmark.py'
+      - 'run_janus_slime_gold_benchmark.py'
+      - 'tests/test_slime_gold_benchmark.py'
+      - '.github/workflows/slime-gold-vs-ideal-frozen-bench-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute frozen benchmark
+        run: |
+          python run_janus_slime_gold_benchmark.py \
+            --require-pass \
+            --output slime-gold-vs-ideal-result.json
+      - name: Upload benchmark receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: slime-gold-vs-ideal-frozen-bench-v1
+          path: slime-gold-vs-ideal-result.json
+          if-no-files-found: error
+          retention-days: 30
