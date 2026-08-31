@@ -1,9 +1,9 @@
 {
   "schema_id": "janus.genesis.api.contract.v1",
   "version": "1.0.0",
-  "status": "IMPLEMENTED_CANDIDATE_R0",
+  "status": "IMPLEMENTED_CANDIDATE_R0_3_ADDITIVE",
   "home_repository": "Hawkar-usls/Hawkar-usls",
-  "purpose": "Expose JANUS HOME as a bounded cognition and asset-resolution nerve for Janus_Genesis without granting model output direct world authority.",
+  "purpose": "Expose JANUS HOME as a bounded cognition and asset-resolution nerve for the text-native Janus_Genesis command runtime without granting model output direct world authority.",
   "routes": {
     "health": "GET /v1/health",
     "intent": "POST /v1/genesis/intent",
@@ -16,6 +16,7 @@
     "GENESIS_EXPLICIT_PLAYER_TEXT",
     "JANUS_HOME_API",
     "ACTIVATOR_BOUNDARY",
+    "LANGUAGE_SYNTHESIS",
     "SEMANTIC_TO_MECHANIC",
     "FILE_FABRIC_ASSET_REQUIREMENTS",
     "BOUNDED_INTENT_PROPOSAL",
@@ -28,10 +29,24 @@
     "RETURN_TO_HEARTH",
     "PLACE_MARK",
     "GENERATE_STRUCTURE",
+    "SPAWN_ENTITY",
+    "SET_ATMOSPHERE",
+    "WORLD_TRANSFORM",
     "SET_CAMERA",
     "SET_MIRROR",
+    "SET_CAMERA_DISTANCE",
+    "INSPECT",
     "UNRESOLVED"
   ],
+  "command_semantics": {
+    "known_structure_nouns_use_specialized_recipe_kind": true,
+    "spawn_plus_structure_noun_becomes_generate_structure": true,
+    "unknown_build_noun_becomes_generic_structure": true,
+    "unknown_spawn_noun_becomes_generic_entity": true,
+    "unsupported_semantics": "UNRESOLVED_WITH_VISIBLE_REASON",
+    "unresolved_reason": "JANUS_SEMANTIC_TISSUE_REQUIRED",
+    "silent_world_mutation_on_unresolved": false
+  },
   "language_policy": {
     "text_encoding": "UTF-8",
     "unicode_normalization": "NFKC",
@@ -64,6 +79,8 @@
     "JANUS_RESPONSE_NE_WORLD_AUTHORITY",
     "GENESIS_VALIDATOR_REQUIRED_BEFORE_MUTATION",
     "PLAYER_LANGUAGE_NE_AUTHORITY_CHANGE",
+    "SPAWN_STRUCTURE_NOUN_NE_ENTITY_BY_ACCIDENT",
+    "UNRESOLVED_NE_SILENT_WORLD_MUTATION",
     "ASSET_DISCOVERY_NE_LICENSE_AUTHORITY",
     "RIGHTS_GATE_BEFORE_ASSET_MATERIALIZATION",
     "SLIME_CARRIES_POINTERS_AND_PROVENANCE_NOT_BINARY_ASSET_BYTES",
