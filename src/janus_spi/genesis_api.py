@@ -22,11 +22,29 @@ class GenesisAPIError(RuntimeError):
     pass
 
 
+def _ascii_fold(text: str) -> str:
+    return "".join(ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch))
+
+
+def _phrase_pattern(value: str) -> str:
+    return rf"(?<!\w){re.escape(_ascii_fold(value))}(?!\w)"
+
+
+def _contains_any(text: str, values: Iterable[str]) -> bool:
+    folded = _ascii_fold(text)
+    return any(re.search(_phrase_pattern(v), folded, flags=re.IGNORECASE) is not None for v in values)
+
+
+def _contains_fragment(text: str, values: Iterable[str]) -> bool:
+    folded = _ascii_fold(text)
+    return any(_ascii_fold(v) in folded for v in values)
+
+
 @dataclass(frozen=True)
 class LexemeSet:
     values: tuple[str, ...]
     def find(self, text: str) -> bool:
-        return any(v in text for v in self.values)
+        return _contains_any(text, self.values)
 
 
 BUILD = LexemeSet(("build","construct","generate","erect","построй","построить","возведи","создай","создать","сделай","поставь","размести","сгенерируй","побудуй","збудуй","створи","зроби","розмісти","zbuduj","stworz","postaw","baue","bauen","erschaffe","construye","crear","crea","construis","cree","creer"))
@@ -66,22 +84,13 @@ STRUCTURE_HINTS = {
     "house": ("house","building","дом","будинок","haus","casa","maison"), "wall": ("wall","стен","стіна","sciana","mauer","muro","mur"),
     "portal": ("portal","портал"), "tree": ("tree","дерев","drzew","baum","arbol","arbre"), "statue": ("statue","стату","памятник","пам'ятник","pomnik"), "road": ("road","дорог","шлях","droga","strasse","camino","route"),
 }
-ENTITY_HINTS = ("npc","person","human","guard","guardian","creature","animal","dragon","wolf","horse","робот","человек","персонаж","нпс","страж","существо","дракон","волк","кінь","людина","істота","smok","wilka","mensch","drache","persona","personne")
+ENTITY_HINTS = ("npc","person","human","guard","guardian","creature","animal","dragon","wolf","horse","робот","человек","персонаж","нпс","страж","существо","дракон","волк","кінь","людина","істота","smok","wilk","mensch","drache","persona","personne")
 
 
 def _normalize(text: str) -> str:
     value = unicodedata.normalize("NFKC", str(text or "")).strip().lower().replace("ё", "е")
     value = re.sub(r"[\u2010-\u2015]", "-", value)
     return re.sub(r"\s+", " ", value)
-
-
-def _ascii_fold(text: str) -> str:
-    return "".join(ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch))
-
-
-def _contains_any(text: str, values: Iterable[str]) -> bool:
-    folded = _ascii_fold(text)
-    return any(_ascii_fold(v) in folded for v in values)
 
 
 def _match_map(text: str, mapping: Mapping[str, Iterable[str]]) -> str | None:
@@ -107,13 +116,16 @@ def _concept(text: str) -> str:
     noise = BUILD.values + SPAWN.values + MOVE.values + RETURN.values + MARK.values + INSPECT.values
     folded = _ascii_fold(cleaned)
     for token in sorted(noise, key=len, reverse=True):
-        folded = folded.replace(_ascii_fold(token), " ")
+        folded = re.sub(_phrase_pattern(token), " ", folded, flags=re.IGNORECASE)
     folded = re.sub(r"\b\d+(?:\.\d+)?\b", " ", folded)
     return re.sub(r"\s+", " ", folded).strip(" -'")[:MAX_CONCEPT_CHARS] or "generated object"
 
 
 def _structure_kind(text: str) -> str | None:
-    return _match_map(text, STRUCTURE_HINTS)
+    for kind, aliases in STRUCTURE_HINTS.items():
+        if _contains_fragment(text, aliases):
+            return kind
+    return None
 
 
 def _world_state(payload: Mapping[str, Any]) -> Dict[str, Any]:
