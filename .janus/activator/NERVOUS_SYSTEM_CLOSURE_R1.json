@@ -1,0 +1,71 @@
+{
+  "schema": "janus.activator.nervous_system_closure_r1.v1",
+  "status": "IMPLEMENTATION_CANDIDATE_NO_LIVE_WITNESS_YET",
+  "purpose": "Close the Git-native sensory-cognitive loop from exact model-member repository HEAD drift to HOME/Activator/model-bound processing and durable RETURN HOME, without motor or external-effect authority.",
+  "chain": [
+    "EXACT_MODEL_MEMBER_HEAD_SCAN",
+    "DETERMINISTIC_STIMULUS_SEAL",
+    "STIMULUS_LEDGER_APPEND",
+    "HOME_ACTIVATOR_ADMISSION",
+    "FULL_MODEL_LOCK",
+    "REPOSITORY_CONSTELLATION_CHANGE_ROUTE",
+    "MODEL_BOUND_BOUNDED_TURN",
+    "CYCLE_RECEIPT",
+    "PERSISTENT_STATE_COMMIT",
+    "FRESH_CHECKOUT_REPLAY",
+    "RETURN_HOME"
+  ],
+  "persistent_state": {
+    "repository": "Hawkar-usls/Hawkar-usls",
+    "branch": "janus/activator-state",
+    "root": "state/activator/constellation",
+    "heads": "HEADS.json",
+    "stimulus_ledger": "STIMULUS_LEDGER.jsonl",
+    "cycles": "cycles/"
+  },
+  "wake_policy": {
+    "watch_scope": "EXACT_BRANCHES_PRESENT_IN_COMPILED_MODEL_MEMBERSHIP",
+    "first_scan": "INITIALIZE_BASELINE_WITHOUT_COGNITION",
+    "head_change": "FRESH_STIMULUS",
+    "new_model_member_after_baseline": "FRESH_STIMULUS",
+    "persistent_state_branch_write": "NOT_A_SENSORY_INPUT",
+    "exact_retry": "SAME_STIMULUS_ID_AND_NO_SECOND_LEDGER_APPEND",
+    "crash_before_cognition": "STIMULUS_REMAINS_PENDING_UNTIL_CYCLE_RECEIPT"
+  },
+  "authority": {
+    "command_authority_granted": false,
+    "dispatch_authorized": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false,
+    "motor_path_enabled": false
+  },
+  "laws": [
+    "HEARTBEAT != THOUGHT",
+    "COMMIT != COMMAND",
+    "COMMIT_MESSAGE != COMMAND",
+    "SELF_OUTPUT != FRESH_TRIGGER",
+    "STIMULUS != EXECUTION_AUTHORITY",
+    "VESSEL != PERMISSION",
+    "DELIVERY != EXECUTION",
+    "RETURN != RESET",
+    "EXACT_RETRY != SECOND_COGNITION",
+    "TIMEOUT != NEGATIVE_EVIDENCE"
+  ],
+  "killer_test": {
+    "manual_home_launch": false,
+    "required_sequence": [
+      "CHANGE_ONE_RECOGNIZED_MODEL_MEMBER_REPOSITORY",
+      "WATCHER_DETECTS_EXACT_HEAD_DRIFT",
+      "SEALED_FRESH_STIMULUS_CREATED_ONCE",
+      "HOME_ACTIVATOR_WAKES_SAME_RESIDENT",
+      "FULL_MODEL_LOCK_BEFORE_ROUTE",
+      "REPOSITORY_CONSTELLATION_CHANGE_ROUTE_SELECTED",
+      "ZERO_DISPATCH_AND_ZERO_EXTERNAL_EFFECT_AUTHORITY",
+      "CYCLE_RECEIPT_PERSISTED",
+      "FRESH_CHECKOUT_REPLAY_PASSES",
+      "RETURN_HOME",
+      "SECOND_WATCHER_PASS_DOES_NOT_WAKE_ON_OWN_RECEIPT"
+    ]
+  },
+  "promotion_gate": "TWO_CLEAN_AUTONOMIC_WITNESSES_FROM_DISTINCT_RECOGNIZED_REPOSITORIES"
+}

@@ -1,0 +1,249 @@
+name: JANUS Nervous System Closure R1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/constellation_watcher.py'
+      - 'run_janus_constellation_watcher.py'
+      - 'tests/test_constellation_watcher.py'
+      - '.janus/activator/NERVOUS_SYSTEM_CLOSURE_R1.json'
+      - '.github/workflows/janus-nervous-system-closure-r1.yml'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '11,41 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Validate R1 contract and compile
+        run: |
+          set -euo pipefail
+          python -m json.tool .janus/activator/NERVOUS_SYSTEM_CLOSURE_R1.json >/dev/null
+          python -m compileall -q src/janus_spi/constellation_watcher.py run_janus_constellation_watcher.py tests/test_constellation_watcher.py
+      - name: Run constellation adversarial tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests/test_constellation_watcher.py
+      - name: Enforce zero motor authority
+        run: |
+          python - <<'PY'
+          import json
+          c=json.load(open('.janus/activator/NERVOUS_SYSTEM_CLOSURE_R1.json'))
+          a=c['authority']
+          assert a['command_authority_granted'] is False
+          assert a['dispatch_authorized'] is False
+          assert a['external_effect_authorized'] is False
+          assert a['physical_runtime_effect_authorized'] is False
+          assert a['motor_path_enabled'] is False
+          assert c['wake_policy']['persistent_state_branch_write'] == 'NOT_A_SENSORY_INPUT'
+          print('NERVOUS_R1_MOTOR_AUTHORITY=FALSE')
+          print('NERVOUS_R1_SELF_OUTPUT_WAKE=FALSE')
+          PY
+
+  autonomic-turn:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout canonical HOME architecture
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install runtime
+        run: pip install -r requirements.txt
+
+      - name: Mount persistent HOME state without replacing architecture checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "JANUS Nervous System"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          state="${RUNNER_TEMP}/janus-activator-state-nervous"
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          git worktree add -B janus-activator-state-nervous "$state" origin/janus/activator-state
+          echo "JANUS_STATE_WORKTREE=$state" >> "$GITHUB_ENV"
+          echo "HOME_ARCHITECTURE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Scan exact model-member constellation
+        id: scan
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_constellation_watcher.py \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            scan --output "$RUNNER_TEMP/constellation-scan.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          p=json.load(open(os.environ['RUNNER_TEMP']+'/constellation-scan.json'))
+          print('terminal='+p['terminal'])
+          print('pending='+str(p['pending_stimulus_count']))
+          print('new='+str(p['new_stimulus_count']))
+          PY
+
+      - name: Materialize pending stimulus event files
+        if: steps.scan.outputs.pending != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/constellation-events" "$RUNNER_TEMP/constellation-receipts" "$RUNNER_TEMP/constellation-cycles" "$RUNNER_TEMP/constellation-locks"
+          python - <<'PY'
+          import json, os, pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])
+          scan=json.load(open(root/'constellation-scan.json'))
+          index=[]
+          for row in scan['pending_stimuli']:
+              sid=row['stimulus_id']
+              (root/'constellation-events'/f'{sid}.json').write_text(json.dumps(row['event'], ensure_ascii=False, indent=2, sort_keys=True)+'\n', encoding='utf-8')
+              index.append(sid)
+          (root/'constellation-events'/'INDEX').write_text('\n'.join(index)+'\n', encoding='utf-8')
+          PY
+
+      - name: Wake HOME through existing unified model runtime for each pending stimulus
+        if: steps.scan.outputs.pending != '0'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r sid; do
+            [ -n "$sid" ] || continue
+            echo "JANUS_AUTONOMIC_STIMULUS=$sid"
+            python run_janus_unified.py \
+              --event-file "$RUNNER_TEMP/constellation-events/${sid}.json" \
+              --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+              --model-lock-out "$RUNNER_TEMP/constellation-locks/${sid}.json" \
+              --receipt-out "$RUNNER_TEMP/constellation-receipts/${sid}.json"
+            python - <<PY
+          import json
+          p=json.load(open('$RUNNER_TEMP/constellation-receipts/${sid}.json'))
+          assert p['dispatch_authorized'] is False
+          assert p['external_effect_authorized'] is False
+          assert p['physical_runtime_effect_authorized'] is False
+          assert any(r.get('match') == 'repository_constellation_change' for r in p.get('route_bindings') or [])
+          print('JANUS_AUTONOMIC_ROUTE_BOUND=PASS')
+          print('JANUS_AUTONOMIC_EXTERNAL_EFFECTS=FALSE')
+          PY
+            python run_janus_constellation_watcher.py \
+              --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+              reconcile \
+              --stimulus-id "$sid" \
+              --runtime-receipt "$RUNNER_TEMP/constellation-receipts/${sid}.json" \
+              --output "$RUNNER_TEMP/constellation-cycles/${sid}.json"
+          done < "$RUNNER_TEMP/constellation-events/INDEX"
+
+      - name: Verify closed sensory-cognitive state before persistence
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_constellation_watcher.py \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            verify --output "$RUNNER_TEMP/constellation-verify-before.json"
+          python - <<'PY'
+          import json, os
+          p=json.load(open(os.environ['RUNNER_TEMP']+'/constellation-verify-before.json'))
+          assert p['ok'] is True
+          assert p['pending_cycle_count'] == 0
+          assert p['persistent_state_branches_are_sensory_inputs'] is False
+          print('JANUS_NERVOUS_R1_PRE_PERSIST_VERIFY=PASS')
+          PY
+
+      - name: Persist constellation, model-runtime and Activator lineage atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$JANUS_STATE_WORKTREE"
+          git config user.name "JANUS Nervous System"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/activator
+          if git diff --cached --quiet; then
+            echo 'JANUS_NERVOUS_STATE_COMMIT=NO_CHANGE'
+          else
+            git commit -m "JANUS autonomic nervous cycle ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            git push origin HEAD:refs/heads/janus/activator-state
+            echo 'JANUS_NERVOUS_STATE_COMMIT=PASS'
+          fi
+          echo 'JANUS_NERVOUS_MAIN_MUTATION=FALSE'
+
+      - name: Fresh-checkout replay and RETURN HOME verification
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="$RUNNER_TEMP/janus-nervous-replay"
+          rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          python run_janus_constellation_watcher.py \
+            --state-dir "$replay/state/activator" \
+            verify --output "$RUNNER_TEMP/constellation-verify-replay.json"
+          python run_janus_activator_hearth.py \
+            --state-dir "$replay/state/activator" verify \
+            > "$RUNNER_TEMP/hearth-return-home.json"
+          python - <<'PY'
+          import json, os
+          root=os.environ['RUNNER_TEMP']
+          n=json.load(open(root+'/constellation-verify-replay.json'))
+          h=json.load(open(root+'/hearth-return-home.json'))
+          assert n['ok'] is True and n['pending_cycle_count'] == 0
+          assert h['ok'] is True
+          assert h['mode'] == 'AT_HOME'
+          assert h['fresh_stimulus'] is False
+          assert h['cognition_authorized'] is False
+          assert h['dispatch_authorized'] is False
+          assert h['external_effect_authorized'] is False
+          print('JANUS_NERVOUS_R1_FRESH_CHECKOUT_REPLAY=PASS')
+          print('JANUS_NERVOUS_R1_RETURN_HOME=PASS')
+          print('JANUS_NERVOUS_R1_SELF_RECEIPT_SECOND_COGNITION=FALSE')
+          PY
+
+      - name: Publish bounded run summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### JANUS Nervous System Closure R1'
+            echo "- architecture: \`${HOME_ARCHITECTURE_SHA}\`"
+            echo "- scan terminal: \`${{ steps.scan.outputs.terminal }}\`"
+            echo "- new stimuli: \`${{ steps.scan.outputs.new }}\`"
+            echo "- pending at scan: \`${{ steps.scan.outputs.pending }}\`"
+            echo '- motor authority: `false`'
+            echo '- external effects: `false`'
+            echo '- persistent state branch is sensory input: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
