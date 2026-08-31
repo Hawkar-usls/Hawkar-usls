@@ -1,0 +1,130 @@
+{
+  "command_authority_granted": false,
+  "commerce_mode": "ZERO_PRICE_SHADOW",
+  "dataset_payload_downloaded": false,
+  "dataset_scout_result": {
+    "authority": {
+      "claim_authority_granted": false,
+      "command_authority_granted": false,
+      "dataset_payload_downloaded": false,
+      "external_effect_authorized": false,
+      "license_authority_granted": false,
+      "read_only": true,
+      "redistribution_authority_granted": false,
+      "scientific_evidence_authority_granted": false,
+      "world_truth_authority_granted": false
+    },
+    "dataset_manifest": [
+      {
+        "catalog": "ZENODO",
+        "dataset_id": "16974316",
+        "formats": [
+          "zip",
+          "pdf"
+        ],
+        "license_observation": "cc-by-4.0",
+        "metadata_only": true,
+        "publication_date": "2025-08-28",
+        "source_url": "https://zenodo.org/records/16974316",
+        "title": "Proof of the P=NP Problem"
+      }
+    ],
+    "date_range": null,
+    "deduplication_notes": {
+      "duplicates_removed": 0,
+      "key": "normalized_source_url"
+    },
+    "domain": "",
+    "format_preferences": [],
+    "laws": [
+      "DATASET METADATA != DATASET PAYLOAD",
+      "DATASET DISCOVERY != REDISTRIBUTION AUTHORITY",
+      "LICENSE OBSERVATION != LICENSE AUTHORITY",
+      "CATALOG SILENCE != NEGATIVE EVIDENCE"
+    ],
+    "license_observations": [
+      {
+        "authoritative_license_determination": false,
+        "observed": "cc-by-4.0",
+        "source_url": "https://zenodo.org/records/16974316"
+      }
+    ],
+    "license_preferences": [],
+    "provenance": {
+      "catalog_attempt_receipts": [
+        {
+          "candidate_count": 1,
+          "catalog": "ZENODO",
+          "metadata_endpoint": "https://zenodo.org/api/records?q=P%3DNP&size=1&sort=bestmatch",
+          "status": "METADATA_READ_PASS"
+        },
+        {
+          "candidate_count": 0,
+          "catalog": "HUGGINGFACE",
+          "metadata_endpoint": "https://huggingface.co/api/datasets?search=P%3DNP&limit=1&full=false",
+          "status": "METADATA_READ_PASS"
+        }
+      ],
+      "catalog_failures": [],
+      "catalogs_attempted": [
+        "ZENODO",
+        "HUGGINGFACE"
+      ],
+      "catalogs_succeeded": [
+        "ZENODO",
+        "HUGGINGFACE"
+      ],
+      "metadata_only": true,
+      "silence_is_negative_evidence": false
+    },
+    "query": "P=NP",
+    "request_hash": "d3da4c7f3efe07ea48834f3142ef6131b0252cea55356b7991ec8c3692eb5e1b",
+    "request_id": "ds-shadow-081dc88215756b0ff335970963ca3bfc725f048303b414ca",
+    "result_hash": "bcfc0b0ba416d7ea83b4f0c99d1fb49c730a959d757fe5bf10746a77c072f00b",
+    "schema": "janus.market_service.dataset_scout_result.v1",
+    "source_urls": [
+      "https://zenodo.org/records/16974316"
+    ],
+    "status": "BOUNDED_DATASET_SCOUT_COMPLETE"
+  },
+  "dataset_scout_result_hash": "bcfc0b0ba416d7ea83b4f0c99d1fb49c730a959d757fe5bf10746a77c072f00b",
+  "external_effect_authorized": false,
+  "file_fabric_digest": "6c45c90f9e1fb0fb4294ed1233b395e00bf206ee5629446fc72c1f7f274a066d",
+  "home_response_hash": "7a1feec99c0b45b512f1139f2e29e71a47cfdd98875a4259f1170d3a68285e11",
+  "home_service_receipt_hash": "c24937cffa637505c456529160efa15d1b5923731fe1af2e104a9edfa2cf778f",
+  "laws": [
+    "MARKET IS EXTERNAL NERVE NOT JANUS ROOT",
+    "DATASET METADATA != DATASET PAYLOAD",
+    "DATASET DISCOVERY != REDISTRIBUTION AUTHORITY",
+    "LICENSE OBSERVATION != LICENSE AUTHORITY",
+    "DELIVERY != AUTHORITY",
+    "EXACT RETRY != SECOND COGNITION"
+  ],
+  "license_authority_granted": false,
+  "model_digest": "4929b6fdbb601dfe70c47bc6b6a037336786df650909100b36ddc7b0773427b5",
+  "money_enabled": false,
+  "packet_hash": "5c30bd62e97c1df43c03627e2292cd30dd26cab8e2aac92c451805597b123b31",
+  "packet_id": "dsp-shadow-90aef66a7e3c1fb38cbebc8381145eefeb52dce7af6f72b3",
+  "payment_reference": null,
+  "purchase_grant_hash": "2fc17afa504112c6e84ee0ef4c6dfb89614f788ca18c9a591de40ede55dc4760",
+  "purchase_id": "pur-ds-shadow-665c96c1a8d5cef04736e4585e5c4e1c",
+  "redistribution_authority_granted": false,
+  "replayed": false,
+  "resident_uuid": "75e514ab-be76-42c8-bcb3-fc9670164f96",
+  "return_home_verified": true,
+  "runtime_receipt_hash": "ddaa67e6de3a3acc471044423906b1fb62850f1ba8b640280e15781b6b436de7",
+  "same_resident_uuid": true,
+  "schema": "janus.machine_market.home_dataset_scout_response.v1",
+  "service_request_hash": "d3da4c7f3efe07ea48834f3142ef6131b0252cea55356b7991ec8c3692eb5e1b",
+  "service_request_id": "ds-shadow-081dc88215756b0ff335970963ca3bfc725f048303b414ca",
+  "sku": "JANUS.DATASET_SCOUT",
+  "source_binding": {
+    "market_packet_file_sha256": "85bcb00dfe071fa0ed03e7379d676719e0c316b7b1d6ba54b47dc9b9abd4aeec",
+    "market_packet_git_blob_sha": "7e02df9a3b160564577e1da62a49925f634c3d61",
+    "market_packet_hash": "5c30bd62e97c1df43c03627e2292cd30dd26cab8e2aac92c451805597b123b31",
+    "market_packet_path": ".janus/market-home-outbox/ds-shadow-081dc88215756b0ff335970963ca3bfc725f048303b414ca.dataset-scout.packet.json",
+    "market_source_commit": "e49a0f82739f43b7673d07c3abfcf1d530f6af46",
+    "pull_receipt_hash": "feefe4470f078e63a3855a4414f82894f83a17aad9b20d14add1c0fd6a797b62",
+    "transport": "PHYSARIUS_CREDENTIALLESS_PULL"
+  }
+}
