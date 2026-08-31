@@ -6,6 +6,7 @@ on:
       - 'src/janus_spi/genesis_api.py'
       - 'src/janus_spi/genesis_scene_graph.py'
       - 'src/janus_spi/genesis_scene_graph_r04.py'
+      - 'src/janus_spi/genesis_scene_graph_transport.py'
       - 'run_janus_genesis_api.py'
       - 'run_janus_genesis_scene_api.py'
       - 'tests/test_genesis_api.py'
@@ -19,6 +20,7 @@ on:
       - 'src/janus_spi/genesis_api.py'
       - 'src/janus_spi/genesis_scene_graph.py'
       - 'src/janus_spi/genesis_scene_graph_r04.py'
+      - 'src/janus_spi/genesis_scene_graph_transport.py'
       - 'run_janus_genesis_api.py'
       - 'run_janus_genesis_scene_api.py'
       - 'tests/test_genesis_api.py'
@@ -47,7 +49,7 @@ jobs:
           pip install pytest
       - name: Compile scene nerve
         run: |
-          python -m compileall -q src/janus_spi/genesis_api.py src/janus_spi/genesis_scene_graph.py src/janus_spi/genesis_scene_graph_r04.py run_janus_genesis_api.py run_janus_genesis_scene_api.py
+          python -m compileall -q src/janus_spi/genesis_api.py src/janus_spi/genesis_scene_graph.py src/janus_spi/genesis_scene_graph_r04.py src/janus_spi/genesis_scene_graph_transport.py run_janus_genesis_api.py run_janus_genesis_scene_api.py
       - name: Validate graph contract JSON
         run: |
           python - <<'PY'
@@ -72,7 +74,7 @@ jobs:
           cleanup() { docker stop janus-scene >/dev/null 2>&1 || true; }
           trap cleanup EXIT
           python - <<'PY'
-          import json, time, urllib.request
+          import hashlib, json, time, urllib.request
           for _ in range(30):
               try:
                   health=json.load(urllib.request.urlopen('http://127.0.0.1:18765/v1/health',timeout=1))
@@ -99,5 +101,8 @@ jobs:
           roots=[n for n in graph['nodes'] if n['family']=='STRUCTURE']
           assert len(roots)==1 and 'cathedral' in roots[0]['concept']
           assert graph['authority']['janus_graph_is_world_authority'] is False
+          proof=out['transport_proof']
+          assert hashlib.sha256(proof['canonical_graph_json'].encode('utf-8')).hexdigest()==proof['canonical_graph_utf8_sha256']
+          assert json.loads(proof['canonical_graph_json'])==graph
           print('SCENE_GRAPH_CONTAINER_ROUNDTRIP_PASS', graph['graph_id'], len(graph['nodes']))
           PY
