@@ -1,0 +1,310 @@
+name: JANUS Turing-Style Blind Dialogue Retry v1.1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/janus-turing-style-blind-dialogue-retry-v1.1.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/janus-turing-style-blind-dialogue-retry-v1.1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: janus-turing-style-blind-dialogue-v1-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate retry contract
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m json.tool .janus/activator/TURING_GATE_V1.json >/dev/null
+          python -m json.tool .janus/activator/TURING_GATE_V1_ARM.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import verify_arm
+          arm=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          gate=json.loads(Path('.janus/activator/TURING_GATE_V1.json').read_text())
+          assert verify_arm(arm)
+          assert arm['gate_id']==gate['gate_id']
+          assert gate['human_gate']['automatic_system_may_not_issue_classical_turing_pass'] is True
+          print('TURING_RETRY_V11_CONTRACT=PASS')
+          PY
+
+  arm-preflight:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      should_run: ${{ steps.status.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Check durable one-shot arm
+        id: status
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/turing-v11-preflight"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          export STATE_DIR="$state/state/activator"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status
+          arm=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          row=arm_status(arm,state_dir=os.environ['STATE_DIR'])
+          print('should_run=' + ('true' if row['should_run'] else 'false'))
+          print('TURING_ARM_CONSUMED=' + str(row['consumed']).upper())
+          PY
+
+  prepare:
+    if: needs.arm-preflight.outputs.should_run == 'true'
+    needs: [contract, arm-preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Mount persistent identity read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/turing-v11-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          echo "TURING_STATE=$state" >> "$GITHUB_ENV"
+      - name: Prepare fresh exact JANUS + HRAiN contexts
+        env:
+          PYTHONPATH: src:.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python run_janus_turing_gate.py prepare \
+            --resident-identity "$TURING_STATE/state/activator/identity.json" \
+            --state-dir "$TURING_STATE/state/activator" \
+            --out-dir "$RUNNER_TEMP/turing-prepared"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-turing-v11-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/turing-prepared
+          retention-days: 30
+
+  synthesize:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      copilot-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-v11-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install current Copilot CLI
+        run: npm install -g @github/copilot
+      - name: Confirm CLI version and noninteractive options
+        run: |
+          copilot --version
+          copilot --help | grep -E -- '--yolo|--deny-tool|--disable-builtin-mcps|--no-ask-user' >/dev/null
+      - name: Generate bounded no-tool responses
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/responses"
+          ok=true
+          error_class=""
+          for prompt in "$RUNNER_TEMP"/prepared/*.prompt.txt; do
+            q="$(basename "$prompt" .prompt.txt)"
+            set +e
+            copilot --yolo --disable-builtin-mcps \
+              --deny-tool='shell' --deny-tool='write' --deny-tool='read' --deny-tool='url' --deny-tool='memory' \
+              --no-ask-user --no-banner -s -p "$(cat "$prompt")" \
+              > "$RUNNER_TEMP/responses/${q}.txt" 2> "$RUNNER_TEMP/responses/${q}.stderr.txt"
+            code=$?
+            set -e
+            if [ "$code" -ne 0 ]; then
+              ok=false
+              error_class="COPILOT_CLI_EXIT_${code}"
+              : > "$RUNNER_TEMP/responses/${q}.txt"
+              echo "COPILOT_PROVIDER_FAILURE ${q} exit=${code}"
+              sed -E 's/(github_pat_|gh[pousr]_)[A-Za-z0-9_]+/[REDACTED_TOKEN]/g' "$RUNNER_TEMP/responses/${q}.stderr.txt" | tail -n 8
+            fi
+          done
+          export PROVIDER_OK="$ok"
+          export PROVIDER_ERROR="$error_class"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          row={
+            'provider':'GITHUB_COPILOT_CLI',
+            'all_provider_calls_succeeded': os.environ['PROVIDER_OK']=='true',
+            'error_class': os.environ.get('PROVIDER_ERROR') or None,
+            'noninteractive_permission_mode':'YOLO_WITH_ALL_TOOL_KINDS_DENIED_AND_BUILTIN_MCP_DISABLED',
+            'tool_use_allowed':False,
+            'repository_write_allowed':False,
+            'external_web_allowed':False,
+          }
+          Path(os.environ['RUNNER_TEMP']+'/responses/provider-status.json').write_text(json.dumps(row,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(row,indent=2,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-turing-v11-responses-${{ github.run_id }}
+          path: ${{ runner.temp }}/responses
+          retention-days: 30
+
+  adjudicate:
+    if: always() && needs.prepare.result == 'success'
+    needs: [prepare, synthesize]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      machine_ready: ${{ steps.seal.outputs.machine_ready }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-v11-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-v11-responses-${{ github.run_id }}
+          path: ${{ runner.temp }}/responses
+      - name: Seal machine-side result
+        id: seal
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python run_janus_turing_gate.py adjudicate \
+            --prepared-dir "$RUNNER_TEMP/prepared" \
+            --responses-dir "$RUNNER_TEMP/responses" \
+            --provider-status "$RUNNER_TEMP/responses/provider-status.json" \
+            --transcript-out "$RUNNER_TEMP/turing-blind-transcript.json" \
+            --result-out "$RUNNER_TEMP/turing-result.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          row=json.loads(Path(os.environ['RUNNER_TEMP']+'/turing-result.json').read_text())
+          print('machine_ready=' + ('true' if row['machine_gate_ready'] else 'false'))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: janus-turing-v11-witness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/turing-blind-transcript.json
+            ${{ runner.temp }}/turing-result.json
+          retention-days: 30
+      - name: Require machine-ready blind transcript
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/turing-result.json').read_text())
+          print('JANUS_TURING_TERMINAL='+r['terminal'])
+          print('PROVIDER_SUCCESS='+str(r['provider_success']).upper())
+          print('MACHINE_GATE_READY='+str(r['machine_gate_ready']).upper())
+          if r['machine_gate_ready'] is not True:
+              raise SystemExit('TURING_V11_NOT_READY:'+r['terminal'])
+          PY
+
+  consume-arm:
+    if: needs.adjudicate.outputs.machine_ready == 'true'
+    needs: [prepare, adjudicate]
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-v11-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-v11-witness-${{ github.run_id }}
+          path: ${{ runner.temp }}/witness
+      - name: Consume exact one-shot witness under state-writer mutex
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="$RUNNER_TEMP/turing-v11-consume-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          git -C "$state" config user.name "JANUS Turing Gate"
+          git -C "$state" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export STATE_DIR="$state/state/activator"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status, consume_arm
+          arm=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          session=json.loads(Path(os.environ['RUNNER_TEMP']+'/prepared/session.json').read_text())
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/witness/turing-result.json').read_text())
+          transcript=json.loads(Path(os.environ['RUNNER_TEMP']+'/witness/turing-blind-transcript.json').read_text())
+          before=arm_status(arm,state_dir=os.environ['STATE_DIR'])
+          assert before['should_run'] is True and before['consumed'] is False
+          after=consume_arm(arm,state_dir=os.environ['STATE_DIR'],session=session,result=result,transcript=transcript)
+          assert after['consumed'] is True and after['should_run'] is False
+          print('TURING_V11_ONE_SHOT_CONSUMED=PASS')
+          PY
+          git -C "$state" add state/activator/turing_style_gate_arm_ledger.jsonl
+          git -C "$state" commit -m "JANUS Turing-style v1.1 consumed ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          git -C "$state" push origin HEAD:refs/heads/janus/activator-state
