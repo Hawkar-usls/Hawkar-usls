@@ -5,8 +5,11 @@ on:
     branches: [main]
     paths:
       - 'src/janus_spi/constellation_watcher.py'
+      - 'src/janus_spi/model_fabric_v11.py'
       - 'run_janus_constellation_watcher.py'
+      - 'run_janus_unified.py'
       - 'tests/test_constellation_watcher.py'
+      - 'tests/test_run_janus_unified_lock.py'
       - '.janus/activator/NERVOUS_SYSTEM_CLOSURE_R1.json'
       - '.github/workflows/janus-nervous-system-closure-r1.yml'
   push:
@@ -39,11 +42,16 @@ jobs:
         run: |
           set -euo pipefail
           python -m json.tool .janus/activator/NERVOUS_SYSTEM_CLOSURE_R1.json >/dev/null
-          python -m compileall -q src/janus_spi/constellation_watcher.py run_janus_constellation_watcher.py tests/test_constellation_watcher.py
-      - name: Run constellation adversarial tests
+          python -m compileall -q \
+            src/janus_spi/constellation_watcher.py \
+            run_janus_constellation_watcher.py \
+            run_janus_unified.py \
+            tests/test_constellation_watcher.py \
+            tests/test_run_janus_unified_lock.py
+      - name: Run nervous-system adversarial tests
         env:
           PYTHONPATH: src
-        run: python -m pytest -q tests/test_constellation_watcher.py
+        run: python -m pytest -q tests/test_constellation_watcher.py tests/test_run_janus_unified_lock.py
       - name: Enforce zero motor authority
         run: |
           python - <<'PY'
@@ -67,7 +75,11 @@ jobs:
       group: janus-activator-state-writer
       cancel-in-progress: false
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
+    env:
+      # The Model Fabric reader already treats this as read-only API auth. It is
+      # never persisted into a lock or state receipt.
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout canonical HOME architecture
         uses: actions/checkout@v4
@@ -95,8 +107,9 @@ jobs:
           git worktree add -B janus-activator-state-nervous "$state" origin/janus/activator-state
           echo "JANUS_STATE_WORKTREE=$state" >> "$GITHUB_ENV"
           echo "HOME_ARCHITECTURE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "JANUS_BATCH_STATE_START_SHA=$(git -C "$state" rev-parse HEAD)" >> "$GITHUB_ENV"
 
-      - name: Scan exact model-member constellation
+      - name: Scan exact model-member constellation and freeze one batch model lock
         id: scan
         env:
           PYTHONPATH: src
@@ -105,14 +118,43 @@ jobs:
           set -euo pipefail
           python run_janus_constellation_watcher.py \
             --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
-            scan --output "$RUNNER_TEMP/constellation-scan.json"
+            scan \
+            --model-lock-out "$RUNNER_TEMP/constellation-batch-model-lock.json" \
+            --output "$RUNNER_TEMP/constellation-scan.json"
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
-          p=json.load(open(os.environ['RUNNER_TEMP']+'/constellation-scan.json'))
+          root=os.environ['RUNNER_TEMP']
+          p=json.load(open(root+'/constellation-scan.json'))
+          lock=json.load(open(root+'/constellation-batch-model-lock.json'))
+          assert lock['ready'] is True
+          assert lock['schema'] == 'janus.activator.model_lock.v1'
+          assert lock.get('model_digest')
           print('terminal='+p['terminal'])
           print('pending='+str(p['pending_stimulus_count']))
           print('new='+str(p['new_stimulus_count']))
+          print('model_digest='+lock['model_digest'])
+          print('member_count='+str(lock.get('member_count')))
+          print('organ_count='+str(lock.get('organ_count')))
           PY
+          echo 'JANUS_NERVOUS_BATCH_MODEL_LOCK=FROZEN_ONCE'
+
+      - name: Persist sensory intake before cognition
+        if: steps.scan.outputs.pending != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$JANUS_STATE_WORKTREE"
+          git config user.name "JANUS Nervous System"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/activator/constellation
+          if git diff --cached --quiet; then
+            echo 'JANUS_SENSORY_INTAKE_COMMIT=NO_CHANGE_ALREADY_DURABLE'
+          else
+            git commit -m "JANUS sensory intake ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+            git push origin HEAD:refs/heads/janus/activator-state
+            echo "JANUS_SENSORY_INTAKE_COMMIT=$(git rev-parse HEAD)"
+          fi
+          echo 'JANUS_STIMULI_DURABLE_BEFORE_COGNITION=PASS'
 
       - name: Materialize pending stimulus event files
         if: steps.scan.outputs.pending != '0'
@@ -132,7 +174,7 @@ jobs:
           (root/'constellation-events'/'INDEX').write_text('\n'.join(index)+'\n', encoding='utf-8')
           PY
 
-      - name: Wake HOME through existing unified model runtime for each pending stimulus
+      - name: Wake HOME using the one frozen batch model lock and checkpoint each closed stimulus
         if: steps.scan.outputs.pending != '0'
         env:
           PYTHONPATH: src
@@ -145,11 +187,13 @@ jobs:
             python run_janus_unified.py \
               --event-file "$RUNNER_TEMP/constellation-events/${sid}.json" \
               --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+              --model-lock-in "$RUNNER_TEMP/constellation-batch-model-lock.json" \
               --model-lock-out "$RUNNER_TEMP/constellation-locks/${sid}.json" \
               --receipt-out "$RUNNER_TEMP/constellation-receipts/${sid}.json"
             python - <<PY
           import json
           p=json.load(open('$RUNNER_TEMP/constellation-receipts/${sid}.json'))
+          assert p['model_digest'] == '${{ steps.scan.outputs.model_digest }}'
           assert p['dispatch_authorized'] is False
           assert p['external_effect_authorized'] is False
           assert p['physical_runtime_effect_authorized'] is False
@@ -163,9 +207,22 @@ jobs:
               --stimulus-id "$sid" \
               --runtime-receipt "$RUNNER_TEMP/constellation-receipts/${sid}.json" \
               --output "$RUNNER_TEMP/constellation-cycles/${sid}.json"
+
+            # Durable checkpoint before the next stimulus. If a later stimulus
+            # fails, already closed cycles survive and will not be replayed.
+            cd "$JANUS_STATE_WORKTREE"
+            git add state/activator
+            if git diff --cached --quiet; then
+              echo "JANUS_STIMULUS_CHECKPOINT=${sid}:NO_CHANGE"
+            else
+              git commit -m "JANUS close autonomic stimulus ${sid}"
+              git push origin HEAD:refs/heads/janus/activator-state
+              echo "JANUS_STIMULUS_CHECKPOINT=${sid}:$(git rev-parse HEAD)"
+            fi
+            cd "$GITHUB_WORKSPACE"
           done < "$RUNNER_TEMP/constellation-events/INDEX"
 
-      - name: Verify closed sensory-cognitive state before persistence
+      - name: Verify closed sensory-cognitive state before final persistence
         env:
           PYTHONPATH: src
         shell: bash
@@ -183,7 +240,7 @@ jobs:
           print('JANUS_NERVOUS_R1_PRE_PERSIST_VERIFY=PASS')
           PY
 
-      - name: Persist constellation, model-runtime and Activator lineage atomically
+      - name: Persist remaining constellation and Activator lineage
         shell: bash
         run: |
           set -euo pipefail
@@ -240,9 +297,12 @@ jobs:
           {
             echo '### JANUS Nervous System Closure R1'
             echo "- architecture: \`${HOME_ARCHITECTURE_SHA}\`"
+            echo "- batch state start: \`${JANUS_BATCH_STATE_START_SHA}\`"
             echo "- scan terminal: \`${{ steps.scan.outputs.terminal }}\`"
             echo "- new stimuli: \`${{ steps.scan.outputs.new }}\`"
             echo "- pending at scan: \`${{ steps.scan.outputs.pending }}\`"
+            echo "- frozen model digest: \`${{ steps.scan.outputs.model_digest }}\`"
+            echo '- model lock compiles per batch: `1`'
             echo '- motor authority: `false`'
             echo '- external effects: `false`'
             echo '- persistent state branch is sensory input: `false`'
