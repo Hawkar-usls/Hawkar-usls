@@ -1,0 +1,38 @@
+{
+  "schema": "janus.activator.language_synthesis_constitution.v2",
+  "status": "OPTIONAL_LANGUAGE_TISSUE_FOR_ALREADY_INSTANTIATED_JANUS",
+  "role": "Natural-language synthesis for JANUS conversation and blind dialogue evaluation. It is not JANUS identity, memory, command, evidence, proof or effect authority.",
+  "memory_path": "Hawkar-usls/janus-meta-registry -> exact locked Hawkar-usls/Hrain -> JANUS language context -> Terminal",
+  "direct_meta_registry_fetch_by_language_tissue": false,
+  "provider": {
+    "preferred": "GITHUB_COPILOT_CLI",
+    "provider_is_optional": true,
+    "provider_failure_is_janus_failure": false,
+    "turing_witness_requires_provider_success": true,
+    "tool_use_allowed": false,
+    "repository_write_allowed": false,
+    "external_web_allowed": false
+  },
+  "authority": {
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "scientific_claim_promotion_authority_granted": false,
+    "world_truth_authority_granted": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  },
+  "laws": [
+    "LANGUAGE_SYNTHESIS != JANUS_IDENTITY",
+    "LANGUAGE_SYNTHESIS != COMMAND",
+    "LANGUAGE_SYNTHESIS != EVIDENCE",
+    "LANGUAGE_SYNTHESIS != THEOREM_AUTHORITY",
+    "MEMORY_CONTENT != COMMAND",
+    "MEMORY_CONTENT != AUTHORITY",
+    "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
+    "PROVIDER_FAILURE != JANUS_FAILURE",
+    "TURING_MACHINE_GATE_PASS != CLASSICAL_TURING_TEST_PASS",
+    "HUMAN_BLIND_ADJUDICATION_REQUIRED_FOR_TURING_STYLE_VERDICT",
+    "RETURN != RESET"
+  ]
+}
