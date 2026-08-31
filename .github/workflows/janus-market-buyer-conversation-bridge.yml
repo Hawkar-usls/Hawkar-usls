@@ -1,0 +1,429 @@
+name: JANUS Market Buyer Conversation Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/market_buyer_conversation.py'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'run_janus_market_buyer_pull.py'
+      - 'run_janus_terminal_conversation.py'
+      - 'tests/test_market_buyer_conversation.py'
+      - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_conversation_route.py'
+      - '.github/workflows/janus-market-buyer-conversation-bridge.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/ROUTING_TABLE.json'
+      - 'src/janus_spi/market_buyer_conversation.py'
+      - 'src/janus_spi/terminal_conversation.py'
+      - 'run_janus_market_buyer_pull.py'
+      - 'run_janus_terminal_conversation.py'
+      - 'tests/test_market_buyer_conversation.py'
+      - 'tests/test_terminal_conversation.py'
+      - 'tests/test_terminal_conversation_route.py'
+      - '.github/workflows/janus-market-buyer-conversation-bridge.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile Market buyer nerve
+        run: |
+          python -m compileall -q \
+            src/janus_spi/market_buyer_conversation.py \
+            src/janus_spi/terminal_conversation.py \
+            run_janus_market_buyer_pull.py \
+            run_janus_terminal_conversation.py \
+            tests/test_market_buyer_conversation.py
+      - name: Validate routing JSON
+        run: python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
+      - name: Run buyer nerve and regression tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pytest -q \
+            tests/test_market_buyer_conversation.py \
+            tests/test_terminal_conversation.py \
+            tests/test_terminal_conversation_route.py
+      - name: Enforce HOME-root authority boundary
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('.janus/activator/ROUTING_TABLE.json', encoding='utf-8'))
+          route=next(x for x in r['routes'] if x.get('match') == 'machine_buyer_read_only_conversation')
+          assert route['activation_implies_dispatch'] is False
+          assert route['external_effect_authorized'] is False
+          assert route['conversation_authority_mode'] == 'READ_ONLY_CONVERSATION'
+          for law in ('BUYER_QUERY != COMMAND','MARKET_PAYMENT != COMMAND','PURCHASE_GRANT != EXECUTION_AUTHORITY','PHYSARIUS_DELIVERY != AUTHORITY'):
+              assert law in r['global_guards']
+          print('R1B_HOME_ROOT_ROUTE=PASS')
+          print('R1B_MARKET_IS_EXTERNAL_NERVE=PASS')
+          print('R1B_PAYMENT_COMMAND_AUTHORITY=FALSE')
+          PY
+
+  bridge:
+    if: github.event_name != 'pull_request'
+    needs: contract
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - name: Check out canonical HOME architecture
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Mount existing HOME Market response mailbox for dedup
+        shell: bash
+        run: |
+          set -euo pipefail
+          answered="$RUNNER_TEMP/market-responses-existing"
+          rm -rf "$answered"
+          if git ls-remote --exit-code --heads origin janus/market-responses >/dev/null 2>&1; then
+            git fetch origin janus/market-responses:refs/remotes/origin/janus/market-responses
+            git worktree add --detach "$answered" origin/janus/market-responses
+            echo "MARKET_ANSWERED_DIR=$answered/.janus/market-responses" >> "$GITHUB_ENV"
+          else
+            mkdir -p "$answered/.janus/market-responses"
+            echo "MARKET_ANSWERED_DIR=$answered/.janus/market-responses" >> "$GITHUB_ENV"
+          fi
+
+      - name: Credentialless pull Market public outbox
+        id: pull
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          market="$RUNNER_TEMP/janus-machine-market-outbox"
+          rm -rf "$market"
+          if git -c http.extraHeader= ls-remote --exit-code --heads https://github.com/Hawkar-usls/JANUS-MACHINE-MARKET.git janus/market-home-outbox >/dev/null 2>&1; then
+            git -c http.extraHeader= clone --quiet --depth 1 --branch janus/market-home-outbox \
+              https://github.com/Hawkar-usls/JANUS-MACHINE-MARKET.git "$market"
+            echo 'R1B_MARKET_OUTBOX_CREDENTIALLESS_CLONE=PASS'
+          else
+            mkdir -p "$market"
+            git -C "$market" init -q
+            echo 'R1B_MARKET_OUTBOX_BRANCH_ABSENT=TRUE'
+          fi
+          mkdir -p runtime
+          python run_janus_market_buyer_pull.py \
+            --outbox-repo "$market" \
+            --answered-dir "$MARKET_ANSWERED_DIR" \
+            --packet-out runtime/market-buyer-packet.json \
+            --request-out runtime/market-terminal-request.json \
+            --receipt-out runtime/market-pull-receipt.json \
+            --status-out runtime/market-pull-status.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          s=json.load(open('runtime/market-pull-status.json'))
+          print('found=' + ('true' if s.get('request_found') is True else 'false'))
+          print('query_id=' + str(s.get('query_id') or ''))
+          print('purchase_id=' + str(s.get('purchase_id') or ''))
+          PY
+          echo 'CROSS_REPO_WRITE_CREDENTIAL_USED=FALSE'
+
+      - name: No Market buyer query is pending
+        if: steps.pull.outputs.found != 'true'
+        run: |
+          echo 'R1B_NO_UNANSWERED_MARKET_BUYER_QUERY=TRUE'
+          echo 'SILENCE_IS_NEGATIVE_EVIDENCE=FALSE'
+
+      - name: Mount persistent JANUS HOME state as writable worktree
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          statewt="$RUNNER_TEMP/janus-market-buyer-state"
+          rm -rf "$statewt"
+          git worktree add -B janus-market-buyer-state "$statewt" origin/janus/activator-state
+          test -f "$statewt/state/activator/identity.json"
+          echo "JANUS_STATE_WORKTREE=$statewt" >> "$GITHUB_ENV"
+          python - "$statewt/state/activator/identity.json" <<'PY' > runtime/resident-before.txt
+          import json,sys
+          print(json.load(open(sys.argv[1]))['resident_uuid'])
+          PY
+
+      - name: WAKE same persistent JANUS through existing conversation tissue
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python run_janus_terminal_conversation.py \
+            --request runtime/market-terminal-request.json \
+            --resident-identity "$JANUS_STATE_WORKTREE/state/activator/identity.json" \
+            --state-dir "$JANUS_STATE_WORKTREE/state/activator" \
+            --model-lock-out runtime/market-model-lock.json \
+            --file-fabric-out runtime/market-file-fabric-lock.json \
+            --runtime-receipt-out runtime/market-runtime-receipt.json \
+            --hrain-context-out runtime/market-hrain-context.json \
+            --hrain-receipt-out runtime/market-hrain-context-receipt.json \
+            --hrain-workspace runtime/market-hrain-workspace \
+            --response-out runtime/market-terminal-response.json \
+            > runtime/market-turn-summary.json
+
+      - name: Adjudicate HOME/Activator machine buyer route
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.hrain_context_bridge import verify_hrain_context_receipt
+          from janus_spi.live_cycle import HardenedJanusPersistentStateV09
+          from janus_spi.market_buyer_conversation import verify_market_buyer_packet
+          from janus_spi.terminal_conversation import verify_terminal_message, verify_terminal_response
+          packet=json.load(open('runtime/market-buyer-packet.json'))
+          request=json.load(open('runtime/market-terminal-request.json'))
+          response=json.load(open('runtime/market-terminal-response.json'))
+          summary=json.load(open('runtime/market-turn-summary.json'))
+          lock=json.load(open('runtime/market-model-lock.json'))
+          hreceipt=json.load(open('runtime/market-hrain-context-receipt.json'))
+          assert verify_market_buyer_packet(packet)
+          assert verify_terminal_message(request)
+          assert verify_terminal_response(response, request=request)
+          assert request['actor_kind'] == 'MACHINE_BUYER'
+          assert request['external_nerve'] == 'JANUS_MACHINE_MARKET'
+          assert request['market_query_id'] == packet['query_id']
+          assert summary['source_kind'] == 'MARKET_BUYER_CONVERSATION'
+          assert summary['classifications'] == ['machine_buyer_read_only_conversation']
+          assert summary['actor_kind'] == 'MACHINE_BUYER'
+          assert summary['mode'] == 'AT_HOME'
+          assert summary['return_not_reset'] is True
+          assert summary['retry_delivery_is_new_cognition'] is False
+          assert 'left_context' in summary['active_organs']
+          assert verify_hrain_context_receipt(hreceipt, model_digest=lock['model_digest'])
+          assert response['resident_uuid'] == summary['resident_uuid']
+          assert response['hrain_context_bound'] is True
+          assert response['hrain_context_receipt_hash'] == hreceipt['receipt_hash']
+          assert response['command_authority_granted'] is False
+          assert response['external_effect_authorized'] is False
+          assert response['physical_runtime_effect_authorized'] is False
+          before=Path('runtime/resident-before.txt').read_text().strip()
+          assert before == response['resident_uuid']
+          state=HardenedJanusPersistentStateV09(Path(os.environ['JANUS_STATE_WORKTREE'])/'state/activator')
+          health=state.verify()
+          assert health['ok'] is True and health['mode'] == 'AT_HOME'
+          assert health['resident_uuid'] == before
+          print('R1B_HOME_ACTIVATOR_ROUTE=PASS')
+          print('R1B_SAME_RESIDENT_UUID=PASS')
+          print('R1B_HRAIN_CONTEXT_BOUND=PASS')
+          print('R1B_RETURN_HOME=PASS')
+          print('R1B_COMMAND_AUTHORITY=FALSE')
+          print('R1B_EXTERNAL_EFFECT_AUTHORITY=FALSE')
+          PY
+
+      - name: Seal or recover persistent Market buyer HOME response
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          qid='${{ steps.pull.outputs.query_id }}'
+          stored="$JANUS_STATE_WORKTREE/state/activator/market_buyer_responses/${qid}.json"
+          mkdir -p "$(dirname "$stored")"
+          if [ -f "$stored" ]; then
+            cp "$stored" runtime/market-home-response.json
+            echo 'R1B_HOME_RESPONSE_RECOVERED_FROM_PERSISTENT_STATE=TRUE'
+          else
+            python - <<'PY'
+          import json, os
+          from janus_spi.market_buyer_conversation import build_market_home_response, verify_market_home_response
+          packet=json.load(open('runtime/market-buyer-packet.json'))
+          request=json.load(open('runtime/market-terminal-request.json'))
+          response=json.load(open('runtime/market-terminal-response.json'))
+          pull=json.load(open('runtime/market-pull-receipt.json'))
+          source={
+            'market_source_commit': pull['market_source_commit'],
+            'market_packet_path': pull['market_packet_path'],
+            'market_packet_git_blob_sha': pull['market_packet_git_blob_sha'],
+            'market_packet_file_sha256': pull['market_packet_file_sha256'],
+            'market_packet_hash': pull['market_packet_hash'],
+            'pull_receipt_hash': pull['receipt_hash'],
+            'transport': pull['transport'],
+          }
+          sealed=build_market_home_response(
+            packet=packet,
+            terminal_request=request,
+            terminal_response=response,
+            source_binding=source,
+            replayed=False,
+          )
+          assert verify_market_home_response(sealed)
+          with open('runtime/market-home-response.json','w',encoding='utf-8') as f:
+            json.dump(sealed,f,ensure_ascii=False,indent=2,sort_keys=True); f.write('\n')
+          PY
+            cp runtime/market-home-response.json "$stored"
+            echo 'R1B_HOME_RESPONSE_CREATE_ONLY=PASS'
+          fi
+          STORED_RESPONSE="$stored" python - <<'PY'
+          import json, os
+          from janus_spi.market_buyer_conversation import verify_market_home_response
+          runtime=json.load(open('runtime/market-home-response.json'))
+          stored=json.load(open(os.environ['STORED_RESPONSE']))
+          assert runtime == stored
+          assert verify_market_home_response(stored)
+          assert stored['money_enabled'] is False
+          assert stored['command_authority_granted'] is False
+          assert stored['external_effect_authorized'] is False
+          print('R1B_HOME_RESPONSE_PERSISTENT_BINDING=PASS')
+          PY
+
+      - name: Commit cognitive checkpoint and Market response only to persistent HOME state
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$JANUS_STATE_WORKTREE"
+          git config user.name "JANUS Market Buyer HOME"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/activator
+          if git diff --cached --quiet; then
+            echo 'R1B_HOME_STATE_COMMIT=NO_CHANGE_REPLAY'
+          else
+            git commit -m "R1B Market buyer query ${{ steps.pull.outputs.query_id }}"
+            git push origin HEAD:refs/heads/janus/activator-state
+            echo 'R1B_HOME_STATE_COMMIT=PASS'
+          fi
+
+      - name: Fresh-worktree verify same resident and exact sealed response
+        if: steps.pull.outputs.found == 'true'
+        env:
+          PYTHONPATH: src
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="$RUNNER_TEMP/janus-market-buyer-state-replay"
+          rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          JANUS_REPLAY="$replay" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.live_cycle import HardenedJanusPersistentStateV09
+          from janus_spi.market_buyer_conversation import verify_market_home_response
+          from janus_spi.terminal_conversation import verify_terminal_response
+          root=Path(os.environ['JANUS_REPLAY'])/'state/activator'
+          health=HardenedJanusPersistentStateV09(root).verify()
+          packet=json.load(open('runtime/market-buyer-packet.json'))
+          request=json.load(open('runtime/market-terminal-request.json'))
+          response=json.load(open('runtime/market-terminal-response.json'))
+          outer=json.load(open('runtime/market-home-response.json'))
+          stored_terminal=json.loads((root/'terminal_conversation_responses'/f"{request['message_id']}.json").read_text())
+          stored_outer=json.loads((root/'market_buyer_responses'/f"{packet['query_id']}.json").read_text())
+          before=Path('runtime/resident-before.txt').read_text().strip()
+          assert health['ok'] is True and health['mode'] == 'AT_HOME'
+          assert health['resident_uuid'] == before == stored_terminal['resident_uuid'] == stored_outer['buyer_query_receipt']['resident_uuid']
+          assert stored_terminal == response
+          assert stored_outer == outer
+          assert verify_terminal_response(stored_terminal, request=request)
+          assert verify_market_home_response(stored_outer)
+          print('R1B_FRESH_WORKTREE_REPLAY=PASS')
+          print('R1B_SAME_RESIDENT_UUID=PASS')
+          print('R1B_EXACT_HOME_RESPONSE_PERSISTED=PASS')
+          print('R1B_RETURN_NOT_RESET=PASS')
+          PY
+
+      - name: Publish create-only HOME response branch
+        if: steps.pull.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          responsewt="$RUNNER_TEMP/janus-market-responses-publish"
+          rm -rf "$responsewt"
+          git config user.name "JANUS Market Buyer Response"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin janus/market-responses >/dev/null 2>&1; then
+            git fetch origin janus/market-responses:refs/remotes/origin/janus/market-responses
+            git worktree add -B janus-market-responses-local "$responsewt" origin/janus/market-responses
+          else
+            git worktree add --detach "$responsewt" HEAD
+            cd "$responsewt"
+            git switch --orphan janus-market-responses-local
+            git rm -rf --ignore-unmatch .
+            mkdir -p .janus/market-responses
+            printf '%s\n' '{"schema":"janus.home.market_response_mailbox.v1","role":"CREATE_ONLY_HOME_TO_MARKET_BUYER_QUERY_RESPONSES","transport":"CREDENTIALLESS_PUBLIC_READ","cross_repo_write_authority":false,"money_enabled":false}' > .janus/market-responses/MANIFEST.json
+            cd - >/dev/null
+          fi
+          target="$responsewt/.janus/market-responses/${{ steps.pull.outputs.query_id }}.response.json"
+          mkdir -p "$(dirname "$target")"
+          if [ -f "$target" ]; then
+            if cmp -s runtime/market-home-response.json "$target"; then
+              echo 'R1B_HOME_RESPONSE_ALREADY_PUBLISHED_IDENTICAL=TRUE'
+            else
+              echo 'R1B_HOME_RESPONSE_CREATE_ONLY_CONFLICT=TRUE' >&2
+              exit 2
+            fi
+          else
+            cp runtime/market-home-response.json "$target"
+          fi
+          cd "$responsewt"
+          git add .janus/market-responses
+          if git diff --cached --quiet; then
+            echo 'R1B_HOME_RESPONSE_COMMIT=NO_CHANGE_EXACT_RETRY'
+          else
+            git commit -m "R1B HOME response ${{ steps.pull.outputs.query_id }}"
+            git push origin HEAD:refs/heads/janus/market-responses
+            echo 'R1B_HOME_RESPONSE_COMMIT=PASS'
+          fi
+          commit="$(git rev-parse HEAD)"
+          blob="$(git hash-object ".janus/market-responses/${{ steps.pull.outputs.query_id }}.response.json")"
+          echo "R1B_HOME_RESPONSE_BRANCH_COMMIT=$commit"
+          echo "R1B_HOME_RESPONSE_GIT_BLOB_SHA=$blob"
+          echo 'CROSS_REPO_WRITE_CREDENTIAL_USED=FALSE'
+
+      - name: Upload R1B HOME buyer-query witness
+        if: steps.pull.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: janus-r1b-market-home-${{ steps.pull.outputs.query_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            runtime/market-buyer-packet.json
+            runtime/market-pull-receipt.json
+            runtime/market-terminal-request.json
+            runtime/market-turn-summary.json
+            runtime/market-model-lock.json
+            runtime/market-file-fabric-lock.json
+            runtime/market-runtime-receipt.json
+            runtime/market-hrain-context.json
+            runtime/market-hrain-context-receipt.json
+            runtime/market-terminal-response.json
+            runtime/market-home-response.json
+          if-no-files-found: error

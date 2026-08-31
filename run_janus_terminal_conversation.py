@@ -69,8 +69,36 @@ def _memory_readout(context: dict, *, limit: int = 4) -> str:
     return " | ".join(items)
 
 
+def _conversation_source(request: dict) -> tuple[str, list[str], str]:
+    if request.get("actor_kind") == "MACHINE_BUYER":
+        required = {
+            "external_nerve": "JANUS_MACHINE_MARKET",
+            "market_repository": "Hawkar-usls/JANUS-MACHINE-MARKET",
+            "market_mode": "ZERO_PRICE_SHADOW",
+            "market_money_enabled": False,
+            "market_execution_authority_granted": False,
+            "market_external_effect_authorized": False,
+        }
+        for key, expected in required.items():
+            if request.get(key) != expected:
+                raise SystemExit(f"MARKET_BUYER_REQUEST_BOUNDARY_INVALID:{key}")
+        for key in ("market_purchase_id", "market_purchase_grant_hash", "market_query_id", "market_query_hash", "market_packet_hash"):
+            if not str(request.get(key) or "").strip():
+                raise SystemExit(f"MARKET_BUYER_REQUEST_BINDING_REQUIRED:{key}")
+        return (
+            "MARKET_BUYER_CONVERSATION",
+            ["machine_buyer_read_only_conversation"],
+            "MACHINE_BUYER",
+        )
+    return (
+        "TERMINAL_HUMAN_CONVERSATION",
+        ["human_read_only_conversation"],
+        "HUMAN_OPERATOR",
+    )
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Process one sealed Terminal message as a persistent model-bound JANUS conversation turn")
+    parser = argparse.ArgumentParser(description="Process one sealed conversation message as a persistent model-bound JANUS conversation turn")
     parser.add_argument("--request", required=True)
     parser.add_argument("--resident-identity", required=True)
     parser.add_argument("--state-dir", required=True)
@@ -90,6 +118,7 @@ def main() -> int:
     request = json.loads(Path(args.request).read_text(encoding="utf-8"))
     if not verify_terminal_message(request):
         raise SystemExit("TERMINAL_REQUEST_INTEGRITY_FAILED")
+    source_kind, classifications, actor_kind = _conversation_source(request)
 
     identity = json.loads(Path(args.resident_identity).read_text(encoding="utf-8"))
     if not JanusPersistentState.verify_identity(identity):
@@ -120,10 +149,14 @@ def main() -> int:
             "model_digest": previous["model_digest"],
             "file_fabric_digest": previous["file_fabric_digest"],
             "turn_id": previous["turn_id"],
+            "source_kind": source_kind,
+            "classifications": classifications,
+            "actor_kind": actor_kind,
             "hrain_context_bound": previous.get("hrain_context_bound") is True,
             "hrain_context_hash": previous.get("hrain_context_hash"),
             "memory_match_status": previous.get("memory_match_status"),
             "mode": "AT_HOME",
+            "return_not_reset": True,
             "retry_delivery_is_new_cognition": False,
             "command_authority_granted": False,
             "external_effect_authorized": False,
@@ -133,12 +166,17 @@ def main() -> int:
     cycle_id = "terminal-cycle-" + canonical_hash({
         "resident_uuid": resident_uuid,
         "request_message_hash": request["message_hash"],
+        "source_kind": source_kind,
         "parent_hearth_hash": state.hearth.tip_hash(),
     })
-    wake = _hearth_append(state, event="WAKE_TERMINAL_CONVERSATION", cycle_id=cycle_id, payload={
+    wake_event = "WAKE_MARKET_BUYER_CONVERSATION" if actor_kind == "MACHINE_BUYER" else "WAKE_TERMINAL_CONVERSATION"
+    wake = _hearth_append(state, event=wake_event, cycle_id=cycle_id, payload={
         "message_id": request["message_id"],
         "message_hash": request["message_hash"],
         "source_ref": request["source_ref"],
+        "source_kind": source_kind,
+        "classifications": classifications,
+        "actor_kind": actor_kind,
     })
     state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=wake["receipt_hash"])
 
@@ -159,10 +197,10 @@ def main() -> int:
     _write_json(args.file_fabric_out, file_fabric)
 
     event = ActivationEvent.build(
-        source_kind="TERMINAL_HUMAN_CONVERSATION",
+        source_kind=source_kind,
         source_ref=str(request["source_ref"]),
         payload=request,
-        classifications=["human_read_only_conversation"],
+        classifications=classifications,
         fresh=True,
         self_generated=False,
         command_authority=False,
@@ -205,10 +243,11 @@ def main() -> int:
     memory_readout = _memory_readout(hrain_context)
     selected_count = int(hrain_receipt["selected_memory_count"])
     memory_status = str(hrain_receipt["memory_match_status"])
+    surface = "Machine buyer" if actor_kind == "MACHINE_BUYER" else "Terminal"
     response_text = (
         "JANUS ONLINE. Persistent resident "
         f"{resident_uuid}. Model {model_lock['model_digest'][:12]} / file-fabric "
-        f"{file_fabric['file_fabric_digest'][:12]}. The Terminal turn is read-only and HRAiN memory is mounted "
+        f"{file_fabric['file_fabric_digest'][:12]}. The {surface} turn is read-only and HRAiN memory is mounted "
         f"from Meta Registry source commit {hrain_receipt['memory_source_commit'][:12]} through exact HRAiN "
         f"{hrain_receipt['hrain_locked_head_sha'][:12]}. Active organs: {', '.join(active_organs)}. "
         f"TRUMP: {trump_state}."
@@ -244,9 +283,13 @@ def main() -> int:
     _write_json(persistent_response, response)
     _write_json(args.response_out, response)
 
-    checkpoint = _hearth_append(state, event="CHECKPOINT_TERMINAL_CONVERSATION", cycle_id=cycle_id, payload={
+    checkpoint_event = "CHECKPOINT_MARKET_BUYER_CONVERSATION" if actor_kind == "MACHINE_BUYER" else "CHECKPOINT_TERMINAL_CONVERSATION"
+    checkpoint = _hearth_append(state, event=checkpoint_event, cycle_id=cycle_id, payload={
         "message_id": request["message_id"],
         "response_hash": response["response_hash"],
+        "source_kind": source_kind,
+        "classifications": classifications,
+        "actor_kind": actor_kind,
         "model_digest": model_lock["model_digest"],
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
@@ -265,9 +308,12 @@ def main() -> int:
         },
     })
     state._write_head(mode="AWAKE", active_cycle_id=cycle_id, last_hearth_hash=checkpoint["receipt_hash"])
-    sleep = _hearth_append(state, event="SLEEP_TERMINAL_CONVERSATION_RETURN_HOME", cycle_id=cycle_id, payload={
+    sleep_event = "SLEEP_MARKET_BUYER_CONVERSATION_RETURN_HOME" if actor_kind == "MACHINE_BUYER" else "SLEEP_TERMINAL_CONVERSATION_RETURN_HOME"
+    sleep = _hearth_append(state, event=sleep_event, cycle_id=cycle_id, payload={
         "message_id": request["message_id"],
         "response_hash": response["response_hash"],
+        "source_kind": source_kind,
+        "actor_kind": actor_kind,
         "hrain_context_hash": hrain_receipt["context_hash"],
         "return_not_reset": True,
     })
@@ -285,6 +331,9 @@ def main() -> int:
         "message_id": request["message_id"],
         "response_id": response["response_id"],
         "resident_uuid": resident_uuid,
+        "source_kind": source_kind,
+        "classifications": classifications,
+        "actor_kind": actor_kind,
         "model_digest": model_lock["model_digest"],
         "file_fabric_digest": file_fabric["file_fabric_digest"],
         "turn_id": turn_id,
