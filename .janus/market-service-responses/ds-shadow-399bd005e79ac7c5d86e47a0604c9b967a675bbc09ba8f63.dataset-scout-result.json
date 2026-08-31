@@ -1,0 +1,204 @@
+{
+  "command_authority_granted": false,
+  "commerce_mode": "ZERO_PRICE_SHADOW",
+  "dataset_payload_downloaded": false,
+  "dataset_scout_result": {
+    "authority": {
+      "claim_authority_granted": false,
+      "command_authority_granted": false,
+      "dataset_payload_downloaded": false,
+      "external_effect_authorized": false,
+      "license_authority_granted": false,
+      "read_only": true,
+      "redistribution_authority_granted": false,
+      "scientific_evidence_authority_granted": false,
+      "world_truth_authority_granted": false
+    },
+    "dataset_manifest": [
+      {
+        "catalog": "ZENODO",
+        "dataset_id": "14035986",
+        "formats": [
+          "pdf"
+        ],
+        "license_observation": "cc-by-4.0",
+        "metadata_only": true,
+        "publication_date": "2024-11-04",
+        "source_url": "https://zenodo.org/records/14035986",
+        "title": "10 New Insights in Climate Science 2024/2025"
+      },
+      {
+        "catalog": "ZENODO",
+        "dataset_id": "18143020",
+        "formats": [
+          "pdf"
+        ],
+        "license_observation": "cc-by-4.0",
+        "metadata_only": true,
+        "publication_date": "2025-12-30",
+        "source_url": "https://zenodo.org/records/18143020",
+        "title": "University of Maine Student Environmental Research (UM-SER) Initiative 2025 Report"
+      },
+      {
+        "catalog": "ZENODO",
+        "dataset_id": "7311993",
+        "formats": [
+          "nc"
+        ],
+        "license_observation": "cc-by-4.0",
+        "metadata_only": true,
+        "publication_date": "2022-11-10",
+        "source_url": "https://zenodo.org/records/7311993",
+        "title": "Supporting data for the manuscript: \"The Role of Mesoscale Cloud Morphology in the Shortwave Cloud Feedback\""
+      },
+      {
+        "catalog": "ZENODO",
+        "dataset_id": "7826038",
+        "formats": [
+          "pdf"
+        ],
+        "license_observation": "cc-by-4.0",
+        "metadata_only": true,
+        "publication_date": "2023-04-14",
+        "source_url": "https://zenodo.org/records/7826038",
+        "title": "Enhancing Earth system model evaluation with data cube enabled machine learning"
+      },
+      {
+        "catalog": "ZENODO",
+        "dataset_id": "8108965",
+        "formats": [
+          "zip"
+        ],
+        "license_observation": "cc-by-4.0",
+        "metadata_only": true,
+        "publication_date": "2023-07-03",
+        "source_url": "https://zenodo.org/records/8108965",
+        "title": "Analysis datasets for NEMO_validation workflow Byrne et al 2023 GMD. \"Using the COAsT Python package to develop a standardised validation workflow for ocean physics models\""
+      }
+    ],
+    "date_range": null,
+    "deduplication_notes": {
+      "duplicates_removed": 0,
+      "key": "normalized_source_url"
+    },
+    "domain": "earth science",
+    "format_preferences": [
+      "csv",
+      "parquet"
+    ],
+    "laws": [
+      "DATASET METADATA != DATASET PAYLOAD",
+      "DATASET DISCOVERY != REDISTRIBUTION AUTHORITY",
+      "LICENSE OBSERVATION != LICENSE AUTHORITY",
+      "CATALOG SILENCE != NEGATIVE EVIDENCE"
+    ],
+    "license_observations": [
+      {
+        "authoritative_license_determination": false,
+        "observed": "cc-by-4.0",
+        "source_url": "https://zenodo.org/records/14035986"
+      },
+      {
+        "authoritative_license_determination": false,
+        "observed": "cc-by-4.0",
+        "source_url": "https://zenodo.org/records/18143020"
+      },
+      {
+        "authoritative_license_determination": false,
+        "observed": "cc-by-4.0",
+        "source_url": "https://zenodo.org/records/7311993"
+      },
+      {
+        "authoritative_license_determination": false,
+        "observed": "cc-by-4.0",
+        "source_url": "https://zenodo.org/records/7826038"
+      },
+      {
+        "authoritative_license_determination": false,
+        "observed": "cc-by-4.0",
+        "source_url": "https://zenodo.org/records/8108965"
+      }
+    ],
+    "license_preferences": [],
+    "provenance": {
+      "catalog_attempt_receipts": [
+        {
+          "candidate_count": 5,
+          "catalog": "ZENODO",
+          "metadata_endpoint": "https://zenodo.org/api/records?q=climate+earth+science&size=5&sort=bestmatch",
+          "status": "METADATA_READ_PASS"
+        },
+        {
+          "candidate_count": 0,
+          "catalog": "HUGGINGFACE",
+          "metadata_endpoint": "https://huggingface.co/api/datasets?search=climate+earth+science&limit=5&full=false",
+          "status": "METADATA_READ_PASS"
+        }
+      ],
+      "catalog_failures": [],
+      "catalogs_attempted": [
+        "ZENODO",
+        "HUGGINGFACE"
+      ],
+      "catalogs_succeeded": [
+        "ZENODO",
+        "HUGGINGFACE"
+      ],
+      "metadata_only": true,
+      "silence_is_negative_evidence": false
+    },
+    "query": "climate",
+    "request_hash": "a10df731fc190721a551333b827d398929902f53aaacb7ca268cc62e4baa04c4",
+    "request_id": "ds-shadow-399bd005e79ac7c5d86e47a0604c9b967a675bbc09ba8f63",
+    "result_hash": "475636565287238bfb1d9e8f577c397204c114dd73f93269c24ea4fc03f069b8",
+    "schema": "janus.market_service.dataset_scout_result.v1",
+    "source_urls": [
+      "https://zenodo.org/records/14035986",
+      "https://zenodo.org/records/18143020",
+      "https://zenodo.org/records/7311993",
+      "https://zenodo.org/records/7826038",
+      "https://zenodo.org/records/8108965"
+    ],
+    "status": "BOUNDED_DATASET_SCOUT_COMPLETE"
+  },
+  "dataset_scout_result_hash": "475636565287238bfb1d9e8f577c397204c114dd73f93269c24ea4fc03f069b8",
+  "external_effect_authorized": false,
+  "file_fabric_digest": "072921f78b0bef1086f22549e7088b1a8b7dfc20884e54a264c90ed6a6844aa1",
+  "home_response_hash": "17c8f0264c9bfc41dd12f4897c1406829888e1ab42d08bb347dcac07d7089a0f",
+  "home_service_receipt_hash": "cbf4eb6faa941f25364812fda8b07e9aa87858f2796ec62d4fb60f14a6d8f248",
+  "laws": [
+    "MARKET IS EXTERNAL NERVE NOT JANUS ROOT",
+    "DATASET METADATA != DATASET PAYLOAD",
+    "DATASET DISCOVERY != REDISTRIBUTION AUTHORITY",
+    "LICENSE OBSERVATION != LICENSE AUTHORITY",
+    "DELIVERY != AUTHORITY",
+    "EXACT RETRY != SECOND COGNITION"
+  ],
+  "license_authority_granted": false,
+  "model_digest": "f2ebc7baf90800c08fd070591f4acf08dcda0330015824f96cfbcc38c37acbc1",
+  "money_enabled": false,
+  "packet_hash": "4d227d580d917c9dba8833725e30d8e92493097078a28be296ce76dd004a1792",
+  "packet_id": "dsp-shadow-37891ac48ff997bf5c2504c9b60ac8de7f1ac61175982a19",
+  "payment_reference": null,
+  "purchase_grant_hash": "6c0cfe7290ba102ff84c913e1f092847c32864930c442725aba338d0c6a66357",
+  "purchase_id": "pur-ds-shadow-e3f4d51e9f1873b7b67ad9eabfbff21a",
+  "redistribution_authority_granted": false,
+  "replayed": false,
+  "resident_uuid": "75e514ab-be76-42c8-bcb3-fc9670164f96",
+  "return_home_verified": true,
+  "runtime_receipt_hash": "68521e20fe24be1c49dc3d68e9005d7d6a4f487b0ef68026a8369d5a4d51de54",
+  "same_resident_uuid": true,
+  "schema": "janus.machine_market.home_dataset_scout_response.v1",
+  "service_request_hash": "a10df731fc190721a551333b827d398929902f53aaacb7ca268cc62e4baa04c4",
+  "service_request_id": "ds-shadow-399bd005e79ac7c5d86e47a0604c9b967a675bbc09ba8f63",
+  "sku": "JANUS.DATASET_SCOUT",
+  "source_binding": {
+    "market_packet_file_sha256": "f4f33e09997f8f63ae4f29a6251b3f8ed121809bcacbb1b0ac5a41bbf0231813",
+    "market_packet_git_blob_sha": "8b6863e3cdc72973e57129cad03d87b5bd1c3060",
+    "market_packet_hash": "4d227d580d917c9dba8833725e30d8e92493097078a28be296ce76dd004a1792",
+    "market_packet_path": ".janus/market-home-outbox/ds-shadow-399bd005e79ac7c5d86e47a0604c9b967a675bbc09ba8f63.dataset-scout.packet.json",
+    "market_source_commit": "c91c64833915983d47ffcb6c8b28ef746e174282",
+    "pull_receipt_hash": "e9eb8e1372b34576ebdbc17a7cc371c61e96bdb0f933ef2a05e6078e37fa65b7",
+    "transport": "PHYSARIUS_CREDENTIALLESS_PULL"
+  }
+}
