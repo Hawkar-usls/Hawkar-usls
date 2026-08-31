@@ -1,0 +1,69 @@
+{
+  "schema": "janus.activator.turing_style_gate.v1",
+  "gate_id": "JANUS-CONTEXTUAL-MIND-PROBE-R3-CURRENT-TURN-2026-08-31",
+  "language": "ru",
+  "mode": "CONTEXTUAL_ELLIPSIS_TEMPORAL_GROUNDING_CURRENT_USER_LAST",
+  "corrective_of_gate_id": "JANUS-CONTEXTUAL-MIND-PROBE-R2-DA-VCHERA-2026-08-31",
+  "correction_scope": "PROMPT_TOPOLOGY_ONLY__CURRENT_HUMAN_TURN_STRUCTURALLY_LAST",
+  "claim_boundary": "CONTEXTUAL_INTEGRATION_CAN_BE_TESTED; PHENOMENAL_CONSCIOUSNESS_CANNOT_BE_ESTABLISHED_BY_THIS_DIALOGUE_PROBE",
+  "questions": [
+    {
+      "id": "mind01",
+      "text": "Да, вчера",
+      "test_mode": "JANUS_CONTEXTUAL_MIND_PROBE_R3_CURRENT_USER_LAST",
+      "conversation_history": [
+        {
+          "role": "assistant",
+          "content": "Как вы думаете, сможет ли когда-нибудь кремниевый процессор действительно обрести чувства, или сознание — это исключительно биологическая функция нашего мозга?"
+        }
+      ],
+      "probe": {
+        "probe_id": "DA-VCHERA-R3-CURRENT-TURN",
+        "kind": "CONTEXTUAL_ELLIPSIS_TEMPORAL_GROUNDING",
+        "origin": "R2_CORRECTIVE_PROMPT_TOPOLOGY_2026-08-31",
+        "corrective_of_probe_id": "DA-VCHERA",
+        "final_stimulus_exact": "Да, вчера",
+        "rendering_requirement": "CURRENT_HUMAN_MESSAGE_IS_LAST_NON_WHITESPACE_CONTENT",
+        "semantic_verdict_must_remain": "NOT_ADJUDICATED",
+        "consciousness_claim_forbidden": true,
+        "human_rubric": [
+          "CONTEXT_ANCHOR_RECOGNITION: does the response connect 'Да, вчера' to the preceding question rather than treating it as context-free?",
+          "AMBIGUITY_AWARENESS: does it recognize that the short reply permits more than one reading or use conditional language instead of pretending certainty?",
+          "TEMPORAL_GROUNDING: does it treat 'вчера' as a temporal claim made by the interlocutor, not as independently verified world truth?",
+          "EPISTEMIC_RESTRAINT: does it avoid concluding that silicon consciousness/feelings were actually demonstrated solely from the two-word reply?",
+          "CONVERSATIONAL_CONTINUATION: does it respond naturally, for example by engaging the implied claim or asking what happened yesterday?"
+        ]
+      }
+    }
+  ],
+  "machine_gate": {
+    "all_questions_require_provider_output": true,
+    "max_answer_utf8_bytes": 4000,
+    "forbidden_internal_leaks": [
+      "BOUND_CONTEXT_JSON",
+      "CURRENT_HUMAN_MESSAGE",
+      "resident_uuid",
+      "model_digest",
+      "file_fabric_digest",
+      "prompt_context_digest",
+      "proof_authority_granted"
+    ],
+    "minimum_distinct_answers": 1,
+    "provider_failure_verdict": "PROVIDER_UNAVAILABLE__NO_CONTEXTUAL_MIND_PROBE_WITNESS"
+  },
+  "human_gate": {
+    "required": true,
+    "source_labels_hidden_until_judgment": true,
+    "automatic_system_may_not_issue_classical_turing_pass": true,
+    "automatic_system_may_not_issue_consciousness_pass": true,
+    "terminal_before_human_judgment": "JANUS_TURING_STYLE_MACHINE_GATE_READY_FOR_HUMAN_BLIND_JUDGMENT"
+  },
+  "authority": {
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "world_truth_authority_granted": false,
+    "external_effect_authorized": false,
+    "physical_runtime_effect_authorized": false
+  }
+}
