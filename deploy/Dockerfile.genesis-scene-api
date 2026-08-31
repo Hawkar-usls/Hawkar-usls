@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080 \
+    JANUS_API_HOST=0.0.0.0 \
+    JANUS_API_ALLOW_ORIGIN=https://hawkar-usls.github.io
+
+WORKDIR /app
+COPY requirements.txt ./requirements.txt
+RUN python -m pip install --no-cache-dir -r requirements.txt
+COPY src ./src
+COPY run_janus_genesis_api.py ./run_janus_genesis_api.py
+COPY run_janus_genesis_scene_api.py ./run_janus_genesis_scene_api.py
+
+RUN useradd --create-home --uid 10001 janus && chown -R janus:janus /app
+USER janus
+
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD python -c "import json,urllib.request; d=json.load(urllib.request.urlopen('http://127.0.0.1:8080/v1/health',timeout=2)); assert d.get('scene_graph_available') is True"
+CMD ["python", "run_janus_genesis_scene_api.py", "--host", "0.0.0.0", "--port", "8080", "--quiet"]

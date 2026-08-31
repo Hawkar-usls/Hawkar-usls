@@ -1,0 +1,89 @@
+{
+  "schema_id": "janus.genesis.scene_graph.contract.v1",
+  "version": "0.4.0",
+  "status": "IMPLEMENTED_CANDIDATE_R0_4",
+  "purpose": "Compile one explicit Genesis player utterance into a bounded dependency graph of proposed scene operations without granting JANUS world authority.",
+  "route": "POST /v1/genesis/scene-graph",
+  "request_schema": "janus.genesis.api.request.v1",
+  "graph_schema": "janus.genesis.scene_graph.v1",
+  "response_schema": "janus.genesis.scene_graph.response.v1",
+  "node_families": [
+    "STRUCTURE",
+    "ENTITY",
+    "MATERIAL",
+    "ATMOSPHERE",
+    "TERRAIN",
+    "SOUND",
+    "EFFECT",
+    "PRESENTATION",
+    "RULE",
+    "INSPECTION",
+    "NAVIGATION"
+  ],
+  "limits": {
+    "max_nodes": 32,
+    "max_edges": 64,
+    "max_depth": 8,
+    "max_resource_units": 128,
+    "max_node_resource_units": 16,
+    "cycles_allowed": false
+  },
+  "determinism": {
+    "node_ids": "SHA256_DERIVED_FROM_ACTION_SEED_ORDINAL_FAMILY_OPERATION_CONCEPT",
+    "graph_id": "SHA256_DERIVED_FROM_REQUEST_WORLD_HASH_NORMALIZED_TEXT",
+    "graph_hash_required": true,
+    "response_receipt_hash_required": true
+  },
+  "composition_policy": {
+    "scene_subject_precedes_nested_detail_nouns": true,
+    "nested_parts_are_dependencies_or_effects": true,
+    "unknown_semantics_are_not_guessed": true,
+    "unresolved_command_becomes_visible_failure_node": true,
+    "arbitrary_code_execution": false
+  },
+  "execution_policy": {
+    "order": "TOPOLOGICAL",
+    "validate_whole_graph_before_first_mutation": true,
+    "partial_failure": "DEPENDENTS_SKIP_FAILED_REQUIRED_ANCESTOR",
+    "successful_prior_nodes_are_not_silently_rolled_back": true,
+    "node_receipt_required": true,
+    "silent_noop_forbidden": true
+  },
+  "authority": {
+    "janus_graph_is_world_authority": false,
+    "model_output_is_command": false,
+    "world_mutation_authorized_by_janus": false,
+    "genesis_validator_required": true,
+    "external_effect_authorized": false
+  },
+  "deployment": {
+    "source_adapter": "run_janus_genesis_scene_api.py",
+    "container_profile": "deploy/Dockerfile.genesis-scene-api",
+    "github_pages_is_persistent_api_host": false,
+    "github_actions_is_persistent_api_host": false,
+    "live_claim_requires_real_https_health_check": true,
+    "health_must_report": {
+      "scene_graph_available": true,
+      "scene_graph_version": "0.4.0"
+    }
+  },
+  "canonical_example": {
+    "player_text": "построй заброшенный собор на холме, одна башня разрушена, внутри орган, у входа белые деревья",
+    "expected_graph_families": ["TERRAIN", "MATERIAL", "STRUCTURE", "EFFECT", "ENTITY", "SOUND", "RULE"],
+    "root_structure": "cathedral",
+    "nested_ruined_tower_is_root": false
+  },
+  "laws": [
+    "TEXT_TO_GRAPH_NE_TEXT_TO_ARBITRARY_CODE",
+    "JANUS_GRAPH_NE_WORLD_AUTHORITY",
+    "GENESIS_VALIDATOR_REQUIRED",
+    "SCENE_GRAPH_MUST_BE_DAG",
+    "VALIDATE_WHOLE_GRAPH_BEFORE_FIRST_MUTATION",
+    "NODE_RECEIPT_REQUIRED",
+    "FAILED_REQUIRED_ANCESTOR_IMPLIES_DEPENDENT_SKIPPED",
+    "PARTIAL_FAILURE_NE_SILENT_CORRUPTION",
+    "SCENE_SUBJECT_PRECEDES_NESTED_DETAIL_NOUNS",
+    "UNKNOWN_SEMANTICS_NE_GUESSED_MUTATION",
+    "LIVE_ENDPOINT_CLAIM_REQUIRES_HTTPS_HEALTH_PASS"
+  ]
+}
