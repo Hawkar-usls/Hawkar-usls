@@ -11,6 +11,8 @@ from pathlib import Path
 from janus_spi.activator import canonical_hash
 from janus_spi.market_buyer_conversation import build_market_terminal_message, verify_market_buyer_packet
 
+SHADOW_PACKET_SCHEMA = "janus.machine_market.home_buyer_query_packet.v1"
+
 
 def _git(repo: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
@@ -26,7 +28,7 @@ def _file_sha256(path: Path) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Pull the oldest unanswered JANUS Machine Market buyer-query packet")
+    parser = argparse.ArgumentParser(description="Pull the oldest unanswered JANUS Machine Market shadow buyer-query packet")
     parser.add_argument("--outbox-repo", required=True, help="Local checkout of janus/market-home-outbox")
     parser.add_argument("--answered-dir", required=True, help="Local .janus/market-responses directory or an empty directory")
     parser.add_argument("--packet-out", required=True)
@@ -51,6 +53,8 @@ def main() -> int:
         try:
             packet = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
+            continue
+        if packet.get("schema") != SHADOW_PACKET_SCHEMA:
             continue
         if not verify_market_buyer_packet(packet):
             continue
