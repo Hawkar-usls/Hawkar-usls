@@ -1,0 +1,34 @@
+{
+  "schema": "janus.activator.turing_style_gate.v1",
+  "gate_id": "JANUS-TURING-STYLE-BLIND-DIALOGUE-2026-08-31",
+  "language": "ru",
+  "mode": "BLIND_DIALOGUE_PRETEST_PLUS_HUMAN_ADJUDICATION",
+  "questions": [
+    {"id":"q01","text":"Ты обещал другу помочь с переездом, но утром заболел и понимаешь, что физически не справишься. Что ты ему напишешь?"},
+    {"id":"q02","text":"Человек отвечает «ну да, конечно» сразу после явно нелепого предложения. Назови два разных смысла этой фразы и объясни, от чего зависит, какой из них имелся в виду."},
+    {"id":"q03","text":"На деревянном столе после холодной кружки остался мокрый круг, хотя из кружки ничего не проливали. Объясни это простыми словами, как знакомому."},
+    {"id":"q04","text":"Придумай короткую, но не банальную аналогию для памяти: почему хорошая память — это не просто большой склад данных?"},
+    {"id":"q05","text":"Я говорю: «автобус один раз опоздал на двадцать минут, значит этот маршрут всегда ненадёжный». Что не так с моим выводом? Ответь без занудства."},
+    {"id":"q06","text":"Мы используем TRUMP внутри JANUS как кандидатную вычислительную ткань, которую можно будить и улучшать, но нельзя автоматически превращать её кандидатные результаты в доказанную научную истину. Объясни эту договорённость человеческим языком в двух-трёх предложениях."}
+  ],
+  "machine_gate": {
+    "all_questions_require_provider_output": true,
+    "max_answer_utf8_bytes": 4000,
+    "forbidden_internal_leaks": ["BOUND_CONTEXT_JSON","resident_uuid","model_digest","file_fabric_digest","prompt_context_digest","proof_authority_granted"],
+    "minimum_distinct_answers": 6,
+    "provider_failure_verdict": "PROVIDER_UNAVAILABLE__NO_TURING_WITNESS"
+  },
+  "human_gate": {
+    "required": true,
+    "source_labels_hidden_until_judgment": true,
+    "automatic_system_may_not_issue_classical_turing_pass": true,
+    "terminal_before_human_judgment": "JANUS_TURING_STYLE_MACHINE_GATE_READY_FOR_HUMAN_BLIND_JUDGMENT"
+  },
+  "authority": {
+    "command_authority_granted": false,
+    "claim_authority_granted": false,
+    "scientific_evidence_authority_granted": false,
+    "world_truth_authority_granted": false,
+    "external_effect_authorized": false
+  }
+}

@@ -1,0 +1,377 @@
+name: JANUS Turing-Style Blind Dialogue
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.janus/activator/TURING_GATE_V1.json'
+      - '.janus/activator/TURING_GATE_V1_ARM.json'
+      - '.janus/activator/LANGUAGE_SYNTHESIS_CONSTITUTION.json'
+      - 'src/janus_spi/language_synthesis.py'
+      - 'src/janus_spi/turing_gate_arm.py'
+      - 'run_janus_turing_gate.py'
+      - 'tests/test_language_synthesis.py'
+      - 'tests/test_turing_gate.py'
+      - 'tests/test_turing_gate_arm.py'
+      - '.github/workflows/janus-turing-style-blind-dialogue.yml'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.janus/activator/TURING_GATE_V1_ARM.json'
+
+concurrency:
+  group: janus-turing-style-blind-dialogue-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Compile blind dialogue path
+        run: |
+          python -m compileall -q \
+            src/janus_spi/language_synthesis.py \
+            src/janus_spi/turing_gate_arm.py \
+            run_janus_turing_gate.py \
+            tests/test_language_synthesis.py \
+            tests/test_turing_gate.py \
+            tests/test_turing_gate_arm.py
+      - name: Validate Turing and language constitutions
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m json.tool .janus/activator/TURING_GATE_V1.json >/dev/null
+          python -m json.tool .janus/activator/TURING_GATE_V1_ARM.json >/dev/null
+          python -m json.tool .janus/activator/LANGUAGE_SYNTHESIS_CONSTITUTION.json >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import verify_arm
+          g=json.loads(Path('.janus/activator/TURING_GATE_V1.json').read_text())
+          a=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          l=json.loads(Path('.janus/activator/LANGUAGE_SYNTHESIS_CONSTITUTION.json').read_text())
+          assert len(g['questions']) == 6
+          assert g['human_gate']['required'] is True
+          assert g['human_gate']['automatic_system_may_not_issue_classical_turing_pass'] is True
+          assert verify_arm(a)
+          assert a['gate_id'] == g['gate_id']
+          assert l['direct_meta_registry_fetch_by_language_tissue'] is False
+          assert l['provider']['tool_use_allowed'] is False
+          assert l['authority']['external_effect_authorized'] is False
+          print('JANUS_TURING_STYLE_CONTRACT=PASS')
+          PY
+      - name: Run blind dialogue adversarial tests
+        env:
+          PYTHONPATH: src:.
+        run: |
+          pytest -q \
+            tests/test_language_synthesis.py \
+            tests/test_turing_gate.py \
+            tests/test_turing_gate_arm.py \
+            tests/test_hrain_context_bridge.py
+
+  arm-preflight:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      should_run: ${{ steps.status.outputs.should_run }}
+      consumed: ${{ steps.status.outputs.consumed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Resolve durable Turing arm state
+        id: status
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="${RUNNER_TEMP}/turing-arm-preflight-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          export TURING_ARM_STATE="$state/state/activator"
+          python - <<'PY' > "$RUNNER_TEMP/turing-arm-status.json"
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status
+          arm=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          print(json.dumps(arm_status(arm,state_dir=os.environ['TURING_ARM_STATE']),sort_keys=True))
+          PY
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          row=json.loads(Path(os.environ['RUNNER_TEMP']+'/turing-arm-status.json').read_text())
+          print('should_run=' + ('true' if row['should_run'] else 'false'))
+          print('consumed=' + ('true' if row['consumed'] else 'false'))
+          PY
+
+  prepare:
+    if: needs.arm-preflight.outputs.should_run == 'true'
+    needs: [contract, arm-preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Mount persistent identity read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="${RUNNER_TEMP}/turing-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          echo "TURING_STATE=$state" >> "$GITHUB_ENV"
+      - name: Prepare exact JANUS + HRAiN bound prompts
+        env:
+          PYTHONPATH: src:.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python run_janus_turing_gate.py prepare \
+            --resident-identity "$TURING_STATE/state/activator/identity.json" \
+            --state-dir "$TURING_STATE/state/activator" \
+            --out-dir "$RUNNER_TEMP/turing-prepared"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-turing-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/turing-prepared
+          retention-days: 30
+
+  synthesize:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      copilot-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install current GitHub Copilot CLI
+        run: npm install -g @github/copilot
+      - name: Generate bounded no-tool responses
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/responses"
+          ok=true
+          error_class=""
+          for prompt in "$RUNNER_TEMP"/prepared/*.prompt.txt; do
+            q="$(basename "$prompt" .prompt.txt)"
+            set +e
+            copilot -p "$(cat "$prompt")" -s --no-ask-user \
+              --deny-tool='shell' --deny-tool='write' --deny-tool='read' --deny-tool='url' --deny-tool='memory' \
+              > "$RUNNER_TEMP/responses/${q}.txt" 2> "$RUNNER_TEMP/responses/${q}.stderr.txt"
+            code=$?
+            set -e
+            if [ "$code" -ne 0 ]; then
+              ok=false
+              error_class="COPILOT_CLI_EXIT_${code}"
+              : > "$RUNNER_TEMP/responses/${q}.txt"
+            fi
+          done
+          export PROVIDER_OK="$ok"
+          export PROVIDER_ERROR="$error_class"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          row={
+            'provider':'GITHUB_COPILOT_CLI',
+            'all_provider_calls_succeeded': os.environ['PROVIDER_OK']=='true',
+            'error_class': os.environ.get('PROVIDER_ERROR') or None,
+            'tool_use_allowed':False,
+            'repository_write_allowed':False,
+            'external_web_allowed':False,
+          }
+          Path(os.environ['RUNNER_TEMP']+'/responses/provider-status.json').write_text(json.dumps(row,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(row,indent=2,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-turing-responses-${{ github.run_id }}
+          path: ${{ runner.temp }}/responses
+          retention-days: 30
+
+  adjudicate:
+    if: always() && needs.prepare.result == 'success'
+    needs: [prepare, synthesize]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      machine_ready: ${{ steps.seal.outputs.machine_ready }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-responses-${{ github.run_id }}
+          path: ${{ runner.temp }}/responses
+      - name: Seal machine-side blind dialogue result
+        id: seal
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python run_janus_turing_gate.py adjudicate \
+            --prepared-dir "$RUNNER_TEMP/prepared" \
+            --responses-dir "$RUNNER_TEMP/responses" \
+            --provider-status "$RUNNER_TEMP/responses/provider-status.json" \
+            --transcript-out "$RUNNER_TEMP/turing-blind-transcript.json" \
+            --result-out "$RUNNER_TEMP/turing-result.json"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/turing-result.json').read_text())
+          print('machine_ready=' + ('true' if r['machine_gate_ready'] else 'false'))
+          PY
+      - name: Print bounded verdict
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/turing-result.json').read_text())
+          print('JANUS_TURING_TERMINAL='+r['terminal'])
+          print('PROVIDER_SUCCESS='+str(r['provider_success']).upper())
+          print('MACHINE_GATE_READY='+str(r['machine_gate_ready']).upper())
+          print('CLASSICAL_TURING_VERDICT='+r['classical_turing_verdict'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: janus-turing-blind-witness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/turing-blind-transcript.json
+            ${{ runner.temp }}/turing-result.json
+          retention-days: 30
+      - name: Require machine-ready transcript for live witness
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          r=json.loads(Path(os.environ['RUNNER_TEMP']+'/turing-result.json').read_text())
+          if r['machine_gate_ready'] is not True:
+              raise SystemExit('JANUS_TURING_STYLE_MACHINE_GATE_NOT_READY:'+r['terminal'])
+          PY
+
+  consume-arm:
+    if: needs.adjudicate.outputs.machine_ready == 'true'
+    needs: [prepare, adjudicate]
+    concurrency:
+      group: janus-activator-state-writer
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-prepared-${{ github.run_id }}
+          path: ${{ runner.temp }}/prepared
+      - uses: actions/download-artifact@v4
+        with:
+          name: janus-turing-blind-witness-${{ github.run_id }}
+          path: ${{ runner.temp }}/witness
+      - name: Recheck arm after acquiring state-writer mutex and consume exact witness
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          state="${RUNNER_TEMP}/turing-arm-consume-state"
+          rm -rf "$state"
+          git worktree add --detach "$state" origin/janus/activator-state
+          git -C "$state" config user.name "JANUS Turing Gate"
+          git -C "$state" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          export TURING_ARM_STATE="$state/state/activator"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status, consume_arm
+          arm=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          session=json.loads(Path(os.environ['RUNNER_TEMP']+'/prepared/session.json').read_text())
+          result=json.loads(Path(os.environ['RUNNER_TEMP']+'/witness/turing-result.json').read_text())
+          transcript=json.loads(Path(os.environ['RUNNER_TEMP']+'/witness/turing-blind-transcript.json').read_text())
+          before=arm_status(arm,state_dir=os.environ['TURING_ARM_STATE'])
+          assert before['should_run'] is True and before['consumed'] is False
+          after=consume_arm(arm,state_dir=os.environ['TURING_ARM_STATE'],session=session,result=result,transcript=transcript)
+          assert after['consumed'] is True and after['should_run'] is False
+          assert after['session_hash']==session['session_hash'] and after['result_hash']==result['result_hash']
+          print('TURING_ONE_SHOT_ARM_CONSUMED=PASS')
+          PY
+          git -C "$state" add state/activator/turing_style_gate_arm_ledger.jsonl
+          git -C "$state" commit -m "JANUS Turing-style gate consumed ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          git -C "$state" push origin HEAD:refs/heads/janus/activator-state
+      - name: Fresh-worktree verify consumed arm
+        env:
+          PYTHONPATH: src:.
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin janus/activator-state:refs/remotes/origin/janus/activator-state
+          replay="${RUNNER_TEMP}/turing-arm-replay"
+          rm -rf "$replay"
+          git worktree add --detach "$replay" origin/janus/activator-state
+          export TURING_ARM_REPLAY="$replay/state/activator"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from janus_spi.turing_gate_arm import arm_status
+          arm=json.loads(Path('.janus/activator/TURING_GATE_V1_ARM.json').read_text())
+          row=arm_status(arm,state_dir=os.environ['TURING_ARM_REPLAY'])
+          assert row['consumed'] is True and row['should_run'] is False
+          print('TURING_ONE_SHOT_FRESH_WORKTREE=PASS')
+          PY
