@@ -1,0 +1,19 @@
+{
+  "activation_id": "act-b62715aadd8e4bbba8eed78702940469",
+  "active_members": [
+    "bootstrap_root"
+  ],
+  "created_at": 1788221121.0766287,
+  "cycle_receipt_hash": "780820897469b2283d97f451b94f583f7a1f16703493e3ee0dc4e55feef95090",
+  "dispatch_authorized": false,
+  "event_id": "6fda072ddfa993fa9aceed5bb4ae94d8c654d0ec07ad285321c1efd051adf70b",
+  "external_effect_authorized": false,
+  "model_digest": "154d9f716d152efb8f5f681517d2e76108a8cb424a1653d14fab01185c61786f",
+  "next_gate": "WAIT_FOR_NEW_FRESH_STIMULUS",
+  "runtime_receipt_hash": "6894063f66ea3bce4928d484b733c69ec762838b8302a2aced9b118900c323b1",
+  "schema": "janus.constellation.cycle_receipt.v1",
+  "state": "CLOSED_AT_HOME",
+  "stimulus_id": "stim-aa60c8e967ad71c4298a42f50a068a1c53adf730a7fc3e58951b023ddf32735c",
+  "stimulus_receipt_hash": "a6257b734cb92a0b828244eceeb6ea6ade503ad95c5c1693bfb2c40c32cf282c",
+  "terminal": "JANUS_MODEL_BOUND_ROUTE_PROPOSED"
+}
