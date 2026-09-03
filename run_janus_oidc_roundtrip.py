@@ -30,7 +30,12 @@ def main() -> None:
         source_ref=args.source_ref,
         payload=payload,
         secret_dispatch_token=os.environ.get("JANUS_DEMIURGE_DISPATCH_TOKEN", ""),
-        local_github_token=os.environ.get("GITHUB_TOKEN", ""),
+        # Security quarantine: the v1.1 credentialless mailbox persisted the raw
+        # GitHub Actions OIDC JWT in a public Git branch.  Until that transport
+        # is replaced by a non-secret public-run attestation, HOME deliberately
+        # withholds its local GitHub write token. JanusOIDCMailboxTransport then
+        # fails closed before minting or persisting any OIDC bearer material.
+        local_github_token="",
     )
     text = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     out = Path(args.output)
