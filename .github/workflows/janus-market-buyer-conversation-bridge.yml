@@ -10,6 +10,7 @@ on:
       - 'run_janus_market_buyer_pull.py'
       - 'run_janus_terminal_conversation.py'
       - 'tests/test_market_buyer_conversation.py'
+      - 'tests/test_market_buyer_paid_conversation.py'
       - 'tests/test_terminal_conversation.py'
       - 'tests/test_terminal_conversation_route.py'
       - '.github/workflows/janus-market-buyer-conversation-bridge.yml'
@@ -22,6 +23,7 @@ on:
       - 'run_janus_market_buyer_pull.py'
       - 'run_janus_terminal_conversation.py'
       - 'tests/test_market_buyer_conversation.py'
+      - 'tests/test_market_buyer_paid_conversation.py'
       - 'tests/test_terminal_conversation.py'
       - 'tests/test_terminal_conversation_route.py'
       - '.github/workflows/janus-market-buyer-conversation-bridge.yml'
@@ -52,7 +54,8 @@ jobs:
             src/janus_spi/terminal_conversation.py \
             run_janus_market_buyer_pull.py \
             run_janus_terminal_conversation.py \
-            tests/test_market_buyer_conversation.py
+            tests/test_market_buyer_conversation.py \
+            tests/test_market_buyer_paid_conversation.py
       - name: Validate routing JSON
         run: python -m json.tool .janus/activator/ROUTING_TABLE.json >/dev/null
       - name: Run buyer nerve and regression tests
@@ -61,6 +64,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_market_buyer_conversation.py \
+            tests/test_market_buyer_paid_conversation.py \
             tests/test_terminal_conversation.py \
             tests/test_terminal_conversation_route.py
       - name: Enforce HOME-root authority boundary
@@ -221,6 +225,8 @@ jobs:
           assert request['actor_kind'] == 'MACHINE_BUYER'
           assert request['external_nerve'] == 'JANUS_MACHINE_MARKET'
           assert request['market_query_id'] == packet['query_id']
+          assert request['market_mode'] == packet['mode']
+          assert request['market_money_enabled'] is packet['money_enabled']
           assert summary['source_kind'] == 'MARKET_BUYER_CONVERSATION'
           assert summary['classifications'] == ['machine_buyer_read_only_conversation']
           assert summary['actor_kind'] == 'MACHINE_BUYER'
@@ -247,6 +253,7 @@ jobs:
           print('R1B_RETURN_HOME=PASS')
           print('R1B_COMMAND_AUTHORITY=FALSE')
           print('R1B_EXTERNAL_EFFECT_AUTHORITY=FALSE')
+          print('R1B_MARKET_MODE=' + str(packet['mode']))
           PY
 
       - name: Seal or recover persistent Market buyer HOME response
@@ -264,7 +271,7 @@ jobs:
             echo 'R1B_HOME_RESPONSE_RECOVERED_FROM_PERSISTENT_STATE=TRUE'
           else
             python - <<'PY'
-          import json, os
+          import json
           from janus_spi.market_buyer_conversation import build_market_home_response, verify_market_home_response
           packet=json.load(open('runtime/market-buyer-packet.json'))
           request=json.load(open('runtime/market-terminal-request.json'))
@@ -279,13 +286,7 @@ jobs:
             'pull_receipt_hash': pull['receipt_hash'],
             'transport': pull['transport'],
           }
-          sealed=build_market_home_response(
-            packet=packet,
-            terminal_request=request,
-            terminal_response=response,
-            source_binding=source,
-            replayed=False,
-          )
+          sealed=build_market_home_response(packet=packet,terminal_request=request,terminal_response=response,source_binding=source,replayed=False)
           assert verify_market_home_response(sealed)
           with open('runtime/market-home-response.json','w',encoding='utf-8') as f:
             json.dump(sealed,f,ensure_ascii=False,indent=2,sort_keys=True); f.write('\n')
@@ -295,15 +296,27 @@ jobs:
           fi
           STORED_RESPONSE="$stored" python - <<'PY'
           import json, os
-          from janus_spi.market_buyer_conversation import verify_market_home_response
+          from janus_spi.market_buyer_conversation import PAID_MODE, verify_market_home_response
+          packet=json.load(open('runtime/market-buyer-packet.json'))
           runtime=json.load(open('runtime/market-home-response.json'))
           stored=json.load(open(os.environ['STORED_RESPONSE']))
+          paid=packet['mode']==PAID_MODE
           assert runtime == stored
           assert verify_market_home_response(stored)
-          assert stored['money_enabled'] is False
+          assert stored['mode'] == packet['mode']
+          assert stored['money_enabled'] is paid
+          assert stored['payment_required'] is paid
+          assert stored['production_purchase'] is paid
           assert stored['command_authority_granted'] is False
           assert stored['external_effect_authorized'] is False
+          if paid:
+              assert stored['payment_reference'] == packet['purchase_grant']['payment_reference']
+              assert stored['buyer_query_receipt']['billable_execution_delta'] == 1
+          else:
+              assert stored['payment_reference'] is None
+              assert stored['buyer_query_receipt']['billable_execution_delta'] == 0
           print('R1B_HOME_RESPONSE_PERSISTENT_BINDING=PASS')
+          print('R1B_HOME_RESPONSE_MODE=' + str(stored['mode']))
           PY
 
       - name: Commit cognitive checkpoint and Market response only to persistent HOME state
@@ -379,7 +392,7 @@ jobs:
             git switch --orphan janus-market-responses-local
             git rm -rf --ignore-unmatch .
             mkdir -p .janus/market-responses
-            printf '%s\n' '{"schema":"janus.home.market_response_mailbox.v1","role":"CREATE_ONLY_HOME_TO_MARKET_BUYER_QUERY_RESPONSES","transport":"CREDENTIALLESS_PUBLIC_READ","cross_repo_write_authority":false,"money_enabled":false}' > .janus/market-responses/MANIFEST.json
+            printf '%s\n' '{"schema":"janus.home.market_response_mailbox.v1","role":"CREATE_ONLY_HOME_TO_MARKET_BUYER_QUERY_RESPONSES","transport":"CREDENTIALLESS_PUBLIC_READ","cross_repo_write_authority":false,"supports_modes":["ZERO_PRICE_SHADOW","PAID_SETTLED"],"payment_is_command_authority":false}' > .janus/market-responses/MANIFEST.json
             cd - >/dev/null
           fi
           target="$responsewt/.janus/market-responses/${{ steps.pull.outputs.query_id }}.response.json"
