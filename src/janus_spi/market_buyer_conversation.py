@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import datetime
 from typing import Any, Mapping
 
@@ -17,6 +16,12 @@ MARKET_REPOSITORY = "Hawkar-usls/JANUS-MACHINE-MARKET"
 HOME_REPOSITORY = "Hawkar-usls/Hawkar-usls"
 MACHINE_BUYER_CLASSIFICATION = "machine_buyer_read_only_conversation"
 MACHINE_BUYER_SOURCE_KIND = "MARKET_BUYER_CONVERSATION"
+ZERO_MODE = "ZERO_PRICE_SHADOW"
+PAID_MODE = "PAID_SETTLED"
+PAID_SKU = "JANUS.SEARCH"
+USDT_ETHEREUM = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+USDT_RECEIVER = "0x7149081aea54fbef57effeb52a5a966b81cc03a0"
+MIN_CONFIRMATIONS = 12
 
 
 class MarketBuyerConversationError(ValueError):
@@ -43,6 +48,106 @@ def _iso_to_timestamp(value: str) -> float:
         raise MarketBuyerConversationError("MARKET_BUYER_CREATED_AT_INVALID") from exc
 
 
+def _hash_without(value: Mapping[str, Any], field: str) -> str:
+    body = dict(value)
+    body.pop(field, None)
+    return canonical_hash(body)
+
+
+def _valid_tx_hash(value: Any) -> bool:
+    text = str(value or "").lower()
+    if not (text.startswith("0x") and len(text) == 66):
+        return False
+    try:
+        int(text[2:], 16)
+    except ValueError:
+        return False
+    return True
+
+
+def _verify_paid_commerce(packet: Mapping[str, Any], grant: Mapping[str, Any]) -> bool:
+    commerce = packet.get("commerce")
+    if not isinstance(commerce, Mapping):
+        return False
+    commerce = dict(commerce)
+    quote = commerce.get("quote")
+    receipt = commerce.get("payment_receipt")
+    if not isinstance(quote, Mapping) or not isinstance(receipt, Mapping):
+        return False
+    quote = dict(quote)
+    receipt = dict(receipt)
+
+    if quote.get("schema") != "janus.machine_market.quote.v1":
+        return False
+    supplied_quote_hash = str(quote.get("quote_hash") or "")
+    if len(supplied_quote_hash) != 64 or _hash_without(quote, "quote_hash") != supplied_quote_hash:
+        return False
+    if quote.get("sku") != PAID_SKU or quote.get("request_hash") != packet.get("request_hash"):
+        return False
+    if quote.get("asset") != "USDT" or quote.get("chain_id") != 1:
+        return False
+    if str(quote.get("token_contract") or "").lower() != USDT_ETHEREUM:
+        return False
+    if str(quote.get("receiving_address") or "").lower() != USDT_RECEIVER:
+        return False
+    try:
+        amount = int(quote.get("amount_usdt_micros"))
+    except (TypeError, ValueError):
+        return False
+    if amount <= 0:
+        return False
+
+    if receipt.get("schema") != "janus.machine_market.payment_receipt.v1" or receipt.get("status") != "CONFIRMED":
+        return False
+    if receipt.get("quote_hash") != supplied_quote_hash:
+        return False
+    if not _valid_tx_hash(receipt.get("tx_hash")):
+        return False
+    try:
+        log_index = int(receipt.get("log_index"))
+        confirmations = int(receipt.get("confirmations"))
+        required_confirmations = int(receipt.get("required_confirmations"))
+        receipt_amount = int(receipt.get("amount_usdt_micros"))
+    except (TypeError, ValueError):
+        return False
+    if log_index < 0 or confirmations < MIN_CONFIRMATIONS or required_confirmations < MIN_CONFIRMATIONS:
+        return False
+    expected_ref = f"{str(receipt['tx_hash']).lower()}:{log_index}"
+    if str(receipt.get("payment_reference") or "").lower() != expected_ref:
+        return False
+    if receipt.get("chain_id") != 1:
+        return False
+    if str(receipt.get("token_contract") or "").lower() != USDT_ETHEREUM:
+        return False
+    if str(receipt.get("to") or "").lower() != USDT_RECEIVER:
+        return False
+    if receipt_amount != amount:
+        return False
+
+    if grant.get("schema") != GRANT_SCHEMA or grant.get("status") != "PURCHASE_SETTLED":
+        return False
+    if grant.get("sku") != PAID_SKU or grant.get("request_hash") != packet.get("request_hash"):
+        return False
+    if grant.get("quote_hash") != supplied_quote_hash:
+        return False
+    if str(grant.get("payment_reference") or "").lower() != expected_ref:
+        return False
+    if int(grant.get("amount_usdt_micros", -1)) != amount:
+        return False
+    grant_hash = str(grant.get("grant_hash") or "")
+    if len(grant_hash) != 64 or _hash_without(grant, "grant_hash") != grant_hash:
+        return False
+    if packet.get("purchase_grant_hash") != grant_hash:
+        return False
+    if commerce.get("payment_reference") != expected_ref:
+        return False
+    if commerce.get("quote_hash") != supplied_quote_hash:
+        return False
+    if commerce.get("settlement_verified") is not True:
+        return False
+    return True
+
+
 def verify_market_buyer_packet(packet: Mapping[str, Any]) -> bool:
     if not isinstance(packet, Mapping):
         return False
@@ -56,11 +161,16 @@ def verify_market_buyer_packet(packet: Mapping[str, Any]) -> bool:
         return False
     if value.get("transport_mode") != "PHYSARIUS_CREDENTIALLESS_PULL":
         return False
-    if value.get("mode") != "ZERO_PRICE_SHADOW" or value.get("money_enabled") is not False:
+
+    mode = value.get("mode")
+    if mode not in (ZERO_MODE, PAID_MODE):
+        return False
+    paid = mode == PAID_MODE
+    if value.get("money_enabled") is not paid:
+        return False
+    if value.get("payment_required") is not paid or value.get("production_purchase") is not paid:
         return False
     for field in (
-        "payment_required",
-        "production_purchase",
         "execution_authority_granted",
         "command_authority_granted",
         "external_effect_authorized",
@@ -79,11 +189,19 @@ def verify_market_buyer_packet(packet: Mapping[str, Any]) -> bool:
     query = dict(query)
     if grant.get("schema") != GRANT_SCHEMA or query.get("schema") != QUERY_SCHEMA:
         return False
-    if canonical_hash(grant) != value.get("purchase_grant_hash"):
-        return False
-    if grant.get("status") != "PURCHASE_ELIGIBLE" or grant.get("execution_authority_granted") is not False:
-        return False
-    if grant.get("payment_reference") is not None:
+
+    if paid:
+        if not _verify_paid_commerce(value, grant):
+            return False
+    else:
+        if value.get("commerce") is not None:
+            return False
+        if canonical_hash(grant) != value.get("purchase_grant_hash"):
+            return False
+        if grant.get("status") != "PURCHASE_ELIGIBLE" or grant.get("payment_reference") is not None:
+            return False
+
+    if grant.get("execution_authority_granted") is not False:
         return False
     entitlement = grant.get("buyer_query_entitlement")
     if not isinstance(entitlement, Mapping):
@@ -147,8 +265,6 @@ def build_market_terminal_message(packet: Mapping[str, Any]) -> dict[str, Any]:
         source_ref=f"MARKET_BUYER_QUERY/{query['purchase_id']}/{query['query_id']}",
         created_at=created_at,
     )
-    # Keep the legacy `human_actor` field required by janus.terminal.message.v1,
-    # but make the principal kind explicit and machine-verifiable.
     terminal.update({
         "actor_kind": "MACHINE_BUYER",
         "external_nerve": "JANUS_MACHINE_MARKET",
@@ -158,8 +274,9 @@ def build_market_terminal_message(packet: Mapping[str, Any]) -> dict[str, Any]:
         "market_query_id": query["query_id"],
         "market_query_hash": query["query_hash"],
         "market_packet_hash": packet["packet_hash"],
-        "market_mode": "ZERO_PRICE_SHADOW",
-        "market_money_enabled": False,
+        "market_mode": packet["mode"],
+        "market_money_enabled": packet["money_enabled"],
+        "market_payment_reference": (packet.get("purchase_grant") or {}).get("payment_reference"),
         "market_execution_authority_granted": False,
         "market_external_effect_authorized": False,
     })
@@ -187,6 +304,7 @@ def build_market_home_response(
     packet = dict(packet)
     query = dict(packet["buyer_query"])
     terminal_response = dict(terminal_response)
+    paid = packet["mode"] == PAID_MODE
     _require(terminal_request.get("actor_kind") == "MACHINE_BUYER", "MARKET_RESPONSE_ACTOR_KIND_MISMATCH")
     _require(terminal_request.get("market_query_id") == query["query_id"], "MARKET_RESPONSE_QUERY_BINDING_MISMATCH")
     _require(terminal_response.get("command_authority_granted") is False, "MARKET_RESPONSE_COMMAND_AUTHORITY_FORBIDDEN")
@@ -196,6 +314,7 @@ def build_market_home_response(
         "schema": BUYER_RECEIPT_SCHEMA,
         "purchase_id": query["purchase_id"],
         "purchase_grant_hash": packet["purchase_grant_hash"],
+        "payment_reference": (packet.get("purchase_grant") or {}).get("payment_reference"),
         "query_id": query["query_id"],
         "query_hash": query["query_hash"],
         "status": "REPLAYED" if replayed else "DELIVERED",
@@ -214,17 +333,18 @@ def build_market_home_response(
         "scientific_evidence_authority_granted": False,
         "world_truth_authority_granted": False,
         "replayed": bool(replayed),
-        "billable_execution_delta": 0,
+        "billable_execution_delta": 1 if paid and not replayed else 0,
     }
     response = {
         "schema": HOME_RESPONSE_SCHEMA,
         "market_repository": MARKET_REPOSITORY,
         "home_repository": HOME_REPOSITORY,
-        "mode": "ZERO_PRICE_SHADOW",
+        "mode": packet["mode"],
         "query_id": query["query_id"],
         "query_hash": query["query_hash"],
         "purchase_id": query["purchase_id"],
         "purchase_grant_hash": packet["purchase_grant_hash"],
+        "payment_reference": (packet.get("purchase_grant") or {}).get("payment_reference"),
         "source_packet_binding": dict(source_binding),
         "terminal_message_id": terminal_request.get("message_id"),
         "terminal_message_hash": terminal_request.get("message_hash"),
@@ -233,7 +353,9 @@ def build_market_home_response(
         "buyer_query_receipt": receipt,
         "terminal_response": terminal_response,
         "return_route": dict(packet.get("return_route") or {}),
-        "money_enabled": False,
+        "money_enabled": paid,
+        "payment_required": paid,
+        "production_purchase": paid,
         "execution_authority_granted": False,
         "command_authority_granted": False,
         "external_effect_authorized": False,
@@ -255,7 +377,11 @@ def verify_market_home_response(response: Mapping[str, Any]) -> bool:
         return False
     if value.get("market_repository") != MARKET_REPOSITORY or value.get("home_repository") != HOME_REPOSITORY:
         return False
-    if value.get("money_enabled") is not False:
+    mode = value.get("mode")
+    if mode not in (ZERO_MODE, PAID_MODE):
+        return False
+    paid = mode == PAID_MODE
+    if value.get("money_enabled") is not paid or value.get("payment_required") is not paid or value.get("production_purchase") is not paid:
         return False
     for field in ("execution_authority_granted", "command_authority_granted", "external_effect_authorized"):
         if value.get(field) is not False:
@@ -268,7 +394,15 @@ def verify_market_home_response(response: Mapping[str, Any]) -> bool:
         return False
     if receipt.get("query_id") != value.get("query_id") or receipt.get("purchase_id") != value.get("purchase_id"):
         return False
+    if receipt.get("payment_reference") != value.get("payment_reference"):
+        return False
+    if paid and not receipt.get("payment_reference"):
+        return False
+    if not paid and receipt.get("payment_reference") is not None:
+        return False
     if receipt.get("execution_authority_granted") is not False or receipt.get("external_effect_authorized") is not False:
+        return False
+    if receipt.get("billable_execution_delta") not in ({0, 1} if paid else {0}):
         return False
     if terminal.get("resident_uuid") != receipt.get("resident_uuid"):
         return False
@@ -281,6 +415,8 @@ __all__ = [
     "MACHINE_BUYER_CLASSIFICATION",
     "MACHINE_BUYER_SOURCE_KIND",
     "MarketBuyerConversationError",
+    "PAID_MODE",
+    "ZERO_MODE",
     "build_market_home_response",
     "build_market_terminal_message",
     "verify_market_buyer_packet",
