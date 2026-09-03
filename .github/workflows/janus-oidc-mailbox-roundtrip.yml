@@ -9,6 +9,7 @@ on:
       - 'src/janus_spi/oidc_reconcile.py'
       - 'run_janus_oidc_roundtrip.py'
       - 'run_janus_oidc_reconcile.py'
+      - 'tools/janus_secret_persistence_guard.py'
       - 'tests/test_oidc_mailbox.py'
       - 'tests/test_oidc_reconcile.py'
       - '.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'
@@ -23,6 +24,7 @@ on:
       - 'src/janus_spi/oidc_reconcile.py'
       - 'run_janus_oidc_roundtrip.py'
       - 'run_janus_oidc_reconcile.py'
+      - 'tools/janus_secret_persistence_guard.py'
       - '.janus/activator/OIDC_MAILBOX_IDENTITY_CONSTITUTION.json'
       - '.janus/activator/OIDC_ROUNDTRIP_ARM.json'
       - '.github/workflows/janus-oidc-mailbox-roundtrip.yml'
@@ -47,7 +49,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest 'PyJWT[crypto]>=2.10,<3'
-      - name: Compile OIDC path
+      - name: Compile OIDC path and persistence guard
         run: |
           python -m compileall -q \
             src/janus_spi/oidc_mailbox.py \
@@ -55,6 +57,7 @@ jobs:
             src/janus_spi/oidc_reconcile.py \
             run_janus_oidc_roundtrip.py \
             run_janus_oidc_reconcile.py \
+            tools/janus_secret_persistence_guard.py \
             tests/test_oidc_mailbox.py \
             tests/test_oidc_reconcile.py
       - name: Validate frozen OIDC constitution and arm
@@ -89,13 +92,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
-      contents: write
-      id-token: write
+      contents: read
     steps:
-      - name: Check out canonical HOME
+      - name: Check out canonical HOME without write credentials
         uses: actions/checkout@v4
         with:
           ref: main
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -123,9 +126,8 @@ jobs:
           }
           json.dump(payload,open('runtime/oidc-roundtrip/payload.json','w'),indent=2,sort_keys=True)
           PY
-      - name: Attempt both lanes and boundedly observe target-signed OIDC ACK
+      - name: Attempt secret lane and security-quarantined OIDC lane
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           JANUS_DEMIURGE_DISPATCH_TOKEN: ${{ secrets.JANUS_DEMIURGE_DISPATCH_TOKEN }}
           PYTHONPATH: src
         shell: bash
@@ -138,7 +140,7 @@ jobs:
             --poll-interval 10 \
             --max-wait 660 \
             --output runtime/oidc-roundtrip/result.json
-      - name: Adjudicate verified ACK or honest pending state without P12
+      - name: Adjudicate verified ACK, pending state, or persistence quarantine
         if: always()
         shell: bash
         run: |
@@ -158,26 +160,34 @@ jobs:
               assert r.get(key) is False,(key,r.get(key))
           assert r.get('secret_lane_attempted') is True
           assert r.get('oidc_lane_attempted') is True
-          assert r.get('oidc_lane_emitted') is True
-          assert r.get('oidc_source_identity_verified') is True
-          assert r.get('oidc_request_message_hash')
           if terminal=='OIDC_BIDIRECTIONAL_PACKET_ROUNDTRIP_VERIFIED_NO_EXECUTION':
+              assert r.get('oidc_lane_emitted') is True
+              assert r.get('oidc_source_identity_verified') is True
               assert r.get('oidc_target_identity_verified') is True
               assert r.get('bidirectional_identity_proof') is True
               assert r.get('oidc_response_hash')
               print('JANUS_OIDC_BIDIRECTIONAL_PACKET_ACK=PASS')
           elif terminal=='OIDC_ROUNDTRIP_ACK_WAIT_UNRESOLVED':
+              assert r.get('oidc_lane_emitted') is True
+              assert r.get('oidc_source_identity_verified') is True
               assert r.get('oidc_target_identity_verified') is False
               assert r.get('bidirectional_identity_proof') is False
               assert r.get('oidc_response_hash') is None
               assert any('silence is not negative evidence' in str(x).lower() for x in r.get('reasons',[]))
               print('JANUS_OIDC_REQUEST=PUBLISHED_PENDING_TARGET_POLL')
+          elif terminal=='OIDC_ROUNDTRIP_BLOCKED_REQUEST_NOT_PUBLISHED_WITH_IDENTITY':
+              assert r.get('oidc_lane_emitted') is False
+              assert r.get('oidc_source_identity_verified') is False
+              assert r.get('oidc_request_message_hash') is None
+              assert 'OIDC_MAILBOX_BLOCKED_NO_LOCAL_GITHUB_TOKEN' in [str(x) for x in r.get('reasons',[])]
+              print('JANUS_OIDC_RAW_CREDENTIAL_PERSISTENCE=DENIED')
+              print('OIDC_CREDENTIALLESS_PULL=SECURITY_QUARANTINED_PENDING_NON_SECRET_ATTESTATION')
           else:
               raise AssertionError(('unexpected OIDC roundtrip terminal',terminal,r.get('reasons')))
           print('P12_EXECUTION_AUTHORITY=FALSE')
           print('STRICT_LAUNCH_WITNESS=FALSE')
           PY
-      - name: Upload OIDC witness
+      - name: Upload non-secret roundtrip witness
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -185,6 +195,5 @@ jobs:
           path: |
             runtime/oidc-roundtrip/result.json
             runtime/oidc-roundtrip/payload.json
-            runtime/oidc-roundtrip/state/oidc_mailbox_outbox/*.json
           if-no-files-found: warn
           retention-days: 14
