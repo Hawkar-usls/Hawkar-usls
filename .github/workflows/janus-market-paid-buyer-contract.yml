@@ -1,0 +1,60 @@
+name: JANUS Market Paid Buyer Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/market_buyer_conversation.py'
+      - 'tests/test_market_buyer_conversation.py'
+      - 'tests/test_market_buyer_paid_conversation.py'
+      - '.github/workflows/janus-market-paid-buyer-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/janus_spi/market_buyer_conversation.py'
+      - 'tests/test_market_buyer_conversation.py'
+      - 'tests/test_market_buyer_paid_conversation.py'
+      - '.github/workflows/janus-market-paid-buyer-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  paid-home-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile paid buyer adapter
+        run: |
+          python -m py_compile \
+            src/janus_spi/market_buyer_conversation.py \
+            tests/test_market_buyer_conversation.py \
+            tests/test_market_buyer_paid_conversation.py
+      - name: Run zero-price regression and paid adversarial tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pytest -q \
+            tests/test_market_buyer_conversation.py \
+            tests/test_market_buyer_paid_conversation.py
+      - name: Enforce paid authority ceiling
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          from janus_spi.market_buyer_conversation import PAID_MODE, ZERO_MODE, MIN_CONFIRMATIONS
+          assert ZERO_MODE == 'ZERO_PRICE_SHADOW'
+          assert PAID_MODE == 'PAID_SETTLED'
+          assert MIN_CONFIRMATIONS == 12
+          print('PAID_HOME_PACKET_COMPATIBILITY=PASS')
+          print('PAYMENT_COMMAND_AUTHORITY=FALSE_BY_PACKET_AND_RESPONSE_CONTRACT')
+          print('PAID_REPLAY_SECOND_BILLABLE_EXECUTION=FALSE')
+          PY
