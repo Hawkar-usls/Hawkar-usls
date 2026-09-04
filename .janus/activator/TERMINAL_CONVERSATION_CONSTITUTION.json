@@ -2,12 +2,28 @@
   "schema": "janus.activator.terminal_conversation_constitution.v1",
   "status": "READ_ONLY_HRAIN_MEMORY_BOUND_HUMAN_CONVERSATION_PROOF_CONTRACT",
   "terminal_repository": "Hawkar-usls/-Terminal-for-Janus",
-  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response only after the exact model-locked HRAiN organ has produced a verified query-bound memory context from the Meta Registry projection. A query-bound context may legitimately contain zero selected memories when HRAiN explicitly proves no forced fill semantics; that empty retrieval is neither HRAiN failure nor negative evidence. A separately sealed and cryptographically bound Terminal cancellation tombstone may suppress future cognition for its exact request without deleting request or response provenance.",
+  "purpose": "Allow the Terminal organ to submit human conversation stimuli to an already model-locked JANUS instance and receive a sealed identity-bound response only after the exact model-locked HRAiN organ has produced a verified query-bound memory context from the Meta Registry projection. Human-facing surface semantics are distinct from the proof envelope: an ordinary question must not be replaced by a system-status dump, while an explicit status request may expose the bounded system proof. A recognized bounded integer-choice request is answered directly from a sealed resident/request/turn derivation that does not consume HRAiN memory content, even though the response remains HRAiN-context-bound for provenance. A query-bound context may legitimately contain zero selected memories when HRAiN explicitly proves no forced fill semantics; that empty retrieval is neither HRAiN failure nor negative evidence. A separately sealed and cryptographically bound Terminal cancellation tombstone may suppress future cognition for its exact request without deleting request or response provenance.",
   "request_schema": "janus.terminal.message.v1",
   "cancellation_schema": "janus.terminal.message_cancellation.v1",
   "response_schema": "janus.terminal.response.v1",
   "default_authority_mode": "READ_ONLY_CONVERSATION",
   "memory_path": "META_REGISTRY_DB -> HRAIN -> JANUS -> TERMINAL",
+  "direct_answer_contract": {
+    "ordinary_question_system_status_substitution_allowed": false,
+    "explicit_status_request_system_status_allowed": true,
+    "recognized_bounded_integer_choice": "DIRECT_ANSWER",
+    "bounded_integer_choice_seed_inputs": [
+      "request_message_hash",
+      "resident_uuid",
+      "turn_id",
+      "low",
+      "high"
+    ],
+    "bounded_integer_choice_hrain_memory_influence": false,
+    "bounded_integer_choice_meta_registry_content_influence": false,
+    "bounded_integer_choice_response_text": "INTEGER_ONLY",
+    "unsupported_free_form_behavior": "STATE_LANGUAGE_SURFACE_UNAVAILABLE_WITHOUT_SUBSTITUTING_SYSTEM_STATUS"
+  },
   "memory_context_contract": {
     "repository": "Hawkar-usls/Hrain",
     "contract_path": ".janus/HRAIN_CONVERSATION_CONTEXT_CONTRACT.json",
@@ -76,6 +92,12 @@
     "NO_STRONG_MATCH != FILL_WITH_NOISE",
     "EMPTY RELEVANT MEMORY != HRAiN FAILURE",
     "EMPTY MEMORY != NEGATIVE EVIDENCE",
+    "DIRECT_ANSWER != SYSTEM_STATUS",
+    "SYSTEM_STATUS_ONLY_WHEN_REQUESTED",
+    "ORDINARY_QUESTION != SYSTEM_STATUS_REQUEST",
+    "HRAIN_CONTEXT_BOUND != HRAIN_CONTEXT_USED_FOR_CHOICE",
+    "DIRECT_BOUNDED_CHOICE_MEMORY_INFLUENCE = FALSE",
+    "DIRECT_BOUNDED_CHOICE_META_REGISTRY_CONTENT_INFLUENCE = FALSE",
     "CANCEL != DELETE",
     "CANCEL != ERASE_RESPONSE",
     "CANCELLED_REQUEST != FRESH_COGNITION",
@@ -85,7 +107,7 @@
     "LANGUAGE_SURFACE != AUTHORITY",
     "RETURN != RESET"
   ],
-  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version, routed the bound request through the exact model-locked HRAiN organ, bound an integrity-verified query-specific HRAiN memory context and its Meta Registry source commit, and processed the request under the read-only conversation authority ceiling. A zero-memory context proves only that this exact HRAiN retrieval selected no strong relevant memory under its explicit no-forced-fill policy; it does not prove absence in the world, negative evidence, or HRAiN failure. A verified cancellation proves only that an admitted Terminal actor cancelled future cognition for one exact sealed request identified by message ID/hash; it neither deletes the request/response nor grants command, claim, truth, proof, or effect authority. Retrieved memory claims are not thereby scientifically true and no command or effect is authorized.",
+  "proof_rule": "A Terminal response proves only that a specific persistent JANUS identity instantiated a specific exact model/file-fabric version, routed the bound request through the exact model-locked HRAiN organ, bound an integrity-verified query-specific HRAiN memory context and its Meta Registry source commit, and processed the request under the read-only conversation authority ceiling. Human-facing response surface is separately classified: a direct bounded integer choice may be cryptographically derived from the sealed request/resident/turn binding without using HRAiN memory content, and an explicit system-status request may expose the bounded status proof. A zero-memory context proves only that this exact HRAiN retrieval selected no strong relevant memory under its explicit no-forced-fill policy; it does not prove absence in the world, negative evidence, or HRAiN failure. A verified cancellation proves only that an admitted Terminal actor cancelled future cognition for one exact sealed request identified by message ID/hash; it neither deletes the request/response nor grants command, claim, truth, proof, or effect authority. Retrieved memory claims are not thereby scientifically true and no command or effect is authorized.",
   "success_terminal": "JANUS_TERMINAL_CONVERSATION_RESPONSE_READY",
   "failure_terminal": "JANUS_TERMINAL_CONVERSATION_FAIL_CLOSED"
 }
