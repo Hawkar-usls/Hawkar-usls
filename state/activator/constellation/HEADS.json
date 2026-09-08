@@ -1,5 +1,5 @@
 {
-  "heads_hash": "f803e62aeff15fcb1c2e5b3ac3515f8fd280e496448fb187ccea04bbfbfca8b3",
+  "heads_hash": "85a0a75335655aff14f3f2cf44145683512a9361a3a5495ff00fae391b4fcc0f",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
@@ -115,7 +115,7 @@
     },
     "Hawkar-usls/Hrain": {
       "branch": "main",
-      "head_sha": "f51c38258e13d6e68226f4503899387092adf598",
+      "head_sha": "5e51353b016db50d1b9ec0aed177392e260c9258",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "left_context",
@@ -139,7 +139,7 @@
     },
     "Hawkar-usls/Janus-Demiurge": {
       "branch": "main",
-      "head_sha": "917ebc87e8acbddf9ab69d0aafeb5db5054d06d0",
+      "head_sha": "8ab529394b1afc8278f3c3be6b261dd95704a394",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "orchestrator",
@@ -243,7 +243,7 @@
     },
     "Hawkar-usls/aura-oracle-tg": {
       "branch": "main",
-      "head_sha": "2d30dc041db4b61a9bd68c99f24fb31be30631ad",
+      "head_sha": "321d9ca0ebb4b11d6af1edc176bb6bbdb684ad7b",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "symbolic_imagination",
@@ -267,7 +267,7 @@
     },
     "Hawkar-usls/iNaiHR": {
       "branch": "main",
-      "head_sha": "d64aa8222cd9f13f69a4f6c2fb7c936d595817a4",
+      "head_sha": "ecd4d7c4b5d6d344792db1e4afe144393a5ae686",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "right_association",
@@ -307,7 +307,7 @@
     },
     "Hawkar-usls/janus-meta-registry": {
       "branch": "main",
-      "head_sha": "2a4fbf9e5162cdbe6dbfe1341733278557a29005",
+      "head_sha": "c8bee664f63d96719d55e64e23bdbc8e9e8523a9",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "memory",
@@ -354,10 +354,10 @@
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "4b4a4545866c7544562c48c2e1b8c19ba1ed4fe6685611c4d747b33337ec2783",
+  "model_digest": "05ecc599aba11fc54c1ef79df8b3eeccfd435bce9b7551ec091fef5b2563979b",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1788822161.4056418,
+  "updated_at": 1788829677.1612191,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
