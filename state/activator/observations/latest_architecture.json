@@ -4,8 +4,8 @@
   "command_authority_granted": false,
   "external_effect_authorized": false,
   "fresh_stimulus": false,
-  "observation_hash": "299e2597a9843d48d5ebf183bd2221fcece95dbd98683d66c40d4f5f2195e4ee",
-  "observed_at": 1790686940.503732,
+  "observation_hash": "efa0f21990b5128c77e41b576ee607e225f2d29e4ae241caa28af85701fb2a97",
+  "observed_at": 1790720506.4976346,
   "schema": "janus.activator.architecture_observation.v0.6.2",
-  "workflow_run_id": "36572061301"
+  "workflow_run_id": "36639040843"
 }
