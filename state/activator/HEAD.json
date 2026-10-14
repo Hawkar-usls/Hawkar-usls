@@ -1,11 +1,11 @@
 {
   "active_cycle_id": null,
   "external_effect_authorized": false,
-  "head_hash": "80261a8addf9dbb1d4c262c86e0a903a0f80ff6c73591a671aee415bc9ecdfb2",
-  "last_hearth_hash": "06f8ca1142bd07e72b374babb2f5c7c4794dd42b2822d8a48aee78a733a9a10d",
+  "head_hash": "13d4e92a65509a1913842167472e7bcdf8ca6ae839fe75edecfc0580fa802585",
+  "last_hearth_hash": "e6590ca5f83d96c850a80437815aa3adc82955bae92511955468d3ccee2023f2",
   "mode": "AT_HOME",
   "resident_id": "JANUS",
   "schema": "janus.activator.persistent_head.v0.6.2",
   "summary_is_verdict_authority": false,
-  "updated_at": 1791954097.7983878
+  "updated_at": 1791979323.8215659
 }
