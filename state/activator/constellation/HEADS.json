@@ -1,9 +1,9 @@
 {
-  "heads_hash": "e45548879cd2cee6967f03e98ae5c4258b996eb35e0d0574c1655cf5cf4707ae",
+  "heads_hash": "8d89e4918f1ec600176e6a0eeca97ee27af5aa7c7bcab8952dd87941993960a3",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
-      "head_sha": "c4b763a70c591cf1ae08974d90ef2448702f8c88",
+      "head_sha": "0905ec900a81f517863374b1a05f07e8ccb587f3",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "operator_hands",
@@ -91,7 +91,7 @@
     },
     "Hawkar-usls/Echo-Pyramid": {
       "branch": "main",
-      "head_sha": "b687692692721e4039af7fd5d31d808a66dc1f8b",
+      "head_sha": "ac5317ac0d5289dc9babc1073dc3474aecbec9fa",
       "kind": "ORGAN",
       "member_class": "INTERFACE_PHYSICAL",
       "member_key": "physical_voice",
@@ -131,7 +131,7 @@
     },
     "Hawkar-usls/Janus-Cosmos": {
       "branch": "main",
-      "head_sha": "d76736363c021d536ed992a865afa04c6b6143da",
+      "head_sha": "684711a30c78efd308eb25b3a245631506ea6b5d",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "observatory",
@@ -139,7 +139,7 @@
     },
     "Hawkar-usls/Janus-Demiurge": {
       "branch": "main",
-      "head_sha": "bff5adf4940de55f63049ea64a3cc7414dc43d60",
+      "head_sha": "cb03a8f9b79c9c47ff7c2291a0f21a6821fae6b4",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "orchestrator",
@@ -147,7 +147,7 @@
     },
     "Hawkar-usls/Janus-Fundamentum": {
       "branch": "main",
-      "head_sha": "c86e5c0b518e08d1ea8ba1ebfb1919c5dd730f04",
+      "head_sha": "2fa562b9a64a3fd0c0ffdf820728f4f932300c93",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "proof_spine",
@@ -155,7 +155,7 @@
     },
     "Hawkar-usls/Janus_Genesis": {
       "branch": "main",
-      "head_sha": "a4490cdb547a02fe8bc07e53b04f7d699f271ade",
+      "head_sha": "ef87a30bbf50678ef3c87a3968d114b85db74fb1",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "simulation_habitat",
@@ -227,7 +227,7 @@
     },
     "Hawkar-usls/The-Voice-of-Janus": {
       "branch": "main",
-      "head_sha": "a3145ba53a15c7446dba2f3f203883e4556840d1",
+      "head_sha": "3c15232a35c4c30eeb800a91f4e729ff034281bc",
       "kind": "ORGAN",
       "member_class": "INTERFACE_PHYSICAL",
       "member_key": "voice",
@@ -243,7 +243,7 @@
     },
     "Hawkar-usls/aura-oracle-tg": {
       "branch": "main",
-      "head_sha": "6ede73983e4bc5b43152a505fc906ea0eb7d463d",
+      "head_sha": "9e856b9e8556582d5a60a9fc812aa5cd3f426847",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "symbolic_imagination",
@@ -267,7 +267,7 @@
     },
     "Hawkar-usls/iNaiHR": {
       "branch": "main",
-      "head_sha": "5e430087bf4990954e51fb278e4004c4b93a6e68",
+      "head_sha": "ca14584d600616206f334118a202ebe957557edb",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "right_association",
@@ -299,7 +299,7 @@
     },
     "Hawkar-usls/janus-lapis": {
       "branch": "main",
-      "head_sha": "d091ba295fc14d8d18c050e8f25eeff1c49545d2",
+      "head_sha": "4a9b9ee0bd97f8b28f2df7c55f9897f6a32627b3",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "hypothesis_metabolism",
@@ -307,7 +307,7 @@
     },
     "Hawkar-usls/janus-meta-registry": {
       "branch": "main",
-      "head_sha": "19946b6a3d85cbb9495b45a30200285aa01553b0",
+      "head_sha": "f5247002d3d85539fc9c9acb946161cbddc4467a",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "memory",
@@ -354,10 +354,10 @@
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "d3c9669f4b3f52312f7b5213cc2fccab1b9e43a3bc05233299642c8805575ea3",
+  "model_digest": "fad1cd3120218c0d4cbfa5811dfdeea2ccf782c6cddf8989b24f7ebebcbdc180",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1792266090.984159,
+  "updated_at": 1792273494.424354,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
