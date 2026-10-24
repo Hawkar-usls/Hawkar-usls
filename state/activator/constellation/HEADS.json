@@ -1,9 +1,9 @@
 {
-  "heads_hash": "491c391dc7979dbd81bcb6c83c2a6cc0c8080d0fe7e4ea36970ec1a7181c9096",
+  "heads_hash": "a35e5f0a0846112b650ec85bb3085215fc901c6cba3fbbb8ff36456999ff2b2b",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
-      "head_sha": "15e5ebd5b064331f8184ef1310d2a457b3c43499",
+      "head_sha": "b3852e0b02a180f363465f2ffc8670b0e9cdd003",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "operator_hands",
@@ -139,7 +139,7 @@
     },
     "Hawkar-usls/Janus-Demiurge": {
       "branch": "main",
-      "head_sha": "520ec1a2fb72d31914b306d7d3998834e347c7ca",
+      "head_sha": "1d9cfb83b238ae3c2952441f4e9dbed1ac1cc534",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "orchestrator",
@@ -243,7 +243,7 @@
     },
     "Hawkar-usls/aura-oracle-tg": {
       "branch": "main",
-      "head_sha": "50a951c7d936096309cc0a0613041a0521dc325c",
+      "head_sha": "ccbc5e508b6877e3842900e7a5b462ae626fc776",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "symbolic_imagination",
@@ -354,10 +354,10 @@
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "dbd30a66ce098cefdeef91395cee957e0551acccaaa02a46de20fb7ea53fdb0b",
+  "model_digest": "577f62e01c6df43e9958cadf870a08675c925fd2c1eac92c4e9a1d2890f2e3a8",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1792796893.2589767,
+  "updated_at": 1792805583.2224965,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
