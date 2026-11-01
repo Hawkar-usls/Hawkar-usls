@@ -1,6 +1,6 @@
 {
   "active_cycle_id": null,
-  "checked_at": 1793482923.8676326,
+  "checked_at": 1793513948.3096924,
   "cognition_authorized": false,
   "component_integrity": {
     "ack_finalization": true,
@@ -20,8 +20,8 @@
   "dispatch_authorized": false,
   "external_effect_authorized": false,
   "fresh_stimulus": false,
-  "health_hash": "d50f622618191e8b0e403ee6e564a8e0a4e71b8bb3c9e750d6a0a2f53003c5dd",
-  "hearth_tip_hash": "75302226f73822d56bdcae9e8644b484ee87db3a9f78bcca55ed91e8f70ae5d0",
+  "health_hash": "8d9df18fd400faa8ae5a17ea7c048b0dea20d31c626d8d20961fce4ea9394ab7",
+  "hearth_tip_hash": "01dbffbd064198521f67efaa841fd14afe2748ed600b7642b32a23c4cab5afb7",
   "mode": "AT_HOME",
   "ok": true,
   "reasons": [],
