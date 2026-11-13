@@ -1,9 +1,9 @@
 {
-  "heads_hash": "ad574c89ec485c7021e3e4d42394ac812a7c9c507ed9a6f29e3ad1cf17753f76",
+  "heads_hash": "70ebb1b231019c0a605b779275c3be51f13257068f7cbfff413a85b2e73ee482",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
-      "head_sha": "0a8e3a7cdb69fa6560ef8ee0c3f635aa17d69985",
+      "head_sha": "ca41936a86fb612edf345e9a7b9cbaf57dcbb086",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "operator_hands",
@@ -11,7 +11,7 @@
     },
     "Hawkar-usls/AI-Cardputer-adv-A-Portable-AI-Assistant": {
       "branch": "main",
-      "head_sha": "08fad4a22dcfa4474c4457cd6a1c941688a4fafb",
+      "head_sha": "9502ef4cb8464901f40b3cd966ced54631eb5905",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:ai_cardputer_assistant",
@@ -27,7 +27,7 @@
     },
     "Hawkar-usls/ATOM-ELITE-1989---M5stack-ATOMS3R-2026-": {
       "branch": "main",
-      "head_sha": "f5b0c0111bb21f3edc89663c9e83636e333ed08d",
+      "head_sha": "340d117a94555a46bb8fa9050a819cbea229a7e4",
       "kind": "SUBTISSUE",
       "member_class": "SUBTISSUE",
       "member_key": "subtissue:atom_elite_embedded_world",
@@ -35,7 +35,7 @@
     },
     "Hawkar-usls/ATOM-RPG": {
       "branch": "main",
-      "head_sha": "75eea3bc83d39e97aa5065ef39c8b74e72a60320",
+      "head_sha": "8fa07d1e4a4760426c739e236500ab3e97db8d68",
       "kind": "SUBTISSUE",
       "member_class": "SUBTISSUE",
       "member_key": "subtissue:atom_rpg_embedded_world",
@@ -43,7 +43,7 @@
     },
     "Hawkar-usls/Arduino-AI-Chat-Library": {
       "branch": "main",
-      "head_sha": "7a39af81a338ebeb39aff8eb90412f6794fd8cf4",
+      "head_sha": "0747bfb15e31d690e0399e56e14fa9e05b0f1ac3",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:arduino_ai_chat_library",
@@ -51,7 +51,7 @@
     },
     "Hawkar-usls/BFain": {
       "branch": "main",
-      "head_sha": "125c1d3baaa70cf335cc77e616e4a5403c985f57",
+      "head_sha": "7741bd410f434f8b71a2fd137774a06ad22ca23a",
       "kind": "SUBTISSUE",
       "member_class": "SUBTISSUE",
       "member_key": "subtissue:bfain_interface_simulation",
@@ -59,7 +59,7 @@
     },
     "Hawkar-usls/Cardputer-Game-Station-Emulators": {
       "branch": "xip_load",
-      "head_sha": "48d54f1fb72fa4053d364d107ab5ed13fce2b55b",
+      "head_sha": "b4b318f479cfbfd8d7aca006567700da86552043",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:cardputer_game_station",
@@ -67,7 +67,7 @@
     },
     "Hawkar-usls/DIVINE_REALM": {
       "branch": "main",
-      "head_sha": "78b279ecc25e07debcd634246da01dc7453092f2",
+      "head_sha": "dec3142d0525f845a045866fa2e4802f2b0dd1e6",
       "kind": "SUBTISSUE",
       "member_class": "SUBTISSUE",
       "member_key": "subtissue:divine_realm_narrative_world",
@@ -75,7 +75,7 @@
     },
     "Hawkar-usls/Demi_Head": {
       "branch": "main",
-      "head_sha": "dd94fc5a99b891baea9fbb01cdd83d0e66802e89",
+      "head_sha": "f5a8a07bf21b5e98bb7d951068b3ce1ee93fa592",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "guardian_cortex",
@@ -83,7 +83,7 @@
     },
     "Hawkar-usls/ESP32-TWAI-CAN": {
       "branch": "master",
-      "head_sha": "702f3303e31c7623eeeed5a90217b25cfbbd7c66",
+      "head_sha": "aa1b74bf1246f390e303de057013958ef4935d8a",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:esp32_twai_can",
@@ -91,7 +91,7 @@
     },
     "Hawkar-usls/Echo-Pyramid": {
       "branch": "main",
-      "head_sha": "142c00edabef18b9c581c2f28d16f8f9754e77b8",
+      "head_sha": "f241c0645497e2a35f59be8794f82907572c4c1b",
       "kind": "ORGAN",
       "member_class": "INTERFACE_PHYSICAL",
       "member_key": "physical_voice",
@@ -107,7 +107,7 @@
     },
     "Hawkar-usls/Hawkar-usls": {
       "branch": "main",
-      "head_sha": "3961be37b42451957a4631214657491a5d87791b",
+      "head_sha": "8deea114f236876f09b192af0bc506005fe97b33",
       "kind": "BOOTSTRAP_ROOT",
       "member_class": "BOOTSTRAP_ROOT",
       "member_key": "bootstrap_root",
@@ -115,7 +115,7 @@
     },
     "Hawkar-usls/Hrain": {
       "branch": "main",
-      "head_sha": "0a6517846d903cd4ea91c4a482308246bde3d00e",
+      "head_sha": "732b7cad334c536d5ca2fff8d7af97e1c20196a1",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "left_context",
@@ -123,7 +123,7 @@
     },
     "Hawkar-usls/Janus": {
       "branch": "main",
-      "head_sha": "2e1cb37e734f4ffed4dfcd5fc005b9be11483c71",
+      "head_sha": "ac657f3c88fd5e5fc9dbe95b996b5e63da9bbf64",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "gateway",
@@ -131,7 +131,7 @@
     },
     "Hawkar-usls/Janus-Cosmos": {
       "branch": "main",
-      "head_sha": "8ee43878bc15b67e577a90f1f27fd39aa2697147",
+      "head_sha": "00fc6ea07abdb5bc3215e1e472c77fe16d02edd4",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "observatory",
@@ -139,7 +139,7 @@
     },
     "Hawkar-usls/Janus-Demiurge": {
       "branch": "main",
-      "head_sha": "1476d96429277b434120e596ec795629a181b77e",
+      "head_sha": "5419ba51d72a12e3cb5dc37f3bb1f64c11a825ee",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "orchestrator",
@@ -155,7 +155,7 @@
     },
     "Hawkar-usls/Janus_Genesis": {
       "branch": "main",
-      "head_sha": "950633e9a361178b4dc23b945c4d2af92d6ac9f7",
+      "head_sha": "1ae78dea59a79d24b78e14d701f32510142bd9b9",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "simulation_habitat",
@@ -163,7 +163,7 @@
     },
     "Hawkar-usls/Linear-A-decipherment-programme": {
       "branch": "main",
-      "head_sha": "e11e4e7e71c0bbadfe504b561d802bdba1c3a4ea",
+      "head_sha": "35af666d30561f34fc62b6f56253aaf730754329",
       "kind": "EXTERNAL_RESEARCH_INSTRUMENT",
       "member_class": "EXTERNAL_RESEARCH_INSTRUMENT",
       "member_key": "external:linear_a_decipherment_programme",
@@ -171,7 +171,7 @@
     },
     "Hawkar-usls/M5Unit-ENV": {
       "branch": "master",
-      "head_sha": "ccc2b0845e043d144b52884cc5a3a045ff819bf1",
+      "head_sha": "03d15828688bc380c7432c019b93e4bdc130b3f3",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:m5unit_env",
@@ -179,7 +179,7 @@
     },
     "Hawkar-usls/RadioPlayerV3": {
       "branch": "master",
-      "head_sha": "95971e39062fb44a1ef7a6c15a9ab6a3240d3721",
+      "head_sha": "e96725df6d52f00cb295f7bf68852fc6b7f9a4df",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:radio_player_v3",
@@ -187,7 +187,7 @@
     },
     "Hawkar-usls/SCOBY-D0": {
       "branch": "main",
-      "head_sha": "31a85f35f5bc4e5b2d256b08d4636509e63e5a97",
+      "head_sha": "a379602f758cbff9dd3851ad0732b65cb6fe8b47",
       "kind": "ORGAN",
       "member_class": "DOMAIN_LAB",
       "member_key": "materials_lab",
@@ -195,7 +195,7 @@
     },
     "Hawkar-usls/SLOT": {
       "branch": "main",
-      "head_sha": "8486141e84c6879bae0c4e20a5a223cda3477426",
+      "head_sha": "5546ca8c790d0328016d8bf4817941ccaae18185",
       "kind": "LEGACY_ARCHIVE",
       "member_class": "LEGACY_ARCHIVE",
       "member_key": "legacy:slot",
@@ -203,7 +203,7 @@
     },
     "Hawkar-usls/SSlot": {
       "branch": "main",
-      "head_sha": "34416260af671c02965529d40ccb027f92f3ed57",
+      "head_sha": "2c8961ec81b621c1cf485ee72ba7091e57fc87c7",
       "kind": "LEGACY_ARCHIVE",
       "member_class": "LEGACY_ARCHIVE",
       "member_key": "legacy:sslot",
@@ -211,7 +211,7 @@
     },
     "Hawkar-usls/Simptomat": {
       "branch": "main",
-      "head_sha": "d734c332a9692f89fffbaa46e918a0143eaaf7dd",
+      "head_sha": "a466a027e421febd795a5e54b771c72fda68906e",
       "kind": "ORGAN",
       "member_class": "DOMAIN_LAB",
       "member_key": "diagnostic_reasoning",
@@ -219,7 +219,7 @@
     },
     "Hawkar-usls/TOPA": {
       "branch": "main",
-      "head_sha": "fa88d258915e7b01a4dfbb635d372029196b0b1d",
+      "head_sha": "d056519eb08f562a91c4ac5e416c4bcce6402fed",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "anomaly_lab",
@@ -227,7 +227,7 @@
     },
     "Hawkar-usls/The-Voice-of-Janus": {
       "branch": "main",
-      "head_sha": "cab197a82e72688df9eec32078fb49ac4a98b4b8",
+      "head_sha": "70f571045763bf2a85216f612bc84589b4372959",
       "kind": "ORGAN",
       "member_class": "INTERFACE_PHYSICAL",
       "member_key": "voice",
@@ -235,7 +235,7 @@
     },
     "Hawkar-usls/arduino-ide": {
       "branch": "main",
-      "head_sha": "aa9ccb18ec2558f8052151205a3f27d88d718a1b",
+      "head_sha": "16652875cecb1a34d1415fa71d072ea2890f70cf",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:arduino_ide",
@@ -243,7 +243,7 @@
     },
     "Hawkar-usls/aura-oracle-tg": {
       "branch": "main",
-      "head_sha": "a20fece692e073f7dc276cb53438cc50ff55106b",
+      "head_sha": "01a0cf1d27c98624b002f06ea9c2a3bb63c5fe9f",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "symbolic_imagination",
@@ -251,7 +251,7 @@
     },
     "Hawkar-usls/clawdbot": {
       "branch": "main",
-      "head_sha": "5ff45346283afef3b671c570513aff0e7e508e62",
+      "head_sha": "5a0d4409dbd858360cf416002ff7ded9cb870e3a",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:clawdbot",
@@ -259,7 +259,7 @@
     },
     "Hawkar-usls/emoji": {
       "branch": "master",
-      "head_sha": "fdc85898baf2793c2421fa7e7128a9698651fe50",
+      "head_sha": "2a982d20318dae5d3cd1916286947459da927428",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:emoji",
@@ -267,7 +267,7 @@
     },
     "Hawkar-usls/iNaiHR": {
       "branch": "main",
-      "head_sha": "e7fab1d3b981ed5a59b0a6f3464c9b88078d6079",
+      "head_sha": "41250fc35583846e32133bff8b29d44ba4f334fa",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "right_association",
@@ -275,7 +275,7 @@
     },
     "Hawkar-usls/janus-distributed-ai-swarm": {
       "branch": "main",
-      "head_sha": "95ebff469da51926afcd4ef2c23c31623c25ef6e",
+      "head_sha": "9127386122ffa119c8088429fd04f90e37777cbc",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "sensorimotor_mesh",
@@ -283,7 +283,7 @@
     },
     "Hawkar-usls/janus-first-followers-club-": {
       "branch": "main",
-      "head_sha": "7d0777821ae2f901b90b13a9f6dee8dc68c12286",
+      "head_sha": "13276b52af5e8689ba62676a59ff64995219a56f",
       "kind": "ORGAN",
       "member_class": "INTERFACE_PHYSICAL",
       "member_key": "social_membrane",
@@ -291,7 +291,7 @@
     },
     "Hawkar-usls/janus-io-public": {
       "branch": "main",
-      "head_sha": "06e7e814d1f1818ea14a54f30b87c4b8819f717c",
+      "head_sha": "6b44834831c8be98514144bdb70ac356cc67861b",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "measurement_bench",
@@ -299,7 +299,7 @@
     },
     "Hawkar-usls/janus-lapis": {
       "branch": "main",
-      "head_sha": "53f722acc7e54e215dabde08ea164bcaed8cbae5",
+      "head_sha": "a5555e5564f73fc27ac88f660c752c084635f4aa",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "hypothesis_metabolism",
@@ -307,7 +307,7 @@
     },
     "Hawkar-usls/janus-meta-registry": {
       "branch": "main",
-      "head_sha": "99dfece7bca49a6e3d0686c8dd830451e4cd24a6",
+      "head_sha": "8a51380c2b585fef4709f86e8520227e61068df7",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "memory",
@@ -315,7 +315,7 @@
     },
     "Hawkar-usls/lineara.xyz": {
       "branch": "master",
-      "head_sha": "e384122ea06e3c587138040d94524e94644f6f9b",
+      "head_sha": "8c36fdcaaaaf47d9052964e1034608b6cafababe",
       "kind": "EXTERNAL_RESEARCH_INSTRUMENT",
       "member_class": "EXTERNAL_RESEARCH_INSTRUMENT",
       "member_key": "external:linear_a_explorer",
@@ -323,7 +323,7 @@
     },
     "Hawkar-usls/player": {
       "branch": "master",
-      "head_sha": "f29bdefe9de80b4e886ea6c710ef8b392bd1ccbb",
+      "head_sha": "005d714ddca723134c9cec9eb963130ac2503aab",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:player",
@@ -331,7 +331,7 @@
     },
     "Hawkar-usls/tranception": {
       "branch": "main",
-      "head_sha": "8a9e2c7afa2c99f3a46b896bcedca102691eb984",
+      "head_sha": "2f94fe2984c3c2aea53e3a5d3266ba1ca08ba0bd",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:tranception_ml",
@@ -339,7 +339,7 @@
     },
     "Hawkar-usls/vcmi": {
       "branch": "develop",
-      "head_sha": "21f37393e801df4d870e99be9c3b99d119cb47ce",
+      "head_sha": "c20e3f5325eafc81b33a8367d37a20226ab78d2f",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:vcmi",
@@ -347,17 +347,17 @@
     },
     "Hawkar-usls/xiaozhi-esp32": {
       "branch": "main",
-      "head_sha": "6473c15d545f9c6679224a75f298681e75f0d47d",
+      "head_sha": "f59743cfa3787068c32c617cb6b9db47ee631ca9",
       "kind": "TOOLCHAIN_DEPENDENCY",
       "member_class": "TOOLCHAIN_DEPENDENCY",
       "member_key": "toolchain:xiaozhi_esp32",
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "ced1adccf7131c0f33d240f0f79fcaeb9150291b88b040687badadbcc53af3b0",
+  "model_digest": "20742f789202548e54233cd3dd59e965c8fca0150a9d54a9767f4afc684e6955",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1794577503.642865,
+  "updated_at": 1794586749.5997627,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
