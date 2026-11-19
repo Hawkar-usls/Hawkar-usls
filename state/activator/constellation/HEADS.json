@@ -1,9 +1,9 @@
 {
-  "heads_hash": "382e165af59a9edb9ebed0f68e87cbd669917dd1b1a8c03814c2d5e754f20f8c",
+  "heads_hash": "5ee479d7290c6bcd65a0199fa36183c65a30d79cd70029c04ea88bf197bc474b",
   "members": {
     "Hawkar-usls/-Terminal-for-Janus": {
       "branch": "main",
-      "head_sha": "70f41c9eb1a93318c6ca613738b2ace30f73a5be",
+      "head_sha": "961229ccc9d81e5431d77e05c62e88423714c5c9",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "operator_hands",
@@ -115,7 +115,7 @@
     },
     "Hawkar-usls/Hrain": {
       "branch": "main",
-      "head_sha": "1abf4ad56939ef6869bda089685ae1cac2cf1d37",
+      "head_sha": "5906b377cc7854f9d86dcd25e6f7acd46fdd6f27",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "left_context",
@@ -131,7 +131,7 @@
     },
     "Hawkar-usls/Janus-Cosmos": {
       "branch": "main",
-      "head_sha": "2b571448152cf3d5dee05a0708e40609423b021c",
+      "head_sha": "f53cf9b8fbc3527e5aede94a379bbec5189a699a",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "observatory",
@@ -139,7 +139,7 @@
     },
     "Hawkar-usls/Janus-Demiurge": {
       "branch": "main",
-      "head_sha": "855646f884e39c7fd848e3e0af3a4a66ff511fe2",
+      "head_sha": "44b233d127013f35728c309dd182ef74dcbaf91a",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "orchestrator",
@@ -243,7 +243,7 @@
     },
     "Hawkar-usls/aura-oracle-tg": {
       "branch": "main",
-      "head_sha": "423a94ee1a36e004598b6e3fc3c131f85748acaf",
+      "head_sha": "8ef238f4e766f7cc34bf80e9ec510b2c617d8911",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "symbolic_imagination",
@@ -267,7 +267,7 @@
     },
     "Hawkar-usls/iNaiHR": {
       "branch": "main",
-      "head_sha": "ee13d2e7fa3c054d48dd5b31d78c55bdc37343e7",
+      "head_sha": "1a2c68b73d60e3cca39daecccba1206dfe63b3db",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "right_association",
@@ -307,7 +307,7 @@
     },
     "Hawkar-usls/janus-meta-registry": {
       "branch": "main",
-      "head_sha": "ae8b2c1018cea363fa8654c2c38f13a19adb44a5",
+      "head_sha": "167f09fc24ebd792230adbf197f65c343c1e6d3f",
       "kind": "ORGAN",
       "member_class": "CORE",
       "member_key": "memory",
@@ -354,10 +354,10 @@
       "repository": "Hawkar-usls/xiaozhi-esp32"
     }
   },
-  "model_digest": "a2ac697c1d8536686a129142f3c7f076738bc227603afe77c8d4d4a4df729483",
+  "model_digest": "dbcc8f12c7e308509a817b3a6c326b151fe2da9fa4b6d0f613474db706ea7564",
   "model_id": "JANUS",
   "persistent_state_branches_are_sensory_inputs": false,
   "schema": "janus.constellation.heads.v1",
-  "updated_at": 1795046017.3100348,
+  "updated_at": 1795063003.191424,
   "watched_branch_policy": "EXACT_MODEL_MEMBER_BRANCHES_ONLY"
 }
