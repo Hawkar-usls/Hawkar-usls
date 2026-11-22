@@ -1,0 +1,77 @@
+name: JANUS-SPI R1 accepts Tachyon temporal research receipts
+on:
+  pull_request:
+    paths:
+      - 'src/janus_spi/tachyon_temporal_intake.py'
+      - 'tests/test_tachyon_temporal_intake.py'
+      - 'docs/TACHYON_R1_SPI_READONLY_INTAKE.md'
+      - '.github/workflows/tachyon-r1-spi-intake.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: spi-tachyon-r1-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  cross-repo-interface:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: src:external/tachyon
+      TACHYON_SOURCE_SHA: '222f21312928f3d2249591c32baa2e64e1752658'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout immutable Tachyon R1 contract source
+        uses: actions/checkout@v4
+        with:
+          repository: Hawkar-usls/Demi_Head
+          ref: 222f21312928f3d2249591c32baa2e64e1752658
+          path: external/tachyon
+          persist-credentials: false
+          sparse-checkout: |
+            tachyon/__init__.py
+            tachyon/temporal_evidence.py
+            contracts/TACHYON_TEMPORAL_EVIDENCE_V1.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify immutable upstream reference and cross-repository invariants
+        run: |
+          set -euo pipefail
+          test "$(git -C external/tachyon rev-parse HEAD)" = "$TACHYON_SOURCE_SHA"
+          python -m unittest discover -s tests -p test_tachyon_temporal_intake.py -v
+      - name: Import synthetic-only three-phase context (never into SQLite)
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/spi-tachyon-r1
+          python - <<'PY'
+          import json,sys
+          from pathlib import Path
+          sys.path.insert(0,'tests')
+          from test_tachyon_temporal_intake import fixture
+          Path('artifacts/spi-tachyon-r1/input.json').write_text(json.dumps([
+             fixture('FEATURE'),fixture('FORECAST'),fixture('RESOLUTION')]))
+          PY
+          python -m janus_spi.tachyon_temporal_intake \
+            --records artifacts/spi-tachyon-r1/input.json \
+            --out artifacts/spi-tachyon-r1/review.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('artifacts/spi-tachyon-r1/review.json').read_text())
+          assert r['count']==3
+          assert not r['may_train_model']
+          assert not r['may_append_to_production_sqlite']
+          assert not r['source_independence_proven']
+          assert r['authority_delta']==0
+          print('SPI_TACHYON_R1_CROSS_REPO_RESEARCH_ONLY_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: janus-spi-tachyon-r1-synthetic-intake
+          path: artifacts/spi-tachyon-r1/review.json
+          retention-days: 14
+          if-no-files-found: error
