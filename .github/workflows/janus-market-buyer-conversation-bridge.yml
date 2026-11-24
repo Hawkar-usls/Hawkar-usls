@@ -27,6 +27,8 @@ on:
       - 'tests/test_terminal_conversation.py'
       - 'tests/test_terminal_conversation_route.py'
       - '.github/workflows/janus-market-buyer-conversation-bridge.yml'
+  issues:
+    types: [opened]
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
@@ -36,6 +38,11 @@ permissions:
 
 jobs:
   contract:
+    if: >-
+      github.event_name != 'issues' ||
+      (github.event.issue.user.login == github.repository_owner &&
+       github.event.sender.login == github.repository_owner &&
+       github.event.issue.title == '[JANUS HOME WAKE] Market buyer queue')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
